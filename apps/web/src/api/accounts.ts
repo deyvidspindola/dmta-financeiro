@@ -8,7 +8,10 @@ import {
 import { mockApi } from '@/mocks/store'
 import type { Account, AccountType } from '@/types/models'
 
-export type CreateAccountInput = Omit<Account, 'id' | 'context_id' | 'currency'>
+export type CreateAccountInput = Omit<
+  Account,
+  'id' | 'context_id' | 'currency' | 'context'
+>
 
 export type UpdateAccountInput = {
   name: string

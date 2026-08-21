@@ -31,19 +31,27 @@ let user: User = {
 }
 
 
-const contexts: Context[] = [
-  { id: 'ctx_pf', type: 'pf', name: 'Pessoa Física', company_id: null },
+let contexts: Context[] = [
+  {
+    id: 'ctx_pf',
+    type: 'pf',
+    name: 'Pessoa Física',
+    company_id: null,
+    company: null,
+  },
   {
     id: 'ctx_empresa_a',
     type: 'pj',
     name: 'Empresa A',
     company_id: 'company_a',
+    company: { id: 'company_a', name: 'Empresa A LTDA', document: null },
   },
   {
     id: 'ctx_empresa_b',
     type: 'pj',
     name: 'Empresa B',
     company_id: 'company_b',
+    company: { id: 'company_b', name: 'Empresa B LTDA', document: null },
   },
 ]
 
@@ -125,6 +133,9 @@ let transactions: StatementEntry[] = [
     type: 'income',
     date: '2026-08-05',
     origin: 'manual',
+    bill_id: null,
+    transfer_pair_id: null,
+    recurring_transaction_id: null,
   },
   {
     id: 'tx_2',
@@ -136,6 +147,9 @@ let transactions: StatementEntry[] = [
     type: 'income',
     date: '2026-08-10',
     origin: 'manual',
+    bill_id: null,
+    transfer_pair_id: null,
+    recurring_transaction_id: null,
   },
 ]
 
@@ -292,6 +306,28 @@ export const mockApi = {
   async listContexts(): Promise<Context[]> {
     await delay()
     return [...contexts]
+  },
+
+  async createCompanyContext(payload: {
+    name: string
+    company_name: string
+    company_document: string | null
+  }): Promise<Context> {
+    await delay()
+    const companyId = id('co')
+    const row: Context = {
+      id: id('ctx'),
+      type: 'pj',
+      name: payload.name,
+      company_id: companyId,
+      company: {
+        id: companyId,
+        name: payload.company_name,
+        document: payload.company_document,
+      },
+    }
+    contexts = [...contexts, row]
+    return row
   },
 
   async getDashboard(contextId: string | 'consolidated'): Promise<DashboardSummary> {
@@ -460,17 +496,209 @@ export const mockApi = {
 
   async createTransaction(
     contextId: string,
-    payload: Omit<StatementEntry, 'id' | 'context_id' | 'origin'>,
+    payload: {
+      account_id: string
+      category_id: string | null
+      description: string
+      amount: number
+      type: 'income' | 'expense'
+      date: string
+    },
   ): Promise<StatementEntry> {
     await delay()
     const row: StatementEntry = {
       id: id('tx'),
       context_id: contextId,
       origin: 'manual',
+      bill_id: null,
+      transfer_pair_id: null,
+      recurring_transaction_id: null,
       ...payload,
     }
     transactions = [...transactions, row]
     return row
+  },
+
+  async getTransaction(
+    contextId: string,
+    transactionId: string,
+  ): Promise<StatementEntry> {
+    await delay()
+    const row = transactions.find(
+      (item) => item.context_id === contextId && item.id === transactionId,
+    )
+    if (!row) throw Object.assign(new Error('Not found'), { status: 404 })
+    return row
+  },
+
+  async updateTransaction(
+    contextId: string,
+    transactionId: string,
+    payload: {
+      account_id: string
+      category_id: string | null
+      description: string
+      amount: number
+      type: 'income' | 'expense'
+      date: string
+    },
+  ): Promise<StatementEntry> {
+    await delay()
+    const index = transactions.findIndex(
+      (row) => row.context_id === contextId && row.id === transactionId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const current = transactions[index]!
+    if (current.transfer_pair_id || current.bill_id) {
+      throw Object.assign(new Error('Lançamento não editável.'), { status: 422 })
+    }
+    const row: StatementEntry = { ...current, ...payload }
+    transactions = transactions.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
+  async moveTransaction(
+    contextId: string,
+    transactionId: string,
+    payload: {
+      target_context_id: string
+      target_account_id: string
+      target_category_id: string | null
+    },
+  ): Promise<StatementEntry> {
+    await delay()
+    const index = transactions.findIndex(
+      (row) => row.context_id === contextId && row.id === transactionId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const current = transactions[index]!
+    const row: StatementEntry = {
+      ...current,
+      context_id: payload.target_context_id,
+      account_id: payload.target_account_id,
+      category_id: payload.target_category_id,
+    }
+    transactions = transactions.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
+  async createTransfer(
+    contextId: string,
+    payload: {
+      from_account_id: string
+      to_account_id: string
+      amount: number
+      description: string
+      occurred_at: string
+    },
+  ): Promise<{ from: StatementEntry; to: StatementEntry }> {
+    await delay()
+    const pair = id('pair')
+    const from: StatementEntry = {
+      id: id('tx'),
+      context_id: contextId,
+      account_id: payload.from_account_id,
+      category_id: null,
+      description: payload.description,
+      amount: payload.amount,
+      type: 'transfer',
+      date: payload.occurred_at,
+      origin: 'manual',
+      bill_id: null,
+      transfer_pair_id: pair,
+      recurring_transaction_id: null,
+    }
+    const to: StatementEntry = {
+      ...from,
+      id: id('tx'),
+      account_id: payload.to_account_id,
+    }
+    transactions = [...transactions, from, to]
+    return { from, to }
+  },
+
+  async listRecurringTransactions(
+    _contextId: string,
+  ): Promise<import('@/types/models').RecurringTransaction[]> {
+    await delay()
+    return []
+  },
+
+  async createRecurringTransaction(
+    contextId: string,
+    payload: {
+      account_id: string
+      category_id: string | null
+      description: string
+      amount: number
+      type: 'income' | 'expense'
+      interval: 'weekly' | 'monthly' | 'yearly'
+      start_date: string
+      end_date: string | null
+    },
+  ): Promise<import('@/types/models').RecurringTransaction> {
+    await delay()
+    return {
+      id: id('rec'),
+      context_id: contextId,
+      account_id: payload.account_id,
+      category_id: payload.category_id,
+      description: payload.description,
+      amount: payload.amount,
+      type: payload.type,
+      interval: payload.interval,
+      start_date: payload.start_date,
+      end_date: payload.end_date,
+      next_occurrence_date: payload.start_date,
+      is_fixed: payload.end_date === null,
+      active: true,
+    }
+  },
+
+  async deleteRecurringTransaction(
+    _contextId: string,
+    _recurringId: string,
+  ): Promise<void> {
+    await delay()
+  },
+
+  async listConsolidatedAccounts(): Promise<Account[]> {
+    await delay()
+    return accounts.map((row) => ({
+      ...row,
+      context: {
+        id: row.context_id,
+        type: contexts.find((c) => c.id === row.context_id)?.type ?? 'pf',
+        name: contexts.find((c) => c.id === row.context_id)?.name ?? row.context_id,
+        company: contexts.find((c) => c.id === row.context_id)?.company ?? null,
+      },
+    }))
+  },
+
+  async listConsolidatedTransactions(): Promise<StatementEntry[]> {
+    await delay()
+    return transactions.map((row) => ({
+      ...row,
+      context: {
+        id: row.context_id,
+        type: contexts.find((c) => c.id === row.context_id)?.type ?? 'pf',
+        name: contexts.find((c) => c.id === row.context_id)?.name ?? row.context_id,
+        company: contexts.find((c) => c.id === row.context_id)?.company ?? null,
+      },
+    }))
+  },
+
+  async listConsolidatedBills(): Promise<Bill[]> {
+    await delay()
+    return bills.map((row) => ({
+      ...row,
+      context: {
+        id: row.context_id,
+        type: contexts.find((c) => c.id === row.context_id)?.type ?? 'pf',
+        name: contexts.find((c) => c.id === row.context_id)?.name ?? row.context_id,
+        company: contexts.find((c) => c.id === row.context_id)?.company ?? null,
+      },
+    }))
   },
 
   async deleteTransaction(

@@ -24,6 +24,9 @@ export interface BillCapture {
 
 export type MoneyDirection = 'income' | 'expense'
 
+/** API also emits `transfer` for transfer legs. */
+export type EntryType = MoneyDirection | 'transfer'
+
 export type AccountType = 'checking' | 'savings' | 'wallet' | 'other'
 
 export type BillStatus = 'pending' | 'paid' | 'overdue' | 'cancelled'
@@ -31,6 +34,8 @@ export type BillStatus = 'pending' | 'paid' | 'overdue' | 'cancelled'
 export type BillKind = 'payable' | 'receivable'
 
 export type InvoiceStatus = 'open' | 'closed' | 'paid'
+
+export type RecurrenceInterval = 'weekly' | 'monthly' | 'yearly'
 
 export interface User {
   id: string
@@ -45,11 +50,20 @@ export interface Company {
   document: string | null
 }
 
+/** Nested context on consolidated list rows. */
+export interface ContextRef {
+  id: string
+  type: ContextType
+  name: string
+  company: Company | null
+}
+
 export interface Context {
   id: string
   type: ContextType
   name: string
   company_id: string | null
+  company: Company | null
 }
 
 export interface Account {
@@ -60,6 +74,7 @@ export interface Account {
   type: AccountType
   balance: number
   currency: 'BRL'
+  context?: ContextRef | null
 }
 
 export interface Category {
@@ -81,18 +96,39 @@ export interface Bill {
   category_id: string | null
   barcode: string | null
   origin: CaptureOrigin
+  context?: ContextRef | null
 }
 
 export interface StatementEntry {
   id: string
   context_id: string
   account_id: string
-  category_id: string
+  category_id: string | null
+  description: string
+  amount: number
+  type: EntryType
+  date: string
+  origin: CaptureOrigin
+  bill_id: string | null
+  transfer_pair_id: string | null
+  recurring_transaction_id: string | null
+  context?: ContextRef | null
+}
+
+export interface RecurringTransaction {
+  id: string
+  context_id: string
+  account_id: string
+  category_id: string | null
   description: string
   amount: number
   type: MoneyDirection
-  date: string
-  origin: CaptureOrigin
+  interval: RecurrenceInterval
+  start_date: string
+  end_date: string | null
+  next_occurrence_date: string
+  is_fixed: boolean
+  active: boolean
 }
 
 export interface CreditCard {

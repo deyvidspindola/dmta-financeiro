@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { Pencil, Trash2 } from 'lucide-react'
-import { accountsApi } from '@/api'
+import { accountsApi, consolidatedApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
@@ -50,13 +50,15 @@ export function AccountsPage() {
   const [open, setOpen] = useState(false)
   const isEdit = editing !== null
 
-  const listContextId =
-    activeScope === CONSOLIDATED ? null : activeScope
+  const isConsolidated = activeScope === CONSOLIDATED
 
-  const { data = [], isLoading, isError } = useQuery({
-    queryKey: ['accounts', listContextId],
-    queryFn: () => accountsApi.listAccounts(listContextId!),
-    enabled: Boolean(listContextId),
+  const { data = [], isLoading, isError, error } = useQuery({
+    queryKey: ['accounts', activeScope],
+    queryFn: () =>
+      isConsolidated
+        ? consolidatedApi.listConsolidatedAccounts()
+        : accountsApi.listAccounts(activeScope),
+    enabled: isConsolidated || Boolean(activeScope),
   })
 
   const form = useForm<FormValues>({
@@ -141,48 +143,56 @@ export function AccountsPage() {
         }
       />
 
-      {activeScope === CONSOLIDATED ? (
-        <ErrorBanner message="Selecione um contexto (PF ou empresa) para cadastrar e listar contas." />
+      {isConsolidated ? (
+        <p className="muted small">{strings.common.consolidatedHint}</p>
       ) : null}
 
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
-      {isError ? <ErrorBanner message={strings.common.error} /> : null}
+      {isError ? (
+        <ErrorBanner message={getErrorMessage(error)} />
+      ) : null}
 
-      {!isLoading && listContextId && data.length === 0 ? (
+      {!isLoading && data.length === 0 ? (
         <EmptyState message={strings.accounts.empty} />
       ) : null}
 
       {data.length > 0 ? (
         <DataTable
           headers={[
+            ...(isConsolidated ? [strings.common.context] : []),
             strings.accounts.name,
             strings.accounts.bankName,
             strings.accounts.type,
             strings.accounts.balance,
-            strings.common.actions,
+            ...(isConsolidated ? [] : [strings.common.actions]),
           ]}
         >
           {data.map((account) => (
-            <tr key={account.id}>
+            <tr key={`${account.context_id}-${account.id}`}>
+              {isConsolidated ? (
+                <td>{account.context?.name ?? '—'}</td>
+              ) : null}
               <td>{account.name}</td>
               <td>{account.bank_name ?? '—'}</td>
               <td>{strings.accounts.types[account.type]}</td>
               <td className="mono">{formatMoney(account.balance)}</td>
-              <td className="actions-cell">
-                <IconButton
-                  label={strings.common.edit}
-                  icon={Pencil}
-                  onClick={() => openEdit(account)}
-                  disabled={!contextId}
-                />
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => handleDelete(account.id)}
-                  disabled={deleteMutation.isPending || !contextId}
-                />
-              </td>
+              {!isConsolidated ? (
+                <td className="actions-cell">
+                  <IconButton
+                    label={strings.common.edit}
+                    icon={Pencil}
+                    onClick={() => openEdit(account)}
+                    disabled={!contextId}
+                  />
+                  <IconButton
+                    label={strings.common.delete}
+                    icon={Trash2}
+                    variant="danger"
+                    onClick={() => handleDelete(account.id)}
+                    disabled={deleteMutation.isPending || !contextId}
+                  />
+                </td>
+              ) : null}
             </tr>
           ))}
         </DataTable>

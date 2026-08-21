@@ -9,7 +9,9 @@ import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
 import { BillCapturesPage } from '@/pages/BillCapturesPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
+import { RecurringTransactionsPage } from '@/pages/RecurringTransactionsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
+import { CompaniesPage } from '@/pages/CompaniesPage'
 import { InvestmentsPage } from '@/pages/InvestmentsPage'
 import { SecurityPage } from '@/pages/SecurityPage'
 import { ToastHost } from '@/components/ToastHost'
@@ -48,7 +50,9 @@ export default function App() {
             <Route path="bills" element={<BillsPage />} />
             <Route path="bill-captures" element={<BillCapturesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="recurring" element={<RecurringTransactionsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
+            <Route path="companies" element={<CompaniesPage />} />
             <Route path="investments" element={<InvestmentsPage />} />
             <Route path="security" element={<SecurityPage />} />
           </Route>

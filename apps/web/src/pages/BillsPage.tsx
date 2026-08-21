@@ -4,7 +4,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
-import { billsApi, categoriesApi } from '@/api'
+import { billsApi, categoriesApi, consolidatedApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
 import { currentMonthKey, isInMonth } from '@/lib/dates'
@@ -67,13 +67,16 @@ export function BillsPage() {
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [period, setPeriod] = useState(currentMonthKey)
-  const listContextId = activeScope === CONSOLIDATED ? null : activeScope
+  const isConsolidated = activeScope === CONSOLIDATED
   const isEdit = editing !== null
 
-  const { data = [], isLoading, isError } = useQuery({
-    queryKey: ['bills', listContextId],
-    queryFn: () => billsApi.listBills(listContextId!),
-    enabled: Boolean(listContextId),
+  const { data = [], isLoading, isError, error } = useQuery({
+    queryKey: ['bills', activeScope],
+    queryFn: () =>
+      isConsolidated
+        ? consolidatedApi.listConsolidatedBills()
+        : billsApi.listBills(activeScope),
+    enabled: isConsolidated || Boolean(activeScope),
   })
 
   const periodOptions = useMemo(() => {
@@ -196,56 +199,57 @@ export function BillsPage() {
         }
       />
 
-      {activeScope === CONSOLIDATED ? (
-        <ErrorBanner message="Selecione um contexto para cadastrar e listar boletos." />
+      {isConsolidated ? (
+        <p className="muted small">{strings.common.consolidatedHint}</p>
       ) : null}
 
-      {listContextId ? (
-        <div className="filter-bar">
-          <Field label={strings.bills.period}>
-            <TextSelect
-              value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-            >
-              <option value={ALL_PERIODS}>{strings.bills.periodAll}</option>
-              {periodOptions.map((month) => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-        </div>
-      ) : null}
+      <div className="filter-bar">
+        <Field label={strings.bills.period}>
+          <TextSelect
+            value={period}
+            onChange={(event) => setPeriod(event.target.value)}
+          >
+            <option value={ALL_PERIODS}>{strings.bills.periodAll}</option>
+            {periodOptions.map((month) => (
+              <option key={month} value={month}>
+                {month}
+              </option>
+            ))}
+          </TextSelect>
+        </Field>
+      </div>
 
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
-      {isError ? <ErrorBanner message={strings.common.error} /> : null}
+      {isError ? (
+        <ErrorBanner message={getErrorMessage(error)} />
+      ) : null}
 
-      {!isLoading && listContextId && data.length === 0 ? (
+      {!isLoading && data.length === 0 ? (
         <EmptyState message={strings.bills.empty} />
       ) : null}
 
-      {!isLoading &&
-      listContextId &&
-      data.length > 0 &&
-      filtered.length === 0 ? (
+      {!isLoading && data.length > 0 && filtered.length === 0 ? (
         <EmptyState message={strings.bills.emptyMonth} />
       ) : null}
 
       {filtered.length > 0 ? (
         <DataTable
           headers={[
+            ...(isConsolidated ? [strings.common.context] : []),
             strings.bills.description,
             strings.bills.amount,
             strings.bills.dueDate,
             strings.bills.kind,
             strings.bills.status,
             strings.billCaptures.origin,
-            strings.common.actions,
+            ...(isConsolidated ? [] : [strings.common.actions]),
           ]}
         >
           {filtered.map((bill) => (
-            <tr key={bill.id}>
+            <tr key={`${bill.context_id}-${bill.id}`}>
+              {isConsolidated ? (
+                <td>{bill.context?.name ?? '—'}</td>
+              ) : null}
               <td>{bill.description}</td>
               <td className="mono">{formatMoney(bill.amount)}</td>
               <td>{formatDate(bill.due_date)}</td>
@@ -254,21 +258,23 @@ export function BillsPage() {
               <td>
                 <OriginBadge origin={bill.origin} />
               </td>
-              <td className="actions-cell">
-                <IconButton
-                  label={strings.common.edit}
-                  icon={Pencil}
-                  onClick={() => openEdit(bill)}
-                  disabled={!contextId}
-                />
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => handleDelete(bill.id)}
-                  disabled={deleteMutation.isPending || !contextId}
-                />
-              </td>
+              {!isConsolidated ? (
+                <td className="actions-cell">
+                  <IconButton
+                    label={strings.common.edit}
+                    icon={Pencil}
+                    onClick={() => openEdit(bill)}
+                    disabled={!contextId}
+                  />
+                  <IconButton
+                    label={strings.common.delete}
+                    icon={Trash2}
+                    variant="danger"
+                    onClick={() => handleDelete(bill.id)}
+                    disabled={deleteMutation.isPending || !contextId}
+                  />
+                </td>
+              ) : null}
             </tr>
           ))}
         </DataTable>
