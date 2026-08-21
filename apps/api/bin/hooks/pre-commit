@@ -8,6 +8,20 @@
 
 set -e
 
+# O .git é compartilhado entre todos os worktrees do monorepo (git
+# rev-parse --git-common-dir) — este hook dispara pra commit em
+# qualquer um deles, não só em apps/api. Só faz sentido rodar o
+# make check da API quando o commit de fato mexe em apps/api; caso
+# contrário (ex.: commit só em apps/web) ele bloquearia por um
+# `make check` de código que nem mudou.
+TOPLEVEL="$(git rev-parse --show-toplevel)"
+
+if ! git diff --cached --name-only | grep -q '^apps/api/'; then
+    exit 0
+fi
+
+cd "$TOPLEVEL/apps/api"
+
 if ! docker compose ps --status running --quiet app > /dev/null 2>&1; then
     echo ""
     echo "  ⚠  contêineres não estão rodando — 'make up' antes de commitar"
@@ -16,7 +30,7 @@ if ! docker compose ps --status running --quiet app > /dev/null 2>&1; then
 fi
 
 echo ""
-echo "  Verificando padrões antes do commit..."
+echo "  Verificando padrões antes do commit (apps/api)..."
 echo ""
 
 make check

@@ -9,13 +9,14 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\HasApiTokens;
 
 #[Fillable(['name', 'email', 'password', 'avatar_path'])]
-#[Hidden(['password', 'remember_token'])]
+#[Hidden(['password', 'remember_token', 'mfa_secret'])]
 /**
  * Usuário autenticável do sistema (área /admin).
  *
@@ -40,6 +41,18 @@ class User extends Authenticatable
 {
     /** @use HasFactory<UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
+
+    /** @return HasMany<Context, $this> */
+    public function contexts(): HasMany
+    {
+        return $this->hasMany(Context::class);
+    }
+
+    /** Se o usuário já confirmou o MFA (D-10) — só então o login passa a exigir o segundo fator. */
+    public function hasMfaEnabled(): bool
+    {
+        return $this->mfa_confirmed_at !== null;
+    }
 
     /**
      * Filtra por trecho de nome ou e-mail.
@@ -87,6 +100,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'last_login_at' => 'datetime',
+            'mfa_secret' => 'encrypted',
+            'mfa_confirmed_at' => 'datetime',
         ];
     }
 }

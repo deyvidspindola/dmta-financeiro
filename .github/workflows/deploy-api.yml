@@ -63,7 +63,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: apps/api/vendor
-          key: composer-${{ hashFiles('composer.lock') }}
+          key: composer-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-
 
       - name: Instalar dependências PHP
@@ -74,6 +74,7 @@ jobs:
         with:
           node-version: '22'
           cache: npm
+          cache-dependency-path: apps/api/package-lock.json
 
       - name: Buildar assets
         run: |

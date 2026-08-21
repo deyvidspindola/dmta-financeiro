@@ -27,7 +27,8 @@ setup: ## Primeira execução: sobe tudo, instala e prepara o banco e os hooks
 	$(APP) php artisan key:generate
 	$(APP) php artisan migrate --seed
 	$(APP) php artisan storage:link
-	@cp bin/hooks/pre-commit .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+	@cp bin/hooks/pre-commit "$$(git rev-parse --git-common-dir)/hooks/pre-commit" \
+		&& chmod +x "$$(git rev-parse --git-common-dir)/hooks/pre-commit"
 	@echo ""
 	@echo "  \033[32mPronto.\033[0m  App: http://localhost:8090   E-mails: http://localhost:8027"
 	@echo "  Login de teste: admin@example.com / password (só em desenvolvimento local)"

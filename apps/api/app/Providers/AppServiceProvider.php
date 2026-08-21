@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Domain\Capture\EmailBoletoReaderInterface;
+use App\Domain\Capture\PdfBoletoReader;
 use Illuminate\Support\ServiceProvider;
 
 /**
@@ -30,7 +32,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        // Único canal de captura por e-mail hoje — trocar por outra
+        // implementação (ex.: OCR real) é mudar só esta linha.
+        $this->app->bind(EmailBoletoReaderInterface::class, PdfBoletoReader::class);
     }
 
     /**
