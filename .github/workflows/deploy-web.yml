@@ -70,8 +70,14 @@ jobs:
           SSH_USER: ${{ secrets.SSH_USER }}
           WEB_ROOT: ${{ secrets.WEB_ROOT }}
         run: |
-          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "mkdir -p '$WEB_ROOT/app'"
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "mkdir -p '$WEB_ROOT/app' && chmod 755 '$WEB_ROOT/app'"
           rsync -az --delete \
             -e "ssh -p $SSH_PORT -i ~/.ssh/id_ed25519" \
             dist/ \
             "$SSH_USER@$SSH_HOST:$WEB_ROOT/app/"
+          # Apache precisa de -x em toda pasta e -r em todo arquivo pra
+          # RewriteCond %{REQUEST_FILENAME} -d/-f enxergar isso como
+          # "existe" — sem isso, tudo sob /app cai no roteador do Laravel
+          # (404 dele, não da Apache) mesmo com o arquivo lá.
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "find '$WEB_ROOT/app' -type d -exec chmod 755 {} + && find '$WEB_ROOT/app' -type f -exec chmod 644 {} +"
