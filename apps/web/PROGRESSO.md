@@ -1,6 +1,6 @@
 # Progresso — apps/web (F0 + início F1)
 
-Atualizado em 2026-08-21 (capturas de boleto por e-mail — revisão).
+Atualizado em 2026-08-21 (capturas validadas — inclusive campo ausente).
 
 ## Feito
 
@@ -11,6 +11,8 @@ Atualizado em 2026-08-21 (capturas de boleto por e-mail — revisão).
 - **F1 captura (D-06):** tela `/bill-captures` — lista pendências,
   confirmar (escolhe contexto + form editável) e rejeitar; badge de origem
   (e-mail); menu “Capturas”
+- Teste manual ok: listar, confirmar → Bill com `origin: email`, rejeitar,
+  e pendência sem `due_date` (lista “—”, form exige preencher)
 - `npm run build` ok
 
 ## Falta / pendências
