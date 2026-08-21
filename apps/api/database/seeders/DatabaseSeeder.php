@@ -9,6 +9,7 @@ use App\DTOs\RegisterAccountData;
 use App\DTOs\RegisterTransactionData;
 use App\Enums\ContextType;
 use App\Enums\StatementEntryType;
+use App\Models\Company;
 use App\Models\User;
 use App\UseCases\Account\RegisterAccount;
 use App\UseCases\Category\CreateCategory;
@@ -64,6 +65,7 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->seedDemoPfContext($user);
+        $this->seedDemoCompanyContext($user);
     }
 
     /** Contexto PF, uma conta, duas categorias e um lançamento — só para não abrir tela vazia. */
@@ -93,6 +95,30 @@ class DatabaseSeeder extends Seeder
             type: StatementEntryType::Expense,
             occurredAt: now()->toDateString(),
             categoryId: $category->id,
+        ));
+    }
+
+    /**
+     * Segundo contexto de exemplo (empresa) — só para o dashboard
+     * consolidado ter o que consolidar de verdade (D-03), sem misturar
+     * com o saldo da conta PF acima.
+     */
+    private function seedDemoCompanyContext(User $user): void
+    {
+        $company = Company::create(['name' => 'Exemplo Serviços LTDA', 'document' => '12345678000199']);
+
+        $context = app(CreateContext::class)->execute(new CreateContextData(
+            userId: $user->id,
+            type: ContextType::Company,
+            name: 'Exemplo Serviços',
+            companyId: $company->id,
+        ));
+
+        app(RegisterAccount::class)->execute(new RegisterAccountData(
+            contextId: $context->id,
+            name: 'Conta PJ',
+            institution: 'Banco de teste',
+            initialBalance: 5000.0,
         ));
     }
 }
