@@ -9,17 +9,23 @@ use App\Enums\CaptureOrigin;
 use App\Enums\StatementEntryType;
 use App\Exceptions\Domain\AccountContextMismatchException;
 use App\Exceptions\Domain\SameAccountTransferException;
+use App\Http\Controllers\Api\V1\TransferController;
 use App\Models\Account;
 use App\Models\StatementEntry;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Transfere valor entre duas contas do mesmo contexto — gera duas
+ * Transfere valor entre duas contas — do mesmo contexto ou de contextos
+ * diferentes (PF ⇄ empresa, ou entre duas empresas). Gera duas
  * {@see StatementEntry} do tipo `transfer` ligadas por `transfer_pair_id`
- * (débito na origem, crédito no destino), cada uma movendo o saldo da
- * sua própria conta. Nunca usa categoria (transferência não é
- * receita/despesa) e nunca atravessa contexto — pra isso existe o fluxo
- * de mover cadastro ({@see MoveTransactionToContext}), que é outra coisa.
+ * (débito na origem, crédito no destino), cada uma no `context_id` da sua
+ * própria conta e movendo o saldo dela. Nunca usa categoria (transferência
+ * não é receita/despesa).
+ *
+ * Quem autoriza que os dois contextos pertencem ao mesmo usuário é quem
+ * chama este caso de uso ({@see TransferController}),
+ * resolvendo `to_context_id` via `$user->contexts()` — aqui só confere
+ * que cada conta bate com o contexto que foi passado pro seu lado.
  *
  * @package App\UseCases\Transaction
  *
@@ -37,7 +43,7 @@ final class TransferBetweenAccounts
      * @return array{from: StatementEntry, to: StatementEntry}
      *
      * @throws SameAccountTransferException Se origem e destino forem a mesma conta.
-     * @throws AccountContextMismatchException Se alguma conta não for do contexto informado.
+     * @throws AccountContextMismatchException Se alguma conta não pertence ao contexto informado pro seu lado.
      */
     public function execute(TransferBetweenAccountsData $data): array
     {
@@ -51,12 +57,12 @@ final class TransferBetweenAccounts
             /** @var Account $to */
             $to = Account::query()->whereKey($data->toAccountId)->lockForUpdate()->firstOrFail();
 
-            if ($from->context_id !== $data->contextId || $to->context_id !== $data->contextId) {
+            if ($from->context_id !== $data->fromContextId || $to->context_id !== $data->toContextId) {
                 throw new AccountContextMismatchException;
             }
 
             $fromEntry = StatementEntry::create([
-                'context_id' => $data->contextId,
+                'context_id' => $from->context_id,
                 'account_id' => $from->id,
                 'description' => $data->description,
                 'amount' => $data->amount,
@@ -66,7 +72,7 @@ final class TransferBetweenAccounts
             ]);
 
             $toEntry = StatementEntry::create([
-                'context_id' => $data->contextId,
+                'context_id' => $to->context_id,
                 'account_id' => $to->id,
                 'description' => $data->description,
                 'amount' => $data->amount,

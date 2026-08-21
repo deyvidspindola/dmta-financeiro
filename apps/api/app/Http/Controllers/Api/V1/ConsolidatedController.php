@@ -46,7 +46,7 @@ final class ConsolidatedController extends Controller
     public function transactions(Request $request): AnonymousResourceCollection
     {
         $contextIds = $request->user()->contexts()->pluck('id');
-        $entries = StatementEntry::query()->with('context')
+        $entries = StatementEntry::query()->with(['context', 'transferPair.account.context'])
             ->whereIn('context_id', $contextIds)
             ->latest('occurred_at')
             ->get();

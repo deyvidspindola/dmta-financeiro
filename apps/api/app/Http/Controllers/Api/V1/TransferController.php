@@ -12,7 +12,9 @@ use App\Models\Context;
 use App\UseCases\Transaction\TransferBetweenAccounts;
 
 /**
- * Transferência entre duas contas do mesmo contexto — ver
+ * Transferência entre duas contas — do próprio `{context}` da URL (mesmo
+ * comportamento de sempre) ou pra outro contexto do usuário
+ * (`to_context_id`), incluindo PF ⇄ empresa. Ver
  * {@see TransferBetweenAccounts}.
  *
  * @package App\Http\Controllers\Api\V1
@@ -29,8 +31,18 @@ final class TransferController extends Controller
 {
     public function store(StoreTransferRequest $request, Context $context, TransferBetweenAccounts $useCase): TransferResource
     {
+        // `to_context_id` só pode ser um contexto do próprio usuário —
+        // checado aqui via relação, nunca confiando no ID cru do request
+        // (mesma razão do MoveTransactionController). Omitido, cai no
+        // próprio {context} da URL — já autorizado pelo `can:view,context`
+        // da rota.
+        $toContext = $request->filled('to_context_id')
+            ? $request->user()->contexts()->findOrFail($request->integer('to_context_id'))
+            : $context;
+
         $result = $useCase->execute(new TransferBetweenAccountsData(
-            contextId: $context->id,
+            fromContextId: $context->id,
+            toContextId: $toContext->id,
             fromAccountId: $request->integer('from_account_id'),
             toAccountId: $request->integer('to_account_id'),
             amount: (float) $request->input('amount'),

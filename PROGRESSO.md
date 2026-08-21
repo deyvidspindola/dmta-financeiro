@@ -64,6 +64,16 @@ Atualizado em 21/08/2026.
   desta correção. Tudo validado via curl contra o Docker local antes do
   deploy (saldo, isolamento de contexto, reversão de
   transferência/edição, guard rails de erro).
+- **Ajuste pedido logo em seguida:** transferência passou a aceitar
+  contexto de origem e destino diferentes (PF ⇄ empresa, ou entre duas
+  empresas) — `POST transfers` ganhou `to_context_id` opcional (omitido,
+  continua sendo dentro do mesmo contexto de sempre). Cada perna grava o
+  `context_id` da sua própria conta, não um único contexto passado.
+  `GET/PATCH transactions/{id}` agora devolve um bloco `transfer: {from,
+  to}` (contexto + conta de cada lado) quando o lançamento é
+  transferência, pra tela mostrar "de onde saiu → pra onde foi" ao
+  visualizar. Validado cross-context via curl: saldo, visualização pelos
+  dois lados, apagar por qualquer lado reverte os dois saldos.
 
 ## F0 / web (PR #1 — `feature/f0-web-scaffold`)
 
