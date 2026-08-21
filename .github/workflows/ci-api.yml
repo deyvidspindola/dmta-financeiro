@@ -50,7 +50,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: apps/api/vendor
-          key: composer-${{ hashFiles('composer.lock') }}
+          key: composer-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-
 
       - name: Instalar dependências
@@ -95,7 +95,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: apps/api/vendor
-          key: composer-${{ hashFiles('composer.lock') }}
+          key: composer-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-
 
       - name: Instalar dependências
@@ -106,6 +106,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: apps/api/package-lock.json
 
       # welcome.blade.php e os layouts usam @vite — sem o manifest, qualquer
       # teste que renderize essas views falha com ViteManifestNotFoundException.
@@ -148,7 +149,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: apps/api/vendor
-          key: composer-${{ hashFiles('composer.lock') }}
+          key: composer-${{ hashFiles('apps/api/composer.lock') }}
           restore-keys: composer-
 
       - name: Instalar dependências PHP
@@ -159,6 +160,7 @@ jobs:
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
+          cache-dependency-path: apps/api/package-lock.json
 
       - name: Instalar e buildar
         run: |
