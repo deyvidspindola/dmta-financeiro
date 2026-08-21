@@ -7,6 +7,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Sanctum\Http\Middleware\CheckForAnyAbility;
+use Sentry\Laravel\Integration as SentryIntegration;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -30,4 +31,10 @@ return Application::configure(basePath: dirname(__DIR__))
         // cliente, não do servidor — 422, igual a uma falha de validação,
         // nunca 500.
         $exceptions->render(fn (DomainException $e) => new JsonResponse(['message' => $e->getMessage()], 422));
+
+        // Sentry desde o primeiro bloco de código (F0), mesmo sem DSN
+        // configurado ainda — sem SENTRY_LARAVEL_DSN no .env o SDK só não
+        // envia nada, não quebra. Configurar o DSN é ligar o monitoramento,
+        // não escrever código novo.
+        SentryIntegration::handles($exceptions);
     })->create();
