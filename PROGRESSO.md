@@ -3,6 +3,22 @@
 - **F0 / web + início F1:** SPA na `feature/f0-web-scaffold` (PR #1) —
   revisão de captura de boleto validada (incl. campos nulos) — ver
   `apps/web/PROGRESSO.md`.
+- **Deploy real em produção** (`financeiro.dmta.dev.br/app/`): bug de
+  tela em branco resolvido em duas partes — permissão de arquivo no
+  Apache (`chmod` após rsync) e `base: '/app/'` no Vite (assets
+  apontavam pra raiz do domínio). `VITE_API_BASE_URL` também faltava no
+  build. Usuário real criado via `seed-admin.yml` (workflow manual, sem
+  depender de SSH interativo — ver `ProductionAdminSeeder`).
+- **Melhorias pedidas em produção (21/08/2026):** SPA fallback
+  (`.htaccess` em `apps/web/public/`) pro F5 não cair em 404 depois do
+  login; editar/visualizar lançamento; transferência entre contas;
+  mover lançamento entre contextos (PF ⇄ empresa); lançamento
+  recorrente/despesa fixa; visão consolidada de verdade (contas,
+  lançamentos, boletos — não só o dashboard) com coluna de origem;
+  modais sem fechar no backdrop; ícones (`lucide-react`) nas tabelas;
+  tela de categorias/subcategorias. Backend 100% testado via curl contra
+  o Docker local antes do deploy (saldo, isolamento de contexto, reversão
+  de transferência/edição) — detalhes na seção "F0 / api" abaixo.
 
 Atualizado em 21/08/2026.
 
@@ -28,13 +44,26 @@ Atualizado em 21/08/2026.
   `http://localhost:8090`, com usuário de demonstração
   `admin@example.com` / `password` (contexto PF "Pessoal" + contexto PJ
   "Exemplo Serviços", ambos com dado real pra não abrir tela vazia).
-- **Pendente:** deploy real em HostGator — infraestrutura do servidor já
-  criada (banco, .env parcial, secrets do GitHub Environment `staging`
-  cadastrados), mas SSH da conta ficou temporariamente bloqueado no meio
-  do processo (excesso de conexões) — aguardando o suporte da HostGator
-  liberar. Retomar: terminar `.env` do servidor e rodar
-  `gh workflow run deploy-api.yml --ref feature/f0-modelo-de-dados` (ou
-  aguardar merge em `main`) assim que a porta 2222 voltar.
+- **Deploy real em produção concluído** — `financeiro.dmta.dev.br`. Ver
+  nota no topo do arquivo.
+- **21/08/2026, rodada de melhorias pedidas em produção:** editar
+  lançamento (`PATCH transactions/{id}`, bloqueado pra perna de
+  transferência/boleto), transferência entre contas (`POST transfers`,
+  duas `StatementEntry` ligadas por `transfer_pair_id`, apagar uma
+  reverte/apaga as duas), mover lançamento entre contextos PF ⇄ empresa
+  (`POST transactions/{id}/move`), lançamento recorrente/despesa fixa
+  (tabela `recurring_transactions` + job diário
+  `GenerateRecurringTransactionEntries`, reusa `RegisterTransaction`),
+  visão consolidada de listagem de verdade (`GET consolidated/accounts
+  |transactions|bills`, cada item com `context` embutido pra coluna de
+  origem — não só o dashboard, que já existia). Bug real encontrado no
+  caminho: `Context` não tinha método `transactions()` — o
+  `scopeBindings()` das rotas precisa dele (nome vem de
+  `Str::plural(Str::camel('transaction'))`), então toda rota
+  `transactions/{transaction}` quebrava com "undefined method" antes
+  desta correção. Tudo validado via curl contra o Docker local antes do
+  deploy (saldo, isolamento de contexto, reversão de
+  transferência/edição, guard rails de erro).
 
 ## F0 / web (PR #1 — `feature/f0-web-scaffold`)
 

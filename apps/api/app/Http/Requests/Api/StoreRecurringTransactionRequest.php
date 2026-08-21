@@ -4,19 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\UseCases\Transaction\TransferBetweenAccounts;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/transactions` (lançamento
- * manual — F0). `account_id`, `category_id` e `bill_id` são checados
- * quanto a pertencer ao mesmo contexto no controller, não aqui (regra de
- * negócio, não formato de campo).
- *
- * `transfer` não é um tipo aceito aqui — transferência tem endpoint
- * próprio (`POST .../transfers`, {@see TransferBetweenAccounts}),
- * uma única perna não representa uma transferência corretamente.
+ * Validação de `POST /api/v1/contexts/{context}/recurring-transactions`.
+ * `end_date` nulo = "despesa fixa" (recorrência indefinida) na tela.
  *
  * @package App\Http\Requests\Api
  *
@@ -28,7 +21,7 @@ use Illuminate\Validation\Rule;
  *
  * @updated 21/08/2026
  */
-final class StoreTransactionRequest extends FormRequest
+final class StoreRecurringTransactionRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -43,9 +36,10 @@ final class StoreTransactionRequest extends FormRequest
             'description' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'type' => ['required', Rule::in(['income', 'expense'])],
-            'occurred_at' => ['required', 'date'],
+            'interval' => ['required', Rule::in(['weekly', 'monthly', 'yearly'])],
+            'start_date' => ['required', 'date'],
+            'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'bill_id' => ['nullable', 'integer', 'exists:bills,id'],
         ];
     }
 }

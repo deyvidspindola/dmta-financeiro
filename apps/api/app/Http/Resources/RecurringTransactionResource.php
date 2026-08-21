@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Resources;
 
-use App\Models\StatementEntry;
+use App\Models\RecurringTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 /**
- * Formato de saída de um {@see StatementEntry}.
+ * Formato de saída de uma {@see RecurringTransaction}.
  *
- * @mixin StatementEntry
+ * @mixin RecurringTransaction
  *
  * @package App\Http\Resources
  *
@@ -23,7 +23,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @updated 21/08/2026
  */
-final class StatementEntryResource extends JsonResource
+final class RecurringTransactionResource extends JsonResource
 {
     /** @return array<string, mixed> */
     public function toArray(Request $request): array
@@ -32,18 +32,20 @@ final class StatementEntryResource extends JsonResource
             'id' => $this->id,
             'account_id' => $this->account_id,
             'category_id' => $this->category_id,
-            'bill_id' => $this->bill_id,
-            'transfer_pair_id' => $this->transfer_pair_id,
-            'recurring_transaction_id' => $this->recurring_transaction_id,
             'description' => $this->description,
             'amount' => (float) $this->amount,
             // @phpstan-ignore-next-line property.nonObject (cast StatementEntryType da migration)
             'type' => $this->type->value,
+            // @phpstan-ignore-next-line property.nonObject (cast RecurrenceInterval da migration)
+            'interval' => $this->interval->value,
             // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
-            'occurred_at' => $this->occurred_at->toDateString(),
-            'origin' => $this->origin,
-            // Só presente na visão consolidada — ver AccountResource.
-            'context' => new ContextResource($this->whenLoaded('context')),
+            'start_date' => $this->start_date->toDateString(),
+            // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
+            'end_date' => $this->end_date?->toDateString(),
+            // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
+            'next_occurrence_date' => $this->next_occurrence_date->toDateString(),
+            'is_fixed' => $this->isFixed(),
+            'active' => (bool) $this->active,
         ];
     }
 }

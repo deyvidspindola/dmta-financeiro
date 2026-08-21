@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\GenerateRecurringTransactionEntries;
 use App\Jobs\PollBoletoMailbox;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -21,4 +22,10 @@ Schedule::command('queue:work --stop-when-empty --max-time=50')
 // services.boleto_mailbox.enabled não for true (ver PollBoletoMailbox).
 Schedule::job(new PollBoletoMailbox)
     ->everyFiveMinutes()
+    ->withoutOverlapping();
+
+// Materializa ocorrências de lançamento recorrente/despesa fixa vencidas.
+// Diário basta — recorrência nunca tem granularidade menor que "dia".
+Schedule::job(new GenerateRecurringTransactionEntries)
+    ->daily()
     ->withoutOverlapping();

@@ -71,6 +71,22 @@ class Context extends Model
         return $this->hasMany(StatementEntry::class);
     }
 
+    /**
+     * Alias de {@see statementEntries()} — existe só porque o
+     * `scopeBindings()` das rotas resolve `{transaction}` chamando
+     * `Str::plural(Str::camel('transaction'))` = `transactions()`, não
+     * o nome real da relação. Sem isto, toda rota
+     * `contexts/{context}/transactions/{transaction}` quebra com "Call
+     * to undefined method" (bug real encontrado em produção, não
+     * hipotético — ver Model::childRouteBindingRelationshipName()).
+     *
+     * @return HasMany<StatementEntry, $this>
+     */
+    public function transactions(): HasMany
+    {
+        return $this->statementEntries();
+    }
+
     /** @return HasMany<CreditCard, $this> */
     public function creditCards(): HasMany
     {
@@ -81,6 +97,12 @@ class Context extends Model
     public function investments(): HasMany
     {
         return $this->hasMany(Investment::class);
+    }
+
+    /** @return HasMany<RecurringTransaction, $this> */
+    public function recurringTransactions(): HasMany
+    {
+        return $this->hasMany(RecurringTransaction::class);
     }
 
     /** Se este é o contexto pessoa física do usuário. */
