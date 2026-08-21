@@ -12,6 +12,7 @@ import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
+import { OriginBadge } from '@/components/OriginBadge'
 import {
   Button,
   DataTable,
@@ -237,6 +238,7 @@ export function BillsPage() {
             strings.bills.dueDate,
             strings.bills.kind,
             strings.bills.status,
+            strings.billCaptures.origin,
             strings.common.actions,
           ]}
         >
@@ -247,6 +249,9 @@ export function BillsPage() {
               <td>{formatDate(bill.due_date)}</td>
               <td>{strings.bills.kinds[bill.kind]}</td>
               <td>{strings.bills.statuses[bill.status]}</td>
+              <td>
+                <OriginBadge origin={bill.origin} />
+              </td>
               <td className="actions-cell">
                 <Button
                   variant="ghost"

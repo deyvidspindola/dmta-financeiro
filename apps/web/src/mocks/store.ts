@@ -2,6 +2,9 @@ import type {
   Account,
   AuthSession,
   Bill,
+  BillCapture,
+  BillCaptureStatus,
+  BillKind,
   CardInvoice,
   Category,
   Context,
@@ -169,6 +172,19 @@ let investments: Investment[] = [
     institution: 'B3',
     current_position: 15400,
     invested_amount: 14000,
+  },
+]
+
+let billCaptures: BillCapture[] = [
+  {
+    id: 'cap_1',
+    origin: 'email',
+    linha_digitavel: '23793381286000000015368000063305988820000025090',
+    amount: 250.9,
+    due_date: '2026-09-01',
+    beneficiary: 'Empresa Teste LTDA',
+    status: 'pending',
+    created_at: '2026-08-21T12:00:00+00:00',
   },
 ]
 
@@ -582,6 +598,64 @@ export const mockApi = {
     await delay()
     investments = investments.filter(
       (row) => !(row.context_id === contextId && row.id === investmentId),
+    )
+  },
+
+  async listBillCaptures(
+    status: BillCaptureStatus | 'all' = 'pending',
+  ): Promise<BillCapture[]> {
+    await delay()
+    if (status === 'all') return [...billCaptures]
+    return billCaptures.filter((row) => row.status === status)
+  },
+
+  async confirmBillCapture(
+    captureId: string,
+    payload: {
+      context_id: string
+      description: string
+      amount: number
+      due_date: string
+      direction: BillKind
+      category_id: string | null
+      beneficiary: string | null
+    },
+  ): Promise<Bill> {
+    await delay()
+    const index = billCaptures.findIndex((row) => row.id === captureId)
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const capture = billCaptures[index]!
+    if (capture.status !== 'pending') {
+      throw Object.assign(new Error('Captura já processada.'), { status: 422 })
+    }
+    const bill: Bill = {
+      id: id('bill'),
+      context_id: payload.context_id,
+      description: payload.description,
+      amount: payload.amount,
+      due_date: payload.due_date,
+      status: 'pending',
+      kind: payload.direction,
+      category_id: payload.category_id,
+      barcode: capture.linha_digitavel,
+      origin: 'email',
+    }
+    bills = [...bills, bill]
+    billCaptures = billCaptures.map((row, i) =>
+      i === index ? { ...row, status: 'confirmed' as const } : row,
+    )
+    return bill
+  },
+
+  async rejectBillCapture(captureId: string): Promise<void> {
+    await delay()
+    const index = billCaptures.findIndex((row) => row.id === captureId)
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    if (billCaptures[index]!.status !== 'pending') {
+      throw Object.assign(new Error('Captura já processada.'), { status: 422 })
+    }
+    billCaptures = billCaptures.map((row, i) =>
+      i === index ? { ...row, status: 'rejected' as const } : row,
     )
   },
 }

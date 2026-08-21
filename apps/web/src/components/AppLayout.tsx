@@ -9,6 +9,7 @@ const links = [
   { to: '/accounts', label: strings.nav.accounts },
   { to: '/credit-cards', label: strings.nav.creditCards },
   { to: '/bills', label: strings.nav.bills },
+  { to: '/bill-captures', label: strings.nav.billCaptures },
   { to: '/transactions', label: strings.nav.transactions },
   { to: '/investments', label: strings.nav.investments },
   { to: '/security', label: strings.nav.security },

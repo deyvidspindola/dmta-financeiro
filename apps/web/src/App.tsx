@@ -7,6 +7,7 @@ import { DashboardPage } from '@/pages/DashboardPage'
 import { AccountsPage } from '@/pages/AccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
+import { BillCapturesPage } from '@/pages/BillCapturesPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
 import { InvestmentsPage } from '@/pages/InvestmentsPage'
 import { SecurityPage } from '@/pages/SecurityPage'
@@ -44,6 +45,7 @@ export default function App() {
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="credit-cards" element={<CreditCardsPage />} />
             <Route path="bills" element={<BillsPage />} />
+            <Route path="bill-captures" element={<BillCapturesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="investments" element={<InvestmentsPage />} />
             <Route path="security" element={<SecurityPage />} />

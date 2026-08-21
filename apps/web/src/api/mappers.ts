@@ -4,6 +4,8 @@ import type {
   Account,
   AccountType,
   Bill,
+  BillCapture,
+  BillCaptureStatus,
   BillKind,
   BillStatus,
   CaptureOrigin,
@@ -185,7 +187,7 @@ export function mapBill(
         ? null
         : asId(raw.category_id),
     barcode: raw.barcode ?? null,
-    origin: raw.origin ?? 'manual',
+    origin: mapOrigin(raw.origin),
   }
 }
 
@@ -264,7 +266,7 @@ export function mapTransaction(
     amount: Number(raw.amount),
     type: raw.type,
     date: raw.occurred_at ?? raw.date ?? '',
-    origin: raw.origin ?? 'manual',
+    origin: mapOrigin(raw.origin),
   }
 }
 
@@ -471,6 +473,78 @@ type ApiDashboardSlice = {
   month_income: number
   month_expense: number
   investments_total: number
+}
+
+export function mapOrigin(raw: unknown): CaptureOrigin {
+  if (
+    raw === 'manual' ||
+    raw === 'email' ||
+    raw === 'telegram' ||
+    raw === 'scanner' ||
+    raw === 'aggregator'
+  ) {
+    return raw
+  }
+  if (
+    typeof raw === 'object' &&
+    raw !== null &&
+    'value' in raw &&
+    typeof (raw as { value: unknown }).value === 'string'
+  ) {
+    return mapOrigin((raw as { value: string }).value)
+  }
+  return 'manual'
+}
+
+export function mapBillCapture(raw: {
+  id: string | number
+  origin: unknown
+  linha_digitavel: string | null
+  amount: number | null
+  due_date: string | null
+  beneficiary: string | null
+  status: BillCaptureStatus
+  created_at?: string | null
+}): BillCapture {
+  return {
+    id: asId(raw.id),
+    origin: mapOrigin(raw.origin),
+    linha_digitavel: raw.linha_digitavel,
+    amount: raw.amount === null ? null : Number(raw.amount),
+    due_date: raw.due_date,
+    beneficiary: raw.beneficiary,
+    status: raw.status,
+    created_at: raw.created_at ?? null,
+  }
+}
+
+export function toConfirmBillCaptureBody(payload: {
+  context_id: string
+  description: string
+  amount: number
+  due_date: string
+  direction: BillKind
+  category_id: string | null
+  beneficiary: string | null
+}): {
+  context_id: number
+  description: string
+  amount: number
+  due_date: string
+  direction: BillKind
+  category_id: number | null
+  beneficiary: string | null
+} {
+  return {
+    context_id: asApiId(payload.context_id),
+    description: payload.description,
+    amount: payload.amount,
+    due_date: payload.due_date,
+    direction: payload.direction,
+    category_id:
+      payload.category_id === null ? null : asApiId(payload.category_id),
+    beneficiary: payload.beneficiary,
+  }
 }
 
 export function mapDashboard(

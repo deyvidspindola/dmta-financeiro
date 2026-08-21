@@ -9,6 +9,7 @@ export const strings = {
     accounts: 'Contas',
     creditCards: 'Cartões',
     bills: 'Boletos',
+    billCaptures: 'Capturas',
     transactions: 'Lançamentos',
     investments: 'Investimentos',
     logout: 'Sair',
@@ -165,6 +166,37 @@ export const strings = {
     updated: 'Investimento atualizado.',
     deleted: 'Investimento excluído.',
     confirmDelete: 'Excluir este investimento?',
+  },
+
+  billCaptures: {
+    title: 'Boletos capturados',
+    hint: 'Revise o que chegou por e-mail antes de gravar no contexto certo.',
+    empty: 'Nenhuma captura neste filtro.',
+    origin: 'Origem',
+    linhaDigitavel: 'Linha digitável',
+    linhaMissing: 'Linha digitável não extraída',
+    beneficiary: 'Beneficiário',
+    confirm: 'Confirmar',
+    reject: 'Rejeitar',
+    confirmTitle: 'Confirmar boleto capturado',
+    confirmed: 'Boleto confirmado e cadastrado.',
+    rejected: 'Captura rejeitada.',
+    confirmReject: 'Rejeitar esta captura sem criar boleto?',
+    statusFilter: 'Situação',
+    statuses: {
+      pending: 'Pendentes',
+      confirmed: 'Confirmadas',
+      rejected: 'Rejeitadas',
+      all: 'Todas',
+    },
+  },
+
+  origin: {
+    manual: 'Manual',
+    email: 'E-mail',
+    telegram: 'Telegram',
+    scanner: 'Scanner',
+    aggregator: 'Open Finance',
   },
 
   categories: {

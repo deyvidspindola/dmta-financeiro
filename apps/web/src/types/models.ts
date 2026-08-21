@@ -2,7 +2,25 @@
 
 export type ContextType = 'pf' | 'pj'
 
-export type CaptureOrigin = 'manual'
+export type CaptureOrigin =
+  | 'manual'
+  | 'email'
+  | 'telegram'
+  | 'scanner'
+  | 'aggregator'
+
+export type BillCaptureStatus = 'pending' | 'confirmed' | 'rejected'
+
+export interface BillCapture {
+  id: string
+  origin: CaptureOrigin
+  linha_digitavel: string | null
+  amount: number | null
+  due_date: string | null
+  beneficiary: string | null
+  status: BillCaptureStatus
+  created_at: string | null
+}
 
 export type MoneyDirection = 'income' | 'expense'
 
