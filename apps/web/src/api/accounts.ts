@@ -28,3 +28,11 @@ export async function createAccount(
   )
   return mapAccount(contextId, created)
 }
+
+export async function deleteAccount(
+  contextId: string,
+  accountId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.deleteAccount(contextId, accountId)
+  await http.delete(`/contexts/${contextId}/accounts/${accountId}`)
+}

@@ -9,7 +9,7 @@ import { formatDate, formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import {
   Button,
   DataTable,
@@ -121,6 +121,23 @@ export function CreditCardsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (creditCardId: string) =>
+      creditCardsApi.deleteCreditCard(contextId!, creditCardId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['credit-cards'] })
+      await queryClient.invalidateQueries({ queryKey: ['card-invoices'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.creditCards.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function handleDelete(creditCardId: string) {
+    if (!window.confirm(strings.creditCards.confirmDelete)) return
+    deleteMutation.mutate(creditCardId)
+  }
+
   const cards = cardsQuery.data ?? []
   const invoices = invoicesQuery.data ?? []
 
@@ -170,6 +187,7 @@ export function CreditCardsPage() {
             strings.creditCards.limit,
             strings.creditCards.closingDay,
             strings.creditCards.dueDay,
+            strings.common.actions,
           ]}
         >
           {cards.map((card) => (
@@ -179,6 +197,15 @@ export function CreditCardsPage() {
               <td className="mono">{formatMoney(card.limit)}</td>
               <td>{card.closing_day}</td>
               <td>{card.due_day}</td>
+              <td>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDelete(card.id)}
+                  disabled={deleteMutation.isPending || !contextId}
+                >
+                  {strings.common.delete}
+                </Button>
+              </td>
             </tr>
           ))}
         </DataTable>

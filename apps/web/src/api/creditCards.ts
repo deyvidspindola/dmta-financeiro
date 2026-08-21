@@ -45,6 +45,14 @@ export async function createCreditCard(
   return mapCreditCard(contextId, created)
 }
 
+export async function deleteCreditCard(
+  contextId: string,
+  creditCardId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.deleteCreditCard(contextId, creditCardId)
+  await http.delete(`/contexts/${contextId}/credit-cards/${creditCardId}`)
+}
+
 export async function listCardInvoices(
   contextId: string,
 ): Promise<CardInvoice[]> {

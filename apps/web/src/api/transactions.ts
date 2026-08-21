@@ -36,3 +36,11 @@ export async function createTransaction(
   )
   return mapTransaction(contextId, created)
 }
+
+export async function deleteTransaction(
+  contextId: string,
+  transactionId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.deleteTransaction(contextId, transactionId)
+  await http.delete(`/contexts/${contextId}/transactions/${transactionId}`)
+}

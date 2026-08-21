@@ -6,9 +6,10 @@ import { z } from 'zod'
 import { investmentsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import {
   Button,
   DataTable,
@@ -73,6 +74,22 @@ export function InvestmentsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (investmentId: string) =>
+      investmentsApi.deleteInvestment(contextId!, investmentId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['investments'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.investments.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function handleDelete(investmentId: string) {
+    if (!window.confirm(strings.investments.confirmDelete)) return
+    deleteMutation.mutate(investmentId)
+  }
+
   return (
     <div className="stack">
       <PageHeader
@@ -106,6 +123,7 @@ export function InvestmentsPage() {
             strings.investments.institution,
             strings.investments.investedAmount,
             strings.investments.currentPosition,
+            strings.common.actions,
           ]}
         >
           {data.map((item) => (
@@ -115,6 +133,15 @@ export function InvestmentsPage() {
               <td>{item.institution ?? '—'}</td>
               <td className="mono">{formatMoney(item.invested_amount)}</td>
               <td className="mono">{formatMoney(item.current_position)}</td>
+              <td>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDelete(item.id)}
+                  disabled={deleteMutation.isPending || !contextId}
+                >
+                  {strings.common.delete}
+                </Button>
+              </td>
             </tr>
           ))}
         </DataTable>

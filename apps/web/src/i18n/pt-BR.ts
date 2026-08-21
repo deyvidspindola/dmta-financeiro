@@ -68,6 +68,8 @@ export const strings = {
     balance: 'Saldo inicial',
     empty: 'Nenhuma conta cadastrada.',
     created: 'Conta cadastrada.',
+    deleted: 'Conta excluída.',
+    confirmDelete: 'Excluir esta conta?',
     types: {
       checking: 'Corrente',
       savings: 'Poupança',
@@ -88,6 +90,8 @@ export const strings = {
     invoices: 'Faturas',
     created: 'Cartão cadastrado.',
     invoiceCreated: 'Fatura registrada.',
+    deleted: 'Cartão excluído.',
+    confirmDelete: 'Excluir este cartão?',
   },
 
   bills: {
@@ -105,6 +109,8 @@ export const strings = {
     period: 'Vencimento',
     periodAll: 'Todos',
     created: 'Boleto cadastrado.',
+    deleted: 'Boleto excluído.',
+    confirmDelete: 'Excluir este boleto?',
     kinds: {
       payable: 'A pagar',
       receivable: 'A receber',
@@ -131,6 +137,8 @@ export const strings = {
     period: 'Período',
     periodAll: 'Todos',
     created: 'Lançamento registrado.',
+    deleted: 'Lançamento excluído.',
+    confirmDelete: 'Excluir este lançamento?',
     types: {
       income: 'Receita',
       expense: 'Despesa',
@@ -147,6 +155,8 @@ export const strings = {
     currentPosition: 'Posição atual',
     empty: 'Nenhum investimento cadastrado.',
     created: 'Investimento cadastrado.',
+    deleted: 'Investimento excluído.',
+    confirmDelete: 'Excluir este investimento?',
   },
 
   categories: {
@@ -174,6 +184,7 @@ export const strings = {
     select: 'Selecione…',
     currency: 'R$',
     close: 'Fechar',
+    delete: 'Excluir',
   },
 } as const
 

@@ -311,6 +311,13 @@ export const mockApi = {
     return row
   },
 
+  async deleteAccount(contextId: string, accountId: string): Promise<void> {
+    await delay()
+    accounts = accounts.filter(
+      (row) => !(row.context_id === contextId && row.id === accountId),
+    )
+  },
+
   async listCategories(
     contextId: string,
     type?: Category['type'],
@@ -365,6 +372,13 @@ export const mockApi = {
     return row
   },
 
+  async deleteBill(contextId: string, billId: string): Promise<void> {
+    await delay()
+    bills = bills.filter(
+      (row) => !(row.context_id === contextId && row.id === billId),
+    )
+  },
+
   async listTransactions(contextId: string): Promise<StatementEntry[]> {
     await delay()
     return byContext(transactions, contextId)
@@ -385,6 +399,16 @@ export const mockApi = {
     return row
   },
 
+  async deleteTransaction(
+    contextId: string,
+    transactionId: string,
+  ): Promise<void> {
+    await delay()
+    transactions = transactions.filter(
+      (row) => !(row.context_id === contextId && row.id === transactionId),
+    )
+  },
+
   async listCreditCards(contextId: string): Promise<CreditCard[]> {
     await delay()
     return byContext(creditCards, contextId)
@@ -402,6 +426,17 @@ export const mockApi = {
     }
     creditCards = [...creditCards, row]
     return row
+  },
+
+  async deleteCreditCard(
+    contextId: string,
+    creditCardId: string,
+  ): Promise<void> {
+    await delay()
+    creditCards = creditCards.filter(
+      (row) => !(row.context_id === contextId && row.id === creditCardId),
+    )
+    invoices = invoices.filter((row) => row.credit_card_id !== creditCardId)
   },
 
   async listInvoices(contextId: string): Promise<CardInvoice[]> {
@@ -445,5 +480,15 @@ export const mockApi = {
     }
     investments = [...investments, row]
     return row
+  },
+
+  async deleteInvestment(
+    contextId: string,
+    investmentId: string,
+  ): Promise<void> {
+    await delay()
+    investments = investments.filter(
+      (row) => !(row.context_id === contextId && row.id === investmentId),
+    )
   },
 }

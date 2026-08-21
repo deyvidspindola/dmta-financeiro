@@ -10,7 +10,7 @@ import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
@@ -121,6 +121,21 @@ export function BillsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (billId: string) => billsApi.deleteBill(contextId!, billId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['bills'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.bills.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function handleDelete(billId: string) {
+    if (!window.confirm(strings.bills.confirmDelete)) return
+    deleteMutation.mutate(billId)
+  }
+
   const categories = categoriesQuery.data ?? []
 
   return (
@@ -181,6 +196,7 @@ export function BillsPage() {
             strings.bills.dueDate,
             strings.bills.kind,
             strings.bills.status,
+            strings.common.actions,
           ]}
         >
           {filtered.map((bill) => (
@@ -190,6 +206,15 @@ export function BillsPage() {
               <td>{formatDate(bill.due_date)}</td>
               <td>{strings.bills.kinds[bill.kind]}</td>
               <td>{strings.bills.statuses[bill.status]}</td>
+              <td>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDelete(bill.id)}
+                  disabled={deleteMutation.isPending || !contextId}
+                >
+                  {strings.common.delete}
+                </Button>
+              </td>
             </tr>
           ))}
         </DataTable>

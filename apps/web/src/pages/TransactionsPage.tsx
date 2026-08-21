@@ -10,7 +10,7 @@ import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
@@ -116,6 +116,22 @@ export function TransactionsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (transactionId: string) =>
+      transactionsApi.deleteTransaction(contextId!, transactionId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.transactions.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function handleDelete(transactionId: string) {
+    if (!window.confirm(strings.transactions.confirmDelete)) return
+    deleteMutation.mutate(transactionId)
+  }
+
   const accounts = accountsQuery.data ?? []
   const categories = categoriesQuery.data ?? []
 
@@ -178,6 +194,7 @@ export function TransactionsPage() {
             strings.transactions.description,
             strings.transactions.type,
             strings.transactions.amount,
+            strings.common.actions,
           ]}
         >
           {filtered.map((tx) => (
@@ -186,6 +203,15 @@ export function TransactionsPage() {
               <td>{tx.description}</td>
               <td>{strings.transactions.types[tx.type]}</td>
               <td className="mono">{formatMoney(tx.amount)}</td>
+              <td>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDelete(tx.id)}
+                  disabled={deleteMutation.isPending || !contextId}
+                >
+                  {strings.common.delete}
+                </Button>
+              </td>
             </tr>
           ))}
         </DataTable>

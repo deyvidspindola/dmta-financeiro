@@ -28,3 +28,11 @@ export async function createBill(
   )
   return mapBill(contextId, created)
 }
+
+export async function deleteBill(
+  contextId: string,
+  billId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.deleteBill(contextId, billId)
+  await http.delete(`/contexts/${contextId}/bills/${billId}`)
+}

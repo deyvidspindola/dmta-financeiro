@@ -9,7 +9,7 @@ import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import {
   Button,
   DataTable,
@@ -74,6 +74,22 @@ export function AccountsPage() {
     },
   })
 
+  const deleteMutation = useMutation({
+    mutationFn: (accountId: string) =>
+      accountsApi.deleteAccount(contextId!, accountId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.accounts.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function handleDelete(accountId: string) {
+    if (!window.confirm(strings.accounts.confirmDelete)) return
+    deleteMutation.mutate(accountId)
+  }
+
   return (
     <div className="stack">
       <PageHeader
@@ -106,6 +122,7 @@ export function AccountsPage() {
             strings.accounts.bankName,
             strings.accounts.type,
             strings.accounts.balance,
+            strings.common.actions,
           ]}
         >
           {data.map((account) => (
@@ -114,6 +131,15 @@ export function AccountsPage() {
               <td>{account.bank_name ?? '—'}</td>
               <td>{strings.accounts.types[account.type]}</td>
               <td className="mono">{formatMoney(account.balance)}</td>
+              <td>
+                <Button
+                  variant="ghost"
+                  onClick={() => handleDelete(account.id)}
+                  disabled={deleteMutation.isPending || !contextId}
+                >
+                  {strings.common.delete}
+                </Button>
+              </td>
             </tr>
           ))}
         </DataTable>
