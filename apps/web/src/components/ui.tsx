@@ -1,4 +1,11 @@
-import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+import type {
+  ButtonHTMLAttributes,
+  InputHTMLAttributes,
+  ReactNode,
+  SelectHTMLAttributes,
+} from 'react'
+import type { LucideIcon } from 'lucide-react'
+import { strings } from '@/i18n/pt-BR'
 
 export function PageHeader({
   title,
@@ -33,6 +40,31 @@ export function Button({
       className={`btn btn--${variant} ${className}`.trim()}
       {...props}
     />
+  )
+}
+
+/** Compact icon-only control for table row actions (edit, delete, …). */
+export function IconButton({
+  label,
+  icon: Icon,
+  variant = 'ghost',
+  className = '',
+  ...props
+}: Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
+  label: string
+  icon: LucideIcon
+  variant?: 'primary' | 'ghost' | 'danger'
+}) {
+  return (
+    <button
+      type="button"
+      className={`icon-action-btn icon-action-btn--${variant} ${className}`.trim()}
+      aria-label={label}
+      title={label}
+      {...props}
+    >
+      <Icon size={16} strokeWidth={2} aria-hidden />
+    </button>
   )
 }
 
@@ -111,17 +143,21 @@ export function Modal({
   children: ReactNode
 }) {
   return (
-    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+    <div className="modal-backdrop" role="presentation">
       <div
         className="modal"
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        onClick={(event) => event.stopPropagation()}
       >
         <header className="modal__header">
           <h2>{title}</h2>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            aria-label={strings.common.close}
+          >
             ×
           </button>
         </header>

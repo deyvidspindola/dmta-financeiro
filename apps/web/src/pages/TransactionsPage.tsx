@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { accountsApi, categoriesApi, transactionsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
@@ -18,6 +19,7 @@ import {
   EmptyState,
   ErrorBanner,
   Field,
+  IconButton,
   LoadingBlock,
   Modal,
   PageHeader,
@@ -203,14 +205,14 @@ export function TransactionsPage() {
               <td>{tx.description}</td>
               <td>{strings.transactions.types[tx.type]}</td>
               <td className="mono">{formatMoney(tx.amount)}</td>
-              <td>
-                <Button
-                  variant="ghost"
+              <td className="actions-cell">
+                <IconButton
+                  label={strings.common.delete}
+                  icon={Trash2}
+                  variant="danger"
                   onClick={() => handleDelete(tx.id)}
                   disabled={deleteMutation.isPending || !contextId}
-                >
-                  {strings.common.delete}
-                </Button>
+                />
               </td>
             </tr>
           ))}

@@ -11,6 +11,7 @@ const links = [
   { to: '/bills', label: strings.nav.bills },
   { to: '/bill-captures', label: strings.nav.billCaptures },
   { to: '/transactions', label: strings.nav.transactions },
+  { to: '/categories', label: strings.nav.categories },
   { to: '/investments', label: strings.nav.investments },
   { to: '/security', label: strings.nav.security },
 ]

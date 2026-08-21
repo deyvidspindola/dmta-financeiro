@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
@@ -11,6 +12,7 @@ import {
   Button,
   ErrorBanner,
   Field,
+  IconButton,
   Modal,
   TextInput,
   TextSelect,
@@ -37,6 +39,10 @@ interface CategoryModalProps {
   onCreated?: (categoryId: string) => void
   /** Inherited from the form that opened the modal (locked in the UI). */
   defaultType?: MoneyDirection
+  /** Open directly in edit mode (name only — type/parent are not PATCH-able). */
+  editingCategory?: Category | null
+  /** Hide the inline manage list (use when a dedicated categories page exists). */
+  hideManageList?: boolean
 }
 
 export function CategoryModal({
@@ -45,15 +51,20 @@ export function CategoryModal({
   onClose,
   onCreated,
   defaultType = 'expense',
+  editingCategory = null,
+  hideManageList = false,
 }: CategoryModalProps) {
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<Category | null>(null)
   const isEdit = editing !== null
+  const openedForExternalEdit = editingCategory !== null
+
+  const listType = editingCategory?.type ?? defaultType
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', contextId, defaultType],
+    queryKey: ['categories', contextId, listType],
     queryFn: () =>
-      categoriesApi.listCategories(contextId, { type: defaultType }),
+      categoriesApi.listCategories(contextId, { type: listType }),
     enabled: open && Boolean(contextId),
   })
 
@@ -74,12 +85,16 @@ export function CategoryModal({
   const selectedType = createForm.watch('type')
 
   useEffect(() => {
-    if (open) {
-      setEditing(null)
-      createForm.reset({ name: '', type: defaultType, parent_id: null })
-      editForm.reset({ name: '' })
+    if (!open) return
+    if (editingCategory) {
+      setEditing(editingCategory)
+      editForm.reset({ name: editingCategory.name })
+      return
     }
-  }, [open, defaultType, createForm, editForm])
+    setEditing(null)
+    createForm.reset({ name: '', type: defaultType, parent_id: null })
+    editForm.reset({ name: '' })
+  }, [open, defaultType, editingCategory, createForm, editForm])
 
   const createMutation = useMutation({
     mutationFn: (values: CreateValues) =>
@@ -104,6 +119,10 @@ export function CategoryModal({
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
       toastSuccess(strings.categories.updated)
+      if (openedForExternalEdit) {
+        onClose()
+        return
+      }
       setEditing(null)
       editForm.reset({ name: '' })
     },
@@ -182,6 +201,10 @@ export function CategoryModal({
               type="button"
               variant="ghost"
               onClick={() => {
+                if (openedForExternalEdit) {
+                  handleClose()
+                  return
+                }
                 setEditing(null)
                 editForm.reset({ name: '' })
               }}
@@ -210,8 +233,6 @@ export function CategoryModal({
             <input type="hidden" {...createForm.register('type')} />
             <p className="muted small">
               {strings.categories.types[defaultType]}
-              {' — '}
-              herdado do formulário atual
             </p>
           </Field>
           <Field label={strings.categories.parent}>
@@ -242,7 +263,7 @@ export function CategoryModal({
         </form>
       )}
 
-      {!isEdit && categories.length > 0 ? (
+      {!isEdit && !hideManageList && categories.length > 0 ? (
         <div className="category-manage">
           <h3 className="section-title">{strings.categories.existing}</h3>
           <ul className="category-manage-list">
@@ -252,21 +273,18 @@ export function CategoryModal({
                   {cat.parent_id ? `↳ ${cat.name}` : cat.name}
                 </span>
                 <span className="actions-cell">
-                  <Button
-                    type="button"
-                    variant="ghost"
+                  <IconButton
+                    label={strings.common.edit}
+                    icon={Pencil}
                     onClick={() => startEdit(cat)}
-                  >
-                    {strings.common.edit}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
+                  />
+                  <IconButton
+                    label={strings.common.delete}
+                    icon={Trash2}
+                    variant="danger"
                     onClick={() => handleDelete(cat.id)}
                     disabled={deleteMutation.isPending}
-                  >
-                    {strings.common.delete}
-                  </Button>
+                  />
                 </span>
               </li>
             ))}
