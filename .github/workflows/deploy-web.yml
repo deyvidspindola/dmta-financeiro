@@ -3,9 +3,13 @@ name: Deploy (web)
 # React 19 + Vite, build 100% estático — sem Node rodando no servidor.
 # Só dispara quando apps/web muda. Ver docs/02_CI_CD.md.
 #
-# TEMPLATE: apps/web ainda não existe (entra na F0, depois da API). Este
-# workflow fica inofensivo até lá — sem apps/web/package.json o job de build
-# falha rápido, e sem apps/web/** mudando ele nem dispara.
+# Via SSH/rsync, não FTP — publica dentro do MESMO document root da API
+# (secret WEB_ROOT, compartilhado com deploy-api.yml), na subpasta
+# /app/. Reusa os secrets SSH já cadastrados para a API — nenhum secret
+# novo precisa ser criado só pra isto (DT-06 já cogitava essa migração).
+#
+# apps/api/bin/deploy.sh exclui "app/" do rsync --delete dele por causa
+# disso — sem essa exclusão, o próximo deploy da API apagaria esta pasta.
 
 on:
   push:
@@ -29,7 +33,9 @@ jobs:
     name: Build e publicação
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: staging
+      url: ${{ vars.APP_URL }}/app
+
     steps:
       - uses: actions/checkout@v7
 
@@ -44,13 +50,39 @@ jobs:
         run: npm ci
 
       - name: Buildar
+        env:
+          # Sem isto, http.ts cai no fallback de string vazia e chama
+          # <dominio>/auth/login (raiz, onde só a API mora, sem o
+          # prefixo /api/v1) — 404 "route ... could not be found".
+          VITE_API_BASE_URL: ${{ vars.APP_URL }}/api/v1
         run: npm run build
 
-      - name: Publicar via FTP
-        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
-        with:
-          server: ${{ secrets.FTP_SERVER }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          local-dir: ./dist/
-          server-dir: ./app/
+      - name: Configurar SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Publicar em $WEB_ROOT/app
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          WEB_ROOT: ${{ secrets.WEB_ROOT }}
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" "mkdir -p '$WEB_ROOT/app' && chmod 755 '$WEB_ROOT/app'"
+          rsync -az --delete \
+            -e "ssh -p $SSH_PORT -i ~/.ssh/id_ed25519" \
+            dist/ \
+            "$SSH_USER@$SSH_HOST:$WEB_ROOT/app/"
+          # Apache precisa de -x em toda pasta e -r em todo arquivo pra
+          # RewriteCond %{REQUEST_FILENAME} -d/-f enxergar isso como
+          # "existe" — sem isso, tudo sob /app cai no roteador do Laravel
+          # (404 dele, não da Apache) mesmo com o arquivo lá.
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "find '$WEB_ROOT/app' -type d -exec chmod 755 {} + && find '$WEB_ROOT/app' -type f -exec chmod 644 {} +"

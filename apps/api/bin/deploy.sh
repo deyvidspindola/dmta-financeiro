@@ -77,6 +77,10 @@ php artisan storage:link || true
 # --- Document root (hospedagem compartilhada) --------------------------------
 # O clone mora em APP_DIR; o domínio aponta para WEB_ROOT.
 # index.php e o link de storage são reescritos para o caminho real do app.
+# --exclude app: apps/web (SPA) publica os estáticos dela em
+# $WEB_ROOT/app/ (deploy-web.yml, via SSH/rsync também) — sem essa
+# exclusão, o --delete abaixo apagaria essa pasta a cada deploy da API,
+# já que "app/" não existe dentro de public/ do Laravel.
 
 if [ ! -d "${WEB_ROOT}" ]; then
     echo "  ✗ WEB_ROOT não existe: ${WEB_ROOT}" >&2
@@ -88,6 +92,7 @@ rsync -az --delete \
     --exclude storage \
     --exclude .well-known \
     --exclude cgi-bin \
+    --exclude app \
     "${APP_DIR}/public/" \
     "${WEB_ROOT}/"
 

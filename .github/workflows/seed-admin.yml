@@ -1,0 +1,54 @@
+name: Seed admin (manual)
+
+# Cria/atualiza o usuário administrador real em produção
+# (ProductionAdminSeeder), via SSH — só workflow_dispatch, nunca em push
+# automático. Existe porque o SSH direto ficou indisponível tanto pro
+# desenvolvedor quanto pro usuário; o SSH do runner do Actions continuou
+# funcionando (mesmos secrets já usados por deploy-api.yml/deploy-web.yml).
+#
+# ADMIN_EMAIL/ADMIN_PASSWORD nunca vão pro .env do servidor: são passados
+# só como variável de ambiente do comando remoto, e o config:cache é
+# limpo antes e refeito depois (senão o Laravel ignora o env() novo —
+# ver docs/00_LEIA_ME.md / padroes-laravel-dmta sobre config:cache).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed:
+    name: Rodar ProductionAdminSeeder
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+
+    steps:
+      - name: Configurar SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      - name: Rodar seeder no servidor
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_PATH: ${{ secrets.APP_PATH }}
+          ADMIN_NAME: ${{ secrets.ADMIN_NAME }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD }}
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 "$SSH_USER@$SSH_HOST" \
+            "cd '$APP_PATH' && \
+             php artisan config:clear && \
+             ADMIN_NAME='$ADMIN_NAME' ADMIN_EMAIL='$ADMIN_EMAIL' ADMIN_PASSWORD='$ADMIN_PASSWORD' \
+               php artisan db:seed --class=ProductionAdminSeeder --force && \
+             php artisan config:cache"
