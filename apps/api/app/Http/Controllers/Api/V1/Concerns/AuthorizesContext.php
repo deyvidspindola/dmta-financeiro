@@ -29,4 +29,16 @@ trait AuthorizesContext
     {
         $this->authorize('view', $context);
     }
+
+    /**
+     * Confere que um recurso filho (cartão, investimento...) pertence ao
+     * contexto da rota — evita, por exemplo, registrar fatura num cartão
+     * de outro contexto só porque o ID foi adivinhado na URL.
+     *
+     * @param  object{context_id: int}  $model
+     */
+    private function assertBelongsToContext(Context $context, object $model): void
+    {
+        abort_if($model->context_id !== $context->id, 404);
+    }
 }

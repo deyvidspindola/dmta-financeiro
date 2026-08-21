@@ -10,12 +10,17 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 #[Fillable(['credit_card_id', 'reference_month', 'total_amount', 'status', 'due_date', 'paid_at'])]
 /**
  * Fatura de um cartão para um mês de referência. F0 registra só o
  * resumo (valor total, status) — detalhamento por lançamento fica para
  * uma fase seguinte.
+ *
+ * @property-read Carbon $reference_month
+ * @property-read Carbon $due_date
+ * @property-read Carbon|null $paid_at
  *
  * @package App\Models
  *

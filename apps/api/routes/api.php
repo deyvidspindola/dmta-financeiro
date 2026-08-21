@@ -3,10 +3,12 @@
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillController;
+use App\Http\Controllers\Api\V1\CardInvoiceController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ContextController;
 use App\Http\Controllers\Api\V1\CreditCardController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use Illuminate\Support\Facades\Route;
@@ -49,9 +51,13 @@ Route::prefix('v1')->group(function () {
 
             Route::get('credit-cards', [CreditCardController::class, 'index']);
             Route::post('credit-cards', [CreditCardController::class, 'store']);
+            Route::get('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'index']);
+            Route::post('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'store']);
 
             Route::get('investments', [InvestmentController::class, 'index']);
             Route::post('investments', [InvestmentController::class, 'store']);
+            Route::get('investments/{investment}/contributions', [InvestmentContributionController::class, 'index']);
+            Route::post('investments/{investment}/contributions', [InvestmentContributionController::class, 'store']);
         });
     });
 });
