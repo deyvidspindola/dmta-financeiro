@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { creditCardsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
@@ -16,6 +17,7 @@ import {
   EmptyState,
   ErrorBanner,
   Field,
+  IconButton,
   LoadingBlock,
   Modal,
   PageHeader,
@@ -233,20 +235,19 @@ export function CreditCardsPage() {
               <td>{card.closing_day}</td>
               <td>{card.due_day}</td>
               <td className="actions-cell">
-                <Button
-                  variant="ghost"
+                <IconButton
+                  label={strings.common.edit}
+                  icon={Pencil}
                   onClick={() => openEdit(card)}
                   disabled={!contextId}
-                >
-                  {strings.common.edit}
-                </Button>
-                <Button
-                  variant="ghost"
+                />
+                <IconButton
+                  label={strings.common.delete}
+                  icon={Trash2}
+                  variant="danger"
                   onClick={() => handleDelete(card.id)}
                   disabled={deleteMutation.isPending || !contextId}
-                >
-                  {strings.common.delete}
-                </Button>
+                />
               </td>
             </tr>
           ))}

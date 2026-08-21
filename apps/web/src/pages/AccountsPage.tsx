@@ -3,6 +3,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
+import { Pencil, Trash2 } from 'lucide-react'
 import { accountsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatMoney } from '@/lib/format'
@@ -16,6 +17,7 @@ import {
   EmptyState,
   ErrorBanner,
   Field,
+  IconButton,
   LoadingBlock,
   Modal,
   PageHeader,
@@ -167,20 +169,19 @@ export function AccountsPage() {
               <td>{strings.accounts.types[account.type]}</td>
               <td className="mono">{formatMoney(account.balance)}</td>
               <td className="actions-cell">
-                <Button
-                  variant="ghost"
+                <IconButton
+                  label={strings.common.edit}
+                  icon={Pencil}
                   onClick={() => openEdit(account)}
                   disabled={!contextId}
-                >
-                  {strings.common.edit}
-                </Button>
-                <Button
-                  variant="ghost"
+                />
+                <IconButton
+                  label={strings.common.delete}
+                  icon={Trash2}
+                  variant="danger"
                   onClick={() => handleDelete(account.id)}
                   disabled={deleteMutation.isPending || !contextId}
-                >
-                  {strings.common.delete}
-                </Button>
+                />
               </td>
             </tr>
           ))}

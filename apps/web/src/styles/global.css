@@ -290,6 +290,36 @@ select {
   align-items: center;
 }
 
+.icon-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+
+.icon-action-btn:hover:not(:disabled) {
+  background: var(--paper);
+  border-color: var(--line);
+  color: var(--ink);
+}
+
+.icon-action-btn--danger:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--line));
+}
+
+.icon-action-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .origin-badge {
   display: inline-block;
   font-size: 0.75rem;

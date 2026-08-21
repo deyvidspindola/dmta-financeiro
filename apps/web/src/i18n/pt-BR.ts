@@ -11,6 +11,7 @@ export const strings = {
     bills: 'Boletos',
     billCaptures: 'Capturas',
     transactions: 'Lançamentos',
+    categories: 'Categorias',
     investments: 'Investimentos',
     logout: 'Sair',
     context: 'Contexto',
@@ -201,6 +202,8 @@ export const strings = {
 
   categories: {
     title: 'Categoria',
+    listTitle: 'Categorias',
+    listHint: 'Cadastro via modal; aqui você lista, edita o nome e exclui.',
     create: 'Nova categoria',
     edit: 'Editar categoria',
     name: 'Nome',
@@ -209,6 +212,7 @@ export const strings = {
     parentNone: 'Nenhuma (categoria raiz)',
     quickAdd: 'Cadastrar categoria',
     existing: 'Categorias existentes',
+    empty: 'Nenhuma categoria neste filtro.',
     created: 'Categoria cadastrada.',
     updated: 'Categoria atualizada.',
     deleted: 'Categoria excluída.',

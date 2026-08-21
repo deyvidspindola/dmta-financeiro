@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Check, X } from 'lucide-react'
 import { z } from 'zod'
 import { billCapturesApi, categoriesApi } from '@/api'
 import { OriginBadge } from '@/components/OriginBadge'
@@ -12,6 +13,7 @@ import {
   EmptyState,
   ErrorBanner,
   Field,
+  IconButton,
   LoadingBlock,
   Modal,
   PageHeader,
@@ -224,19 +226,18 @@ export function BillCapturesPage() {
               <td className="actions-cell">
                 {capture.status === 'pending' ? (
                   <>
-                    <Button
-                      variant="ghost"
+                    <IconButton
+                      label={strings.billCaptures.confirm}
+                      icon={Check}
                       onClick={() => openConfirm(capture)}
-                    >
-                      {strings.billCaptures.confirm}
-                    </Button>
-                    <Button
-                      variant="ghost"
+                    />
+                    <IconButton
+                      label={strings.billCaptures.reject}
+                      icon={X}
+                      variant="danger"
                       onClick={() => handleReject(capture.id)}
                       disabled={rejectMutation.isPending}
-                    >
-                      {strings.billCaptures.reject}
-                    </Button>
+                    />
                   </>
                 ) : (
                   <span className="muted small">
