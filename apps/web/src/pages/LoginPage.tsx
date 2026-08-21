@@ -30,7 +30,7 @@ export function LoginPage() {
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: 'admin@example.com', password: 'password' },
+    defaultValues: { email: '', password: '' },
   })
 
   const mfaForm = useForm<MfaValues>({
@@ -103,9 +103,6 @@ export function LoginPage() {
             <Button type="submit" disabled={loginForm.formState.isSubmitting}>
               {strings.auth.submit}
             </Button>
-            <p className="muted small">
-              Dev: admin@example.com / password — MFA via Segurança, se ativo
-            </p>
           </form>
         ) : (
           <form className="form-grid" onSubmit={mfaForm.handleSubmit(onMfa)}>
