@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,7 +6,7 @@ import { z } from 'zod'
 import { categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import {
   Button,
   ErrorBanner,
@@ -15,15 +15,20 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
-import type { MoneyDirection } from '@/types/models'
+import type { Category, MoneyDirection } from '@/types/models'
 
-const schema = z.object({
+const createSchema = z.object({
   name: z.string().min(1, strings.common.required),
   type: z.enum(['income', 'expense']),
   parent_id: z.string().nullable(),
 })
 
-type FormValues = z.infer<typeof schema>
+const editSchema = z.object({
+  name: z.string().min(1, strings.common.required),
+})
+
+type CreateValues = z.infer<typeof createSchema>
+type EditValues = z.infer<typeof editSchema>
 
 interface CategoryModalProps {
   contextId: string
@@ -42,6 +47,9 @@ export function CategoryModal({
   defaultType = 'expense',
 }: CategoryModalProps) {
   const queryClient = useQueryClient()
+  const [editing, setEditing] = useState<Category | null>(null)
+  const isEdit = editing !== null
+
   const { data: categories = [] } = useQuery({
     queryKey: ['categories', contextId, defaultType],
     queryFn: () =>
@@ -49,14 +57,8 @@ export function CategoryModal({
     enabled: open && Boolean(contextId),
   })
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    watch,
-    formState: { errors, isSubmitting },
-  } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const createForm = useForm<CreateValues>({
+    resolver: zodResolver(createSchema),
     defaultValues: {
       name: '',
       type: defaultType,
@@ -64,16 +66,23 @@ export function CategoryModal({
     },
   })
 
-  const selectedType = watch('type')
+  const editForm = useForm<EditValues>({
+    resolver: zodResolver(editSchema),
+    defaultValues: { name: '' },
+  })
+
+  const selectedType = createForm.watch('type')
 
   useEffect(() => {
     if (open) {
-      reset({ name: '', type: defaultType, parent_id: null })
+      setEditing(null)
+      createForm.reset({ name: '', type: defaultType, parent_id: null })
+      editForm.reset({ name: '' })
     }
-  }, [open, defaultType, reset])
+  }, [open, defaultType, createForm, editForm])
 
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
+  const createMutation = useMutation({
+    mutationFn: (values: CreateValues) =>
       categoriesApi.createCategory(contextId, {
         name: values.name,
         type: values.type,
@@ -87,55 +96,183 @@ export function CategoryModal({
     },
   })
 
+  const updateMutation = useMutation({
+    mutationFn: (values: EditValues) =>
+      categoriesApi.updateCategory(contextId, editing!.id, {
+        name: values.name,
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
+      toastSuccess(strings.categories.updated)
+      setEditing(null)
+      editForm.reset({ name: '' })
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (categoryId: string) =>
+      categoriesApi.deleteCategory(contextId, categoryId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
+      toastSuccess(strings.categories.deleted)
+      if (editing) {
+        setEditing(null)
+        editForm.reset({ name: '' })
+      }
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  function startEdit(category: Category) {
+    setEditing(category)
+    editForm.reset({ name: category.name })
+  }
+
+  function handleDelete(categoryId: string) {
+    if (!window.confirm(strings.categories.confirmDelete)) return
+    deleteMutation.mutate(categoryId)
+  }
+
+  function handleClose() {
+    setEditing(null)
+    onClose()
+  }
+
   if (!open) return null
 
   const roots = categories.filter(
     (c) => c.parent_id === null && c.type === selectedType,
   )
 
+  const activeError =
+    (isEdit ? updateMutation.error : createMutation.error) ?? null
+  const isPending = isEdit
+    ? updateMutation.isPending
+    : createMutation.isPending
+
   return (
-    <Modal title={strings.categories.create} onClose={onClose}>
-      <form
-        className="form-grid"
-        onSubmit={handleSubmit((values) => mutation.mutateAsync(values))}
-      >
-        <Field label={strings.categories.name} error={errors.name?.message}>
-          <TextInput {...register('name')} autoFocus />
-        </Field>
-        <Field label={strings.categories.type}>
-          <input type="hidden" {...register('type')} />
-          <p className="muted small">
-            {strings.categories.types[defaultType]}
-            {' — '}
-            herdado do formulário atual
-          </p>
-        </Field>
-        <Field label={strings.categories.parent}>
-          <TextSelect
-            {...register('parent_id', {
-              setValueAs: (v: string) => (v === '' ? null : v),
-            })}
+    <Modal
+      title={isEdit ? strings.categories.edit : strings.categories.create}
+      onClose={handleClose}
+    >
+      {isEdit ? (
+        <form
+          className="form-grid"
+          onSubmit={editForm.handleSubmit((values) =>
+            updateMutation.mutateAsync(values),
+          )}
+        >
+          <Field
+            label={strings.categories.name}
+            error={editForm.formState.errors.name?.message}
           >
-            <option value="">{strings.categories.parentNone}</option>
-            {roots.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
+            <TextInput {...editForm.register('name')} autoFocus />
+          </Field>
+          <p className="muted small">
+            {strings.categories.types[editing.type]}
+            {editing.parent_id
+              ? ` — ${categories.find((c) => c.id === editing.parent_id)?.name ?? ''}`
+              : ''}
+          </p>
+          {activeError ? (
+            <ErrorBanner message={getErrorMessage(activeError)} />
+          ) : null}
+          <div className="form-actions">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setEditing(null)
+                editForm.reset({ name: '' })
+              }}
+            >
+              {strings.common.cancel}
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {strings.common.save}
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <form
+          className="form-grid"
+          onSubmit={createForm.handleSubmit((values) =>
+            createMutation.mutateAsync(values),
+          )}
+        >
+          <Field
+            label={strings.categories.name}
+            error={createForm.formState.errors.name?.message}
+          >
+            <TextInput {...createForm.register('name')} autoFocus />
+          </Field>
+          <Field label={strings.categories.type}>
+            <input type="hidden" {...createForm.register('type')} />
+            <p className="muted small">
+              {strings.categories.types[defaultType]}
+              {' — '}
+              herdado do formulário atual
+            </p>
+          </Field>
+          <Field label={strings.categories.parent}>
+            <TextSelect
+              {...createForm.register('parent_id', {
+                setValueAs: (v: string) => (v === '' ? null : v),
+              })}
+            >
+              <option value="">{strings.categories.parentNone}</option>
+              {roots.map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+          {activeError ? (
+            <ErrorBanner message={getErrorMessage(activeError)} />
+          ) : null}
+          <div className="form-actions">
+            <Button type="button" variant="ghost" onClick={handleClose}>
+              {strings.common.cancel}
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {strings.common.save}
+            </Button>
+          </div>
+        </form>
+      )}
+
+      {!isEdit && categories.length > 0 ? (
+        <div className="category-manage">
+          <h3 className="section-title">{strings.categories.existing}</h3>
+          <ul className="category-manage-list">
+            {categories.map((cat) => (
+              <li key={cat.id}>
+                <span>
+                  {cat.parent_id ? `↳ ${cat.name}` : cat.name}
+                </span>
+                <span className="actions-cell">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => startEdit(cat)}
+                  >
+                    {strings.common.edit}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    onClick={() => handleDelete(cat.id)}
+                    disabled={deleteMutation.isPending}
+                  >
+                    {strings.common.delete}
+                  </Button>
+                </span>
+              </li>
             ))}
-          </TextSelect>
-        </Field>
-        {mutation.isError ? (
-          <ErrorBanner message={getErrorMessage(mutation.error)} />
-        ) : null}
-        <div className="form-actions">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            {strings.common.cancel}
-          </Button>
-          <Button type="submit" disabled={isSubmitting || mutation.isPending}>
-            {strings.common.save}
-          </Button>
+          </ul>
         </div>
-      </form>
+      ) : null}
     </Modal>
   )
 }

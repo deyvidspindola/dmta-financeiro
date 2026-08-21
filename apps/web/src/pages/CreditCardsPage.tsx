@@ -22,6 +22,7 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+import type { CreditCard } from '@/types/models'
 
 const cardSchema = z.object({
   name: z.string().min(1, strings.common.required),
@@ -41,13 +42,23 @@ const invoiceSchema = z.object({
 type CardFormValues = z.infer<typeof cardSchema>
 type InvoiceFormValues = z.infer<typeof invoiceSchema>
 
+const emptyCardValues: CardFormValues = {
+  name: '',
+  brand: '',
+  limit: 0,
+  closing_day: 5,
+  due_day: 12,
+}
+
 export function CreditCardsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const [editing, setEditing] = useState<CreditCard | null>(null)
   const [open, setOpen] = useState(false)
   const [invoiceOpen, setInvoiceOpen] = useState(false)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
+  const isEdit = editing !== null
 
   const cardsQuery = useQuery({
     queryKey: ['credit-cards', listContextId],
@@ -63,14 +74,32 @@ export function CreditCardsPage() {
 
   const cardForm = useForm<CardFormValues>({
     resolver: zodResolver(cardSchema),
-    defaultValues: {
-      name: '',
-      brand: '',
-      limit: 0,
-      closing_day: 5,
-      due_day: 12,
-    },
+    defaultValues: emptyCardValues,
   })
+
+  function openCreate() {
+    setEditing(null)
+    cardForm.reset(emptyCardValues)
+    setOpen(true)
+  }
+
+  function openEdit(card: CreditCard) {
+    setEditing(card)
+    cardForm.reset({
+      name: card.name,
+      brand: card.brand ?? '',
+      limit: card.limit,
+      closing_day: card.closing_day,
+      due_day: card.due_day,
+    })
+    setOpen(true)
+  }
+
+  function closeCardModal() {
+    setOpen(false)
+    setEditing(null)
+    cardForm.reset(emptyCardValues)
+  }
 
   const invoiceForm = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
@@ -83,20 +112,26 @@ export function CreditCardsPage() {
   })
 
   const cardMutation = useMutation({
-    mutationFn: (values: CardFormValues) =>
-      creditCardsApi.createCreditCard(contextId!, {
+    mutationFn: (values: CardFormValues) => {
+      const payload = {
         name: values.name,
         brand: values.brand || null,
         limit: values.limit,
         closing_day: values.closing_day,
         due_day: values.due_day,
-      }),
+      }
+      if (isEdit && editing) {
+        return creditCardsApi.updateCreditCard(contextId!, editing.id, payload)
+      }
+      return creditCardsApi.createCreditCard(contextId!, payload)
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['credit-cards'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.creditCards.created)
-      setOpen(false)
-      cardForm.reset()
+      toastSuccess(
+        isEdit ? strings.creditCards.updated : strings.creditCards.created,
+      )
+      closeCardModal()
     },
   })
 
@@ -155,7 +190,7 @@ export function CreditCardsPage() {
               Nova fatura
             </Button>
             <Button
-              onClick={() => setOpen(true)}
+              onClick={openCreate}
               disabled={!contextId || activeScope === CONSOLIDATED}
             >
               {strings.creditCards.create}
@@ -197,7 +232,14 @@ export function CreditCardsPage() {
               <td className="mono">{formatMoney(card.limit)}</td>
               <td>{card.closing_day}</td>
               <td>{card.due_day}</td>
-              <td>
+              <td className="actions-cell">
+                <Button
+                  variant="ghost"
+                  onClick={() => openEdit(card)}
+                  disabled={!contextId}
+                >
+                  {strings.common.edit}
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={() => handleDelete(card.id)}
@@ -241,8 +283,10 @@ export function CreditCardsPage() {
 
       {open && contextId ? (
         <Modal
-          title={strings.creditCards.create}
-          onClose={() => setOpen(false)}
+          title={
+            isEdit ? strings.creditCards.edit : strings.creditCards.create
+          }
+          onClose={closeCardModal}
         >
           <form
             className="form-grid"
@@ -281,7 +325,7 @@ export function CreditCardsPage() {
               <ErrorBanner message={getErrorMessage(cardMutation.error)} />
             ) : null}
             <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={closeCardModal}>
                 {strings.common.cancel}
               </Button>
               <Button type="submit" disabled={cardMutation.isPending}>

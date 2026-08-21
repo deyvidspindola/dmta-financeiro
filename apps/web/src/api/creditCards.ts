@@ -5,6 +5,7 @@ import {
   mapCreditCard,
   toCreateCardInvoiceBody,
   toCreateCreditCardBody,
+  toUpdateCreditCardBody,
 } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { CardInvoice, CreditCard } from '@/types/models'
@@ -43,6 +44,26 @@ export async function createCreditCard(
     ),
   )
   return mapCreditCard(contextId, created)
+}
+
+export async function updateCreditCard(
+  contextId: string,
+  creditCardId: string,
+  payload: CreateCreditCardInput,
+): Promise<CreditCard> {
+  if (useMocks) {
+    return mockApi.updateCreditCard(contextId, creditCardId, payload)
+  }
+  const updated = unwrapData(
+    await http.patch<
+      | Parameters<typeof mapCreditCard>[1]
+      | { data: Parameters<typeof mapCreditCard>[1] }
+    >(
+      `/contexts/${contextId}/credit-cards/${creditCardId}`,
+      toUpdateCreditCardBody(payload),
+    ),
+  )
+  return mapCreditCard(contextId, updated)
 }
 
 export async function deleteCreditCard(

@@ -21,6 +21,7 @@ import {
   PageHeader,
   TextInput,
 } from '@/components/ui'
+import type { Investment } from '@/types/models'
 
 const schema = z.object({
   name: z.string().min(1, strings.common.required),
@@ -32,12 +33,22 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const emptyValues: FormValues = {
+  name: '',
+  type: '',
+  institution: '',
+  invested_amount: 0,
+  current_position: 0,
+}
+
 export function InvestmentsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const [editing, setEditing] = useState<Investment | null>(null)
   const [open, setOpen] = useState(false)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
+  const isEdit = editing !== null
 
   const { data = [], isLoading, isError } = useQuery({
     queryKey: ['investments', listContextId],
@@ -47,30 +58,58 @@ export function InvestmentsPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: '',
-      type: '',
-      institution: '',
-      invested_amount: 0,
-      current_position: 0,
-    },
+    defaultValues: emptyValues,
   })
 
+  function openCreate() {
+    setEditing(null)
+    form.reset(emptyValues)
+    setOpen(true)
+  }
+
+  function openEdit(item: Investment) {
+    setEditing(item)
+    form.reset({
+      name: item.name,
+      type: item.type,
+      institution: item.institution ?? '',
+      invested_amount: item.invested_amount,
+      current_position: item.current_position,
+    })
+    setOpen(true)
+  }
+
+  function closeModal() {
+    setOpen(false)
+    setEditing(null)
+    form.reset(emptyValues)
+  }
+
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      investmentsApi.createInvestment(contextId!, {
+    mutationFn: (values: FormValues) => {
+      if (isEdit && editing) {
+        return investmentsApi.updateInvestment(contextId!, editing.id, {
+          name: values.name,
+          type: values.type,
+          institution: values.institution || null,
+          current_position: values.current_position,
+        })
+      }
+      return investmentsApi.createInvestment(contextId!, {
         name: values.name,
         type: values.type,
         institution: values.institution || null,
         invested_amount: values.invested_amount,
         current_position: values.current_position,
-      }),
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['investments'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.investments.created)
-      setOpen(false)
-      form.reset()
+      toastSuccess(
+        isEdit ? strings.investments.updated : strings.investments.created,
+      )
+      closeModal()
     },
   })
 
@@ -96,7 +135,7 @@ export function InvestmentsPage() {
         title={strings.investments.title}
         actions={
           <Button
-            onClick={() => setOpen(true)}
+            onClick={openCreate}
             disabled={!contextId || activeScope === CONSOLIDATED}
           >
             {strings.investments.create}
@@ -133,7 +172,14 @@ export function InvestmentsPage() {
               <td>{item.institution ?? '—'}</td>
               <td className="mono">{formatMoney(item.invested_amount)}</td>
               <td className="mono">{formatMoney(item.current_position)}</td>
-              <td>
+              <td className="actions-cell">
+                <Button
+                  variant="ghost"
+                  onClick={() => openEdit(item)}
+                  disabled={!contextId}
+                >
+                  {strings.common.edit}
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={() => handleDelete(item.id)}
@@ -149,8 +195,10 @@ export function InvestmentsPage() {
 
       {open && contextId ? (
         <Modal
-          title={strings.investments.create}
-          onClose={() => setOpen(false)}
+          title={
+            isEdit ? strings.investments.edit : strings.investments.create
+          }
+          onClose={closeModal}
         >
           <form
             className="form-grid"
@@ -173,16 +221,18 @@ export function InvestmentsPage() {
             <Field label={strings.investments.institution}>
               <TextInput {...form.register('institution')} />
             </Field>
-            <Field
-              label={strings.investments.investedAmount}
-              error={form.formState.errors.invested_amount?.message}
-            >
-              <TextInput
-                type="number"
-                step="0.01"
-                {...form.register('invested_amount')}
-              />
-            </Field>
+            {!isEdit ? (
+              <Field
+                label={strings.investments.investedAmount}
+                error={form.formState.errors.invested_amount?.message}
+              >
+                <TextInput
+                  type="number"
+                  step="0.01"
+                  {...form.register('invested_amount')}
+                />
+              </Field>
+            ) : null}
             <Field
               label={strings.investments.currentPosition}
               error={form.formState.errors.current_position?.message}
@@ -193,8 +243,11 @@ export function InvestmentsPage() {
                 {...form.register('current_position')}
               />
             </Field>
+            {mutation.isError ? (
+              <ErrorBanner message={getErrorMessage(mutation.error)} />
+            ) : null}
             <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={closeModal}>
                 {strings.common.cancel}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>

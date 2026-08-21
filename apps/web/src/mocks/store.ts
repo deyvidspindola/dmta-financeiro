@@ -311,6 +311,21 @@ export const mockApi = {
     return row
   },
 
+  async updateAccount(
+    contextId: string,
+    accountId: string,
+    payload: { name: string; bank_name: string | null; type: Account['type'] },
+  ): Promise<Account> {
+    await delay()
+    const index = accounts.findIndex(
+      (row) => row.context_id === contextId && row.id === accountId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row: Account = { ...accounts[index]!, ...payload }
+    accounts = accounts.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
   async deleteAccount(contextId: string, accountId: string): Promise<void> {
     await delay()
     accounts = accounts.filter(
@@ -352,6 +367,28 @@ export const mockApi = {
     return row
   },
 
+  async updateCategory(
+    contextId: string,
+    categoryId: string,
+    payload: { name: string },
+  ): Promise<Category> {
+    await delay()
+    const index = categories.findIndex(
+      (row) => row.context_id === contextId && row.id === categoryId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row: Category = { ...categories[index]!, name: payload.name }
+    categories = categories.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
+  async deleteCategory(contextId: string, categoryId: string): Promise<void> {
+    await delay()
+    categories = categories.filter(
+      (row) => !(row.context_id === contextId && row.id === categoryId),
+    )
+  },
+
   async listBills(contextId: string): Promise<Bill[]> {
     await delay()
     return byContext(bills, contextId)
@@ -369,6 +406,27 @@ export const mockApi = {
       ...payload,
     }
     bills = [...bills, row]
+    return row
+  },
+
+  async updateBill(
+    contextId: string,
+    billId: string,
+    payload: {
+      description: string
+      amount: number
+      due_date: string
+      category_id: string | null
+      barcode: string | null
+    },
+  ): Promise<Bill> {
+    await delay()
+    const index = bills.findIndex(
+      (row) => row.context_id === contextId && row.id === billId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row: Bill = { ...bills[index]!, ...payload }
+    bills = bills.map((item, i) => (i === index ? row : item))
     return row
   },
 
@@ -428,6 +486,21 @@ export const mockApi = {
     return row
   },
 
+  async updateCreditCard(
+    contextId: string,
+    creditCardId: string,
+    payload: Omit<CreditCard, 'id' | 'context_id'>,
+  ): Promise<CreditCard> {
+    await delay()
+    const index = creditCards.findIndex(
+      (row) => row.context_id === contextId && row.id === creditCardId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row: CreditCard = { ...creditCards[index]!, ...payload }
+    creditCards = creditCards.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
   async deleteCreditCard(
     contextId: string,
     creditCardId: string,
@@ -479,6 +552,26 @@ export const mockApi = {
       ...payload,
     }
     investments = [...investments, row]
+    return row
+  },
+
+  async updateInvestment(
+    contextId: string,
+    investmentId: string,
+    payload: {
+      name: string
+      type: string
+      institution: string | null
+      current_position: number
+    },
+  ): Promise<Investment> {
+    await delay()
+    const index = investments.findIndex(
+      (row) => row.context_id === contextId && row.id === investmentId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row: Investment = { ...investments[index]!, ...payload }
+    investments = investments.map((item, i) => (i === index ? row : item))
     return row
   },
 

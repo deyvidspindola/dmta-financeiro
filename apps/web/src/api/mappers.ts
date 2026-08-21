@@ -70,7 +70,7 @@ export function mapAccount(
     name: string
     institution?: string | null
     bank_name?: string | null
-    type?: AccountType
+    type: AccountType
     balance: number
     initial_balance?: number
   },
@@ -80,7 +80,7 @@ export function mapAccount(
     context_id: contextId,
     name: raw.name,
     bank_name: raw.institution ?? raw.bank_name ?? null,
-    type: raw.type ?? 'checking',
+    type: raw.type,
     balance: Number(raw.balance),
     currency: 'BRL',
   }
@@ -89,12 +89,35 @@ export function mapAccount(
 export function toCreateAccountBody(payload: {
   name: string
   bank_name: string | null
+  type: AccountType
   balance: number
-}): { name: string; institution: string | null; initial_balance: number } {
+}): {
+  name: string
+  institution: string | null
+  type: AccountType
+  initial_balance: number
+} {
   return {
     name: payload.name,
     institution: payload.bank_name,
+    type: payload.type,
     initial_balance: payload.balance,
+  }
+}
+
+export function toUpdateAccountBody(payload: {
+  name: string
+  bank_name: string | null
+  type: AccountType
+}): {
+  name: string
+  institution: string | null
+  type: AccountType
+} {
+  return {
+    name: payload.name,
+    institution: payload.bank_name,
+    type: payload.type,
   }
 }
 
@@ -126,6 +149,12 @@ export function toCreateCategoryBody(payload: {
     parent_id: payload.parent_id === null ? null : asApiId(payload.parent_id),
     type: payload.type,
   }
+}
+
+export function toUpdateCategoryBody(payload: {
+  name: string
+}): { name: string } {
+  return { name: payload.name }
 }
 
 export function mapBill(
@@ -180,6 +209,29 @@ export function toCreateBillBody(payload: {
     amount: payload.amount,
     due_date: payload.due_date,
     direction: payload.kind,
+    category_id:
+      payload.category_id === null ? null : asApiId(payload.category_id),
+    barcode: payload.barcode,
+  }
+}
+
+export function toUpdateBillBody(payload: {
+  description: string
+  amount: number
+  due_date: string
+  category_id: string | null
+  barcode: string | null
+}): {
+  description: string
+  amount: number
+  due_date: string
+  category_id: number | null
+  barcode: string | null
+} {
+  return {
+    description: payload.description,
+    amount: payload.amount,
+    due_date: payload.due_date,
     category_id:
       payload.category_id === null ? null : asApiId(payload.category_id),
     barcode: payload.barcode,
@@ -286,6 +338,22 @@ export function toCreateCreditCardBody(payload: {
   }
 }
 
+export function toUpdateCreditCardBody(payload: {
+  name: string
+  brand: string | null
+  limit: number
+  closing_day: number
+  due_day: number
+}): {
+  name: string
+  brand: string | null
+  credit_limit: number
+  closing_day: number
+  due_day: number
+} {
+  return toCreateCreditCardBody(payload)
+}
+
 export function mapInvestment(
   contextId: string,
   raw: {
@@ -372,6 +440,25 @@ export function toCreateInvestmentBody(payload: {
     type: payload.type,
     broker: payload.institution,
     initial_amount: payload.invested_amount,
+    current_amount: payload.current_position,
+  }
+}
+
+export function toUpdateInvestmentBody(payload: {
+  name: string
+  type: string
+  institution: string | null
+  current_position: number
+}): {
+  name: string
+  type: string
+  broker: string | null
+  current_amount: number
+} {
+  return {
+    name: payload.name,
+    type: payload.type,
+    broker: payload.institution,
     current_amount: payload.current_position,
   }
 }

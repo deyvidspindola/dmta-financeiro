@@ -22,21 +22,31 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+import type { Account } from '@/types/models'
 
 const schema = z.object({
   name: z.string().min(1, strings.common.required),
   bank_name: z.string().optional(),
-  type: z.enum(['checking', 'savings', 'cash', 'other']),
+  type: z.enum(['checking', 'savings', 'wallet', 'other']),
   balance: z.coerce.number(),
 })
 
 type FormValues = z.infer<typeof schema>
 
+const emptyValues: FormValues = {
+  name: '',
+  bank_name: '',
+  type: 'checking',
+  balance: 0,
+}
+
 export function AccountsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const [editing, setEditing] = useState<Account | null>(null)
   const [open, setOpen] = useState(false)
+  const isEdit = editing !== null
 
   const listContextId =
     activeScope === CONSOLIDATED ? null : activeScope
@@ -49,28 +59,53 @@ export function AccountsPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      name: '',
-      bank_name: '',
-      type: 'checking',
-      balance: 0,
-    },
+    defaultValues: emptyValues,
   })
 
+  function openCreate() {
+    setEditing(null)
+    form.reset(emptyValues)
+    setOpen(true)
+  }
+
+  function openEdit(account: Account) {
+    setEditing(account)
+    form.reset({
+      name: account.name,
+      bank_name: account.bank_name ?? '',
+      type: account.type,
+      balance: account.balance,
+    })
+    setOpen(true)
+  }
+
+  function closeModal() {
+    setOpen(false)
+    setEditing(null)
+    form.reset(emptyValues)
+  }
+
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      accountsApi.createAccount(contextId!, {
+    mutationFn: (values: FormValues) => {
+      if (isEdit && editing) {
+        return accountsApi.updateAccount(contextId!, editing.id, {
+          name: values.name,
+          bank_name: values.bank_name || null,
+          type: values.type,
+        })
+      }
+      return accountsApi.createAccount(contextId!, {
         name: values.name,
         bank_name: values.bank_name || null,
         type: values.type,
         balance: values.balance,
-      }),
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['accounts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.accounts.created)
-      setOpen(false)
-      form.reset()
+      toastSuccess(isEdit ? strings.accounts.updated : strings.accounts.created)
+      closeModal()
     },
   })
 
@@ -96,7 +131,7 @@ export function AccountsPage() {
         title={strings.accounts.title}
         actions={
           <Button
-            onClick={() => setOpen(true)}
+            onClick={openCreate}
             disabled={!contextId || activeScope === CONSOLIDATED}
           >
             {strings.accounts.create}
@@ -131,7 +166,14 @@ export function AccountsPage() {
               <td>{account.bank_name ?? '—'}</td>
               <td>{strings.accounts.types[account.type]}</td>
               <td className="mono">{formatMoney(account.balance)}</td>
-              <td>
+              <td className="actions-cell">
+                <Button
+                  variant="ghost"
+                  onClick={() => openEdit(account)}
+                  disabled={!contextId}
+                >
+                  {strings.common.edit}
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={() => handleDelete(account.id)}
@@ -146,7 +188,10 @@ export function AccountsPage() {
       ) : null}
 
       {open && contextId ? (
-        <Modal title={strings.accounts.create} onClose={() => setOpen(false)}>
+        <Modal
+          title={isEdit ? strings.accounts.edit : strings.accounts.create}
+          onClose={closeModal}
+        >
           <form
             className="form-grid"
             onSubmit={form.handleSubmit((values) =>
@@ -175,17 +220,23 @@ export function AccountsPage() {
                 ))}
               </TextSelect>
             </Field>
-            <Field
-              label={strings.accounts.balance}
-              error={form.formState.errors.balance?.message}
-            >
-              <TextInput type="number" step="0.01" {...form.register('balance')} />
-            </Field>
+            {!isEdit ? (
+              <Field
+                label={strings.accounts.balance}
+                error={form.formState.errors.balance?.message}
+              >
+                <TextInput
+                  type="number"
+                  step="0.01"
+                  {...form.register('balance')}
+                />
+              </Field>
+            ) : null}
             {mutation.isError ? (
               <ErrorBanner message={getErrorMessage(mutation.error)} />
             ) : null}
             <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={closeModal}>
                 {strings.common.cancel}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>

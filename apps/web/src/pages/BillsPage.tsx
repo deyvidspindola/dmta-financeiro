@@ -24,7 +24,7 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
-import type { MoneyDirection } from '@/types/models'
+import type { Bill, MoneyDirection } from '@/types/models'
 
 const ALL_PERIODS = 'all'
 
@@ -46,14 +46,26 @@ function categoryTypeForBillKind(
   return kind === 'receivable' ? 'income' : 'expense'
 }
 
+const emptyValues: FormValues = {
+  description: '',
+  amount: 0,
+  due_date: '',
+  kind: 'payable',
+  status: 'pending',
+  category_id: null,
+  barcode: '',
+}
+
 export function BillsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const [editing, setEditing] = useState<Bill | null>(null)
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [period, setPeriod] = useState(currentMonthKey)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
+  const isEdit = editing !== null
 
   const { data = [], isLoading, isError } = useQuery({
     queryKey: ['bills', listContextId],
@@ -76,23 +88,17 @@ export function BillsPage() {
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: {
-      description: '',
-      amount: 0,
-      due_date: '',
-      kind: 'payable',
-      status: 'pending',
-      category_id: null,
-      barcode: '',
-    },
+    defaultValues: emptyValues,
   })
 
   const watchedKind = form.watch('kind')
   const categoryType = categoryTypeForBillKind(watchedKind)
 
   useEffect(() => {
-    form.setValue('category_id', null)
-  }, [watchedKind, form])
+    if (!isEdit) {
+      form.setValue('category_id', null)
+    }
+  }, [watchedKind, form, isEdit])
 
   const categoriesQuery = useQuery({
     queryKey: ['categories', contextId, categoryType],
@@ -101,9 +107,44 @@ export function BillsPage() {
     enabled: Boolean(contextId) && open,
   })
 
+  function openCreate() {
+    setEditing(null)
+    form.reset(emptyValues)
+    setOpen(true)
+  }
+
+  function openEdit(bill: Bill) {
+    setEditing(bill)
+    form.reset({
+      description: bill.description,
+      amount: bill.amount,
+      due_date: bill.due_date,
+      kind: bill.kind,
+      status: bill.status,
+      category_id: bill.category_id,
+      barcode: bill.barcode ?? '',
+    })
+    setOpen(true)
+  }
+
+  function closeModal() {
+    setOpen(false)
+    setEditing(null)
+    form.reset(emptyValues)
+  }
+
   const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      billsApi.createBill(contextId!, {
+    mutationFn: (values: FormValues) => {
+      if (isEdit && editing) {
+        return billsApi.updateBill(contextId!, editing.id, {
+          description: values.description,
+          amount: values.amount,
+          due_date: values.due_date,
+          category_id: values.category_id || null,
+          barcode: values.barcode || null,
+        })
+      }
+      return billsApi.createBill(contextId!, {
         description: values.description,
         amount: values.amount,
         due_date: values.due_date,
@@ -111,13 +152,13 @@ export function BillsPage() {
         status: values.status,
         category_id: values.category_id || null,
         barcode: values.barcode || null,
-      }),
+      })
+    },
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.bills.created)
-      setOpen(false)
-      form.reset()
+      toastSuccess(isEdit ? strings.bills.updated : strings.bills.created)
+      closeModal()
     },
   })
 
@@ -144,7 +185,7 @@ export function BillsPage() {
         title={strings.bills.title}
         actions={
           <Button
-            onClick={() => setOpen(true)}
+            onClick={openCreate}
             disabled={!contextId || activeScope === CONSOLIDATED}
           >
             {strings.bills.create}
@@ -206,7 +247,14 @@ export function BillsPage() {
               <td>{formatDate(bill.due_date)}</td>
               <td>{strings.bills.kinds[bill.kind]}</td>
               <td>{strings.bills.statuses[bill.status]}</td>
-              <td>
+              <td className="actions-cell">
+                <Button
+                  variant="ghost"
+                  onClick={() => openEdit(bill)}
+                  disabled={!contextId}
+                >
+                  {strings.common.edit}
+                </Button>
                 <Button
                   variant="ghost"
                   onClick={() => handleDelete(bill.id)}
@@ -221,7 +269,10 @@ export function BillsPage() {
       ) : null}
 
       {open && contextId ? (
-        <Modal title={strings.bills.create} onClose={() => setOpen(false)}>
+        <Modal
+          title={isEdit ? strings.bills.edit : strings.bills.create}
+          onClose={closeModal}
+        >
           <form
             className="form-grid"
             onSubmit={form.handleSubmit((values) =>
@@ -246,27 +297,36 @@ export function BillsPage() {
             >
               <TextInput type="date" {...form.register('due_date')} />
             </Field>
-            <Field label={strings.bills.kind}>
-              <TextSelect {...form.register('kind')}>
-                <option value="payable">{strings.bills.kinds.payable}</option>
-                <option value="receivable">
-                  {strings.bills.kinds.receivable}
-                </option>
-              </TextSelect>
-            </Field>
-            <Field label={strings.bills.status}>
-              <TextSelect {...form.register('status')}>
-                {(
-                  Object.keys(strings.bills.statuses) as Array<
-                    keyof typeof strings.bills.statuses
-                  >
-                ).map((key) => (
-                  <option key={key} value={key}>
-                    {strings.bills.statuses[key]}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
+            {!isEdit ? (
+              <>
+                <Field label={strings.bills.kind}>
+                  <TextSelect {...form.register('kind')}>
+                    <option value="payable">{strings.bills.kinds.payable}</option>
+                    <option value="receivable">
+                      {strings.bills.kinds.receivable}
+                    </option>
+                  </TextSelect>
+                </Field>
+                <Field label={strings.bills.status}>
+                  <TextSelect {...form.register('status')}>
+                    {(
+                      Object.keys(strings.bills.statuses) as Array<
+                        keyof typeof strings.bills.statuses
+                      >
+                    ).map((key) => (
+                      <option key={key} value={key}>
+                        {strings.bills.statuses[key]}
+                      </option>
+                    ))}
+                  </TextSelect>
+                </Field>
+              </>
+            ) : (
+              <p className="muted small">
+                {strings.bills.kinds[editing.kind]} ·{' '}
+                {strings.bills.statuses[editing.status]}
+              </p>
+            )}
             <Field label={strings.bills.category}>
               <div className="field-row">
                 <TextSelect
@@ -297,7 +357,7 @@ export function BillsPage() {
               <ErrorBanner message={getErrorMessage(mutation.error)} />
             ) : null}
             <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={closeModal}>
                 {strings.common.cancel}
               </Button>
               <Button type="submit" disabled={mutation.isPending}>

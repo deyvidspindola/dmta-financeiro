@@ -1,6 +1,6 @@
 # Progresso — apps/web (F0)
 
-Atualizado em 2026-08-21 (toasts, filtros, DELETE).
+Atualizado em 2026-08-21 (PATCH edição + Account.type + DELETE categoria).
 
 ## Feito
 
@@ -9,18 +9,20 @@ Atualizado em 2026-08-21 (toasts, filtros, DELETE).
 - Toasts globais de sucesso/erro
 - Filtro de período (mês) em lançamentos e boletos (client-side)
 - Dashboard sem card “Limite usado” (API ainda não expõe `credit_used`)
-- **Exclusão:** DELETE em contas, boletos, lançamentos, cartões e
-  investimentos (`/contexts/{context}/…/{id}`), com confirmação e toast
+- **Exclusão:** DELETE em contas, categorias, boletos, lançamentos, cartões e
+  investimentos, com confirmação e toast
+- **Edição:** PATCH em contas, categorias (só nome), boletos, cartões e
+  investimentos (mesmo formulário de criar, pré-populado)
+- **Account.type** real: `checking | savings | wallet | other` (sem default
+  forçado na leitura; select no create/edit com default `checking`)
+- Lançamentos: criar + apagar apenas (sem PATCH — decisão da API)
 - `npm run build` ok
 
 ## Falta / pendências
 
-- `Account.type` na API (hoje assume `checking` na leitura)
 - Workflow `deploy-web.yml`
-- Edição de registros (PATCH), quando a API existir
 - Filtro de período server-side, se a API passar a aceitar query params
 
 ## Próximo passo concreto
 
 1. Revisar/mergear PR #1.
-2. Quando houver PATCH, plugar edição nas mesmas telas.

@@ -6,7 +6,7 @@ export type CaptureOrigin = 'manual'
 
 export type MoneyDirection = 'income' | 'expense'
 
-export type AccountType = 'checking' | 'savings' | 'cash' | 'other'
+export type AccountType = 'checking' | 'savings' | 'wallet' | 'other'
 
 export type BillStatus = 'pending' | 'paid' | 'overdue' | 'cancelled'
 

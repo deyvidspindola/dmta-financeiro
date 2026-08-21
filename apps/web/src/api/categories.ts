@@ -1,6 +1,10 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
-import { mapCategory, toCreateCategoryBody } from '@/api/mappers'
+import {
+  mapCategory,
+  toCreateCategoryBody,
+  toUpdateCategoryBody,
+} from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { Category, MoneyDirection } from '@/types/models'
 
@@ -35,4 +39,30 @@ export async function createCategory(
     >(`/contexts/${contextId}/categories`, toCreateCategoryBody(payload)),
   )
   return mapCategory(contextId, created)
+}
+
+export async function updateCategory(
+  contextId: string,
+  categoryId: string,
+  payload: { name: string },
+): Promise<Category> {
+  if (useMocks) return mockApi.updateCategory(contextId, categoryId, payload)
+  const updated = unwrapData(
+    await http.patch<
+      | Parameters<typeof mapCategory>[1]
+      | { data: Parameters<typeof mapCategory>[1] }
+    >(
+      `/contexts/${contextId}/categories/${categoryId}`,
+      toUpdateCategoryBody(payload),
+    ),
+  )
+  return mapCategory(contextId, updated)
+}
+
+export async function deleteCategory(
+  contextId: string,
+  categoryId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.deleteCategory(contextId, categoryId)
+  await http.delete(`/contexts/${contextId}/categories/${categoryId}`)
 }
