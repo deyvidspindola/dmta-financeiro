@@ -11,6 +11,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Formato de saída de um {@see Investment}.
  *
+ * @mixin Investment
+ *
  * @package App\Http\Resources
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
@@ -31,8 +33,9 @@ final class InvestmentResource extends JsonResource
             'name' => $this->name,
             'type' => $this->type,
             'broker' => $this->broker,
-            'initial_amount' => $this->initial_amount,
-            'current_amount' => $this->current_amount,
+            'initial_amount' => (float) $this->initial_amount,
+            'current_amount' => (float) $this->current_amount,
+            // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
             'acquired_at' => $this->acquired_at?->toDateString(),
         ];
     }

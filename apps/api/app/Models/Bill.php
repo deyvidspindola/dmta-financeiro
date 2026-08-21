@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'category_id', 'description', 'amount', 'due_date',
@@ -20,6 +21,9 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
  * Boleto a pagar/receber (D-06). Não move saldo de conta sozinho — quando
  * confirmado, o caso de uso que processa o pagamento cria um
  * {@see StatementEntry} vinculado.
+ *
+ * @property-read Carbon $due_date
+ * @property-read Carbon|null $paid_at
  *
  * @package App\Models
  *
@@ -57,8 +61,10 @@ class Bill extends Model
     /** Se o vencimento já passou e o boleto ainda não foi pago/cancelado. */
     public function isOverdue(): bool
     {
-        return $this->status === BillStatus::Pending->value
-            && $this->due_date->isPast();
+        $isPending = $this->status === BillStatus::Pending->value;
+
+        // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration — larastan não infere casts() aqui)
+        return $isPending && $this->due_date->isPast();
     }
 
     /**

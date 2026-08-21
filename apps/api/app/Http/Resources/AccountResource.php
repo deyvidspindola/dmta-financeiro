@@ -11,6 +11,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Formato de saída de um {@see Account}.
  *
+ * @mixin Account
+ *
  * @package App\Http\Resources
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
@@ -30,8 +32,8 @@ final class AccountResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'institution' => $this->institution,
-            'initial_balance' => $this->initial_balance,
-            'balance' => $this->balance,
+            'initial_balance' => (float) $this->initial_balance,
+            'balance' => (float) $this->balance,
         ];
     }
 }

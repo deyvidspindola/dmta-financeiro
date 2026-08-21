@@ -10,10 +10,13 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 #[Fillable(['context_id', 'name', 'type', 'broker', 'initial_amount', 'current_amount', 'acquired_at'])]
 /**
  * Posição de investimento, manual (D-14 — sem rentabilidade automática).
+ *
+ * @property-read Carbon|null $acquired_at
  *
  * @package App\Models
  *

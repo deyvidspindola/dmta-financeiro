@@ -11,6 +11,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Formato de saída de uma {@see Category}.
  *
+ * @mixin Category
+ *
  * @package App\Http\Resources
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>

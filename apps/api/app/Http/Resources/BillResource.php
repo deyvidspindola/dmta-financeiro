@@ -11,6 +11,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Formato de saída de um {@see Bill}.
  *
+ * @mixin Bill
+ *
  * @package App\Http\Resources
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
@@ -29,13 +31,15 @@ final class BillResource extends JsonResource
         return [
             'id' => $this->id,
             'description' => $this->description,
-            'amount' => $this->amount,
+            'amount' => (float) $this->amount,
+            // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration — larastan não infere casts() aqui)
             'due_date' => $this->due_date->toDateString(),
             'direction' => $this->direction,
             'status' => $this->status,
             'origin' => $this->origin,
             'category_id' => $this->category_id,
             'is_overdue' => $this->isOverdue(),
+            // @phpstan-ignore-next-line method.nonObject (cast 'datetime' da migration)
             'paid_at' => $this->paid_at?->toIso8601String(),
         ];
     }

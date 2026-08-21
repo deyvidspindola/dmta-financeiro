@@ -11,6 +11,8 @@ use Illuminate\Http\Resources\Json\JsonResource;
 /**
  * Formato de saída de um {@see Context}.
  *
+ * @mixin Context
+ *
  * @package App\Http\Resources
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
@@ -28,6 +30,7 @@ final class ContextResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            // @phpstan-ignore-next-line property.nonObject (cast ContextType da migration)
             'type' => $this->type->value,
             'name' => $this->name,
             'company' => $this->whenLoaded('company', fn () => [

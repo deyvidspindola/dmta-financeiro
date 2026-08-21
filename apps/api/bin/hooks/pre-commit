@@ -8,6 +8,12 @@
 
 set -e
 
+# Instalado no .git do monorepo (git rev-parse --git-common-dir), mas o
+# docker-compose.yml/Makefile são de apps/api — entra na pasta antes de
+# checar. Quando apps/web também tiver portão de qualidade próprio, este
+# hook precisa rodar os dois, não só este.
+cd "$(git rev-parse --show-toplevel)/apps/api"
+
 if ! docker compose ps --status running --quiet app > /dev/null 2>&1; then
     echo ""
     echo "  ⚠  contêineres não estão rodando — 'make up' antes de commitar"

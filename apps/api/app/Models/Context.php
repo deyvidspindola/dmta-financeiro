@@ -18,6 +18,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * Isolamento de dado do sistema inteiro passa por aqui — ver comentário na
  * migration `create_contexts_table`.
  *
+ * @property-read ContextType $type
+ *
  * @package App\Models
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>

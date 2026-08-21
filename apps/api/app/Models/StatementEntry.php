@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
@@ -19,6 +20,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * Lançamento efetivo numa conta — o único registro que de fato move
  * `accounts.balance` (ver `RegisterTransaction`). `amount` é sempre
  * positivo; o sinal do impacto vem de `type`.
+ *
+ * @property-read StatementEntryType $type
+ * @property-read Carbon $occurred_at
  *
  * @package App\Models
  *
