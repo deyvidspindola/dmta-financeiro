@@ -5,12 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\CategoryType;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCategoryRequest;
+use App\Http\Requests\Api\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
+use App\Models\Category;
 use App\Models\Context;
 use App\UseCases\Category\CreateCategory;
+use App\UseCases\Category\UpdateCategory;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -30,13 +33,9 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class CategoryController extends Controller
 {
-    use AuthorizesContext;
-
     /** `?type=expense|income` filtra a listagem — usado pelo select de categoria em cada formulário. */
     public function index(Request $request, Context $context): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-
         $query = $context->categories();
 
         if ($request->filled('type')) {
@@ -48,8 +47,6 @@ final class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request, Context $context, CreateCategory $useCase): CategoryResource
     {
-        $this->assertOwnsContext($context);
-
         $category = $useCase->execute(
             $context->id,
             $request->string('name')->toString(),
@@ -58,5 +55,24 @@ final class CategoryController extends Controller
         );
 
         return new CategoryResource($category);
+    }
+
+    public function update(
+        UpdateCategoryRequest $request,
+        Context $context,
+        Category $category,
+        UpdateCategory $useCase,
+    ): CategoryResource {
+        $updated = $useCase->execute($category, $request->string('name')->toString());
+
+        return new CategoryResource($updated);
+    }
+
+    /** Apaga a categoria — subcategoria e lançamento/boleto vinculado só ficam sem categoria (FK `nullOnDelete`). */
+    public function destroy(Context $context, Category $category): JsonResponse
+    {
+        $category->delete();
+
+        return response()->json(status: 204);
     }
 }

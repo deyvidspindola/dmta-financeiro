@@ -8,7 +8,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/accounts`.
+ * Validação de `PATCH /api/v1/contexts/{context}/accounts/{account}`.
  *
  * @package App\Http\Requests\Api
  *
@@ -20,7 +20,7 @@ use Illuminate\Validation\Rule;
  *
  * @updated 21/08/2026
  */
-final class StoreAccountRequest extends FormRequest
+final class UpdateAccountRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -34,7 +34,6 @@ final class StoreAccountRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'type' => ['sometimes', Rule::in(['checking', 'savings', 'wallet', 'other'])],
             'institution' => ['nullable', 'string', 'max:100'],
-            'initial_balance' => ['sometimes', 'numeric'],
         ];
     }
 }

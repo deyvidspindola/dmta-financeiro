@@ -31,6 +31,8 @@ final class AccountResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            // @phpstan-ignore-next-line property.nonObject (cast AccountType da migration)
+            'type' => $this->type->value,
             'institution' => $this->institution,
             'initial_balance' => (float) $this->initial_balance,
             'balance' => (float) $this->balance,

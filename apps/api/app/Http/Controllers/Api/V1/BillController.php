@@ -5,14 +5,16 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterBillData;
+use App\DTOs\UpdateBillData;
 use App\Enums\BillDirection;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreBillRequest;
+use App\Http\Requests\Api\UpdateBillRequest;
 use App\Http\Resources\BillResource;
 use App\Models\Bill;
 use App\Models\Context;
 use App\UseCases\Bill\RegisterBill;
+use App\UseCases\Bill\UpdateBill;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -31,19 +33,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class BillController extends Controller
 {
-    use AuthorizesContext;
-
     public function index(Context $context): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-
         return BillResource::collection($context->bills()->orderBy('due_date')->get());
     }
 
     public function store(StoreBillRequest $request, Context $context, RegisterBill $useCase): BillResource
     {
-        $this->assertOwnsContext($context);
-
         $bill = $useCase->execute(new RegisterBillData(
             contextId: $context->id,
             description: $request->string('description')->toString(),
@@ -58,16 +54,23 @@ final class BillController extends Controller
         return new BillResource($bill);
     }
 
-    /**
-     * Apaga o boleto. Não desfaz um lançamento já vinculado — o
-     * `statement_entries.bill_id` só fica nulo (ver migration), o
-     * dinheiro que já se moveu continua movido.
-     */
+    public function update(UpdateBillRequest $request, Context $context, Bill $bill, UpdateBill $useCase): BillResource
+    {
+        $updated = $useCase->execute($bill, new UpdateBillData(
+            description: $request->string('description')->toString(),
+            amount: (float) $request->input('amount'),
+            dueDate: $request->string('due_date')->toString(),
+            categoryId: $request->integer('category_id') ?: null,
+            barcode: $request->input('barcode'),
+            beneficiary: $request->input('beneficiary'),
+        ));
+
+        return new BillResource($updated);
+    }
+
+    /** Apaga o boleto — não desfaz lançamento já vinculado, só desvincula (ver migration). */
     public function destroy(Context $context, Bill $bill): JsonResponse
     {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $bill);
-
         $bill->delete();
 
         return response()->json(status: 204);

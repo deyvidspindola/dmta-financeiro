@@ -5,13 +5,15 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterInvestmentData;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
+use App\DTOs\UpdateInvestmentData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreInvestmentRequest;
+use App\Http\Requests\Api\UpdateInvestmentRequest;
 use App\Http\Resources\InvestmentResource;
 use App\Models\Context;
 use App\Models\Investment;
 use App\UseCases\Investment\RegisterInvestment;
+use App\UseCases\Investment\UpdateInvestment;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -30,22 +32,13 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class InvestmentController extends Controller
 {
-    use AuthorizesContext;
-
     public function index(Context $context): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-
         return InvestmentResource::collection($context->investments()->get());
     }
 
-    public function store(
-        StoreInvestmentRequest $request,
-        Context $context,
-        RegisterInvestment $useCase,
-    ): InvestmentResource {
-        $this->assertOwnsContext($context);
-
+    public function store(StoreInvestmentRequest $request, Context $context, RegisterInvestment $useCase): InvestmentResource
+    {
         $investment = $useCase->execute(new RegisterInvestmentData(
             contextId: $context->id,
             name: $request->string('name')->toString(),
@@ -59,12 +52,21 @@ final class InvestmentController extends Controller
         return new InvestmentResource($investment);
     }
 
+    public function update(UpdateInvestmentRequest $request, Context $context, Investment $investment, UpdateInvestment $useCase): InvestmentResource
+    {
+        $updated = $useCase->execute($investment, new UpdateInvestmentData(
+            name: $request->string('name')->toString(),
+            currentAmount: (float) $request->input('current_amount'),
+            type: $request->input('type'),
+            broker: $request->input('broker'),
+        ));
+
+        return new InvestmentResource($updated);
+    }
+
     /** Apaga o investimento e, em cascata (FK), o histórico de aportes dele. */
     public function destroy(Context $context, Investment $investment): JsonResponse
     {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $investment);
-
         $investment->delete();
 
         return response()->json(status: 204);

@@ -30,6 +30,7 @@ final class RegisterAccount
         return Account::create([
             'context_id' => $data->contextId,
             'name' => $data->name,
+            'type' => $data->type->value,
             'institution' => $data->institution,
             'initial_balance' => $data->initialBalance,
             'balance' => $data->initialBalance,

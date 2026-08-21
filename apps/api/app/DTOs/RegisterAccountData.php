@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\DTOs;
 
+use App\Enums\AccountType;
 use App\UseCases\Account\RegisterAccount;
 
 /**
@@ -26,5 +27,6 @@ final readonly class RegisterAccountData
         public string $name,
         public ?string $institution,
         public float $initialBalance,
+        public AccountType $type = AccountType::Checking,
     ) {}
 }

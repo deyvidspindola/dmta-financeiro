@@ -6,7 +6,6 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterTransactionData;
 use App\Enums\StatementEntryType;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreTransactionRequest;
 use App\Http\Resources\StatementEntryResource;
@@ -33,12 +32,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class TransactionController extends Controller
 {
-    use AuthorizesContext;
-
     public function index(Context $context): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-
         $entries = $context->statementEntries()->latest('occurred_at')->get();
 
         return StatementEntryResource::collection($entries);
@@ -49,8 +44,6 @@ final class TransactionController extends Controller
         Context $context,
         RegisterTransaction $useCase,
     ): StatementEntryResource {
-        $this->assertOwnsContext($context);
-
         $entry = $useCase->execute(new RegisterTransactionData(
             contextId: $context->id,
             accountId: $request->integer('account_id'),
@@ -68,9 +61,6 @@ final class TransactionController extends Controller
     /** Apaga o lançamento e desfaz o efeito no saldo/boleto — ver {@see DeleteTransaction}. */
     public function destroy(Context $context, StatementEntry $transaction, DeleteTransaction $useCase): JsonResponse
     {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $transaction);
-
         $useCase->execute($transaction);
 
         return response()->json(status: 204);

@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterInvestmentContributionData;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreInvestmentContributionRequest;
 use App\Http\Resources\InvestmentContributionResource;
@@ -29,13 +28,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class InvestmentContributionController extends Controller
 {
-    use AuthorizesContext;
-
     public function index(Context $context, Investment $investment): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $investment);
-
         return InvestmentContributionResource::collection(
             $investment->contributions()->orderByDesc('occurred_at')->get(),
         );
@@ -47,9 +41,6 @@ final class InvestmentContributionController extends Controller
         Investment $investment,
         RegisterInvestmentContribution $useCase,
     ): InvestmentContributionResource {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $investment);
-
         $contribution = $useCase->execute(new RegisterInvestmentContributionData(
             investmentId: $investment->id,
             amount: (float) $request->input('amount'),

@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Models\Context;
 use App\Services\DashboardSummaryService;
@@ -26,12 +25,8 @@ use Illuminate\Http\Request;
  */
 final class DashboardController extends Controller
 {
-    use AuthorizesContext;
-
     public function show(Context $context, DashboardSummaryService $service): JsonResponse
     {
-        $this->assertOwnsContext($context);
-
         return response()->json($service->forContext($context));
     }
 

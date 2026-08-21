@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterCardInvoiceData;
-use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCardInvoiceRequest;
 use App\Http\Resources\CardInvoiceResource;
@@ -31,13 +30,8 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class CardInvoiceController extends Controller
 {
-    use AuthorizesContext;
-
     public function index(Context $context, CreditCard $creditCard): AnonymousResourceCollection
     {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $creditCard);
-
         return CardInvoiceResource::collection($creditCard->invoices()->orderByDesc('reference_month')->get());
     }
 
@@ -47,9 +41,6 @@ final class CardInvoiceController extends Controller
         CreditCard $creditCard,
         RegisterCardInvoice $useCase,
     ): CardInvoiceResource {
-        $this->assertOwnsContext($context);
-        $this->assertBelongsToContext($context, $creditCard);
-
         $invoice = $useCase->execute(new RegisterCardInvoiceData(
             creditCardId: $creditCard->id,
             referenceMonth: $request->string('reference_month')->toString(),

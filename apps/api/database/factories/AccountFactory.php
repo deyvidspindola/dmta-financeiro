@@ -19,6 +19,7 @@ class AccountFactory extends Factory
         return [
             'context_id' => Context::factory(),
             'name' => fake()->words(2, true),
+            'type' => 'checking',
             'institution' => fake()->company(),
             'initial_balance' => $balance,
             'balance' => $balance,

@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/accounts`.
+ * Validação de `PATCH .../credit-cards/{creditCard}`.
  *
  * @package App\Http\Requests\Api
  *
@@ -20,21 +19,22 @@ use Illuminate\Validation\Rule;
  *
  * @updated 21/08/2026
  */
-final class StoreAccountRequest extends FormRequest
+final class UpdateCreditCardRequest extends FormRequest
 {
     public function authorize(): bool
     {
         return true;
     }
 
-    /** @return array<string, list<mixed>> */
+    /** @return array<string, list<string>> */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:100'],
-            'type' => ['sometimes', Rule::in(['checking', 'savings', 'wallet', 'other'])],
-            'institution' => ['nullable', 'string', 'max:100'],
-            'initial_balance' => ['sometimes', 'numeric'],
+            'brand' => ['nullable', 'string', 'max:50'],
+            'closing_day' => ['required', 'integer', 'between:1,31'],
+            'due_day' => ['required', 'integer', 'between:1,31'],
+            'credit_limit' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
