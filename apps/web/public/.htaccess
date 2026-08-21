@@ -1,0 +1,13 @@
+# Fallback de SPA — publicado em $WEB_ROOT/app/ (subpasta do document
+# root da API, não a raiz do domínio). React Router usa histórico do
+# navegador (basename="/app"): ao dar F5 numa rota interna como
+# /app/dashboard, o Apache recebe um pedido de arquivo que não existe —
+# sem esta regra, cai no roteador do Laravel (404 dele). Reescreve
+# qualquer caminho sob /app/ que não seja um arquivo/pasta real de volta
+# pro index.html, pra o React Router assumir a partir daí.
+RewriteEngine On
+RewriteBase /app/
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule . /app/index.html [L]

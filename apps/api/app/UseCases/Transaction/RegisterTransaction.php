@@ -41,6 +41,7 @@ final class RegisterTransaction
                 'account_id' => $data->accountId,
                 'category_id' => $data->categoryId,
                 'bill_id' => $data->billId,
+                'recurring_transaction_id' => $data->recurringTransactionId,
                 'description' => $data->description,
                 'amount' => $data->amount,
                 'type' => $data->type->value,

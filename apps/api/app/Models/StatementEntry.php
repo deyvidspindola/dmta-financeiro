@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StatementEntryType;
+use App\UseCases\Transaction\TransferBetweenAccounts;
 use Database\Factories\StatementEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -14,6 +15,7 @@ use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
+    'transfer_pair_id', 'recurring_transaction_id',
     'description', 'amount', 'type', 'occurred_at', 'origin',
 ])]
 /**
@@ -63,11 +65,23 @@ class StatementEntry extends Model
         return $this->belongsTo(Bill::class);
     }
 
+    /** A outra perna desta transferência (débito ⇄ crédito) — ver {@see TransferBetweenAccounts}. */
+    public function transferPair(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'transfer_pair_id');
+    }
+
+    /** @return BelongsTo<RecurringTransaction, $this> */
+    public function recurringTransaction(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTransaction::class);
+    }
+
     /** Sinal (+1/-1) do impacto deste lançamento no saldo da conta. */
     public function balanceSign(): int
     {
         // @phpstan-ignore-next-line identical.alwaysFalse (cast StatementEntryType confirmado em runtime — larastan erra os dois lados dessa inferência)
-        return $this->type === StatementEntryType::Income ? 1 : -1;
+        return $this->type === StatementEntryType::Expense ? -1 : 1;
     }
 
     /**

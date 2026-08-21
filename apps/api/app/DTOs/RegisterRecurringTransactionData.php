@@ -4,14 +4,13 @@ declare(strict_types=1);
 
 namespace App\DTOs;
 
-use App\Enums\CaptureOrigin;
+use App\Enums\RecurrenceInterval;
 use App\Enums\StatementEntryType;
-use App\UseCases\Transaction\RegisterTransaction;
+use App\UseCases\Transaction\RegisterRecurringTransaction;
 
 /**
- * Entrada do caso de uso {@see RegisterTransaction}.
- * Reusada por qualquer canal de captura (manual nesta fase; e-mail/Telegram
- * na F1) — só `origin` muda entre eles.
+ * Entrada do caso de uso {@see RegisterRecurringTransaction}.
+ * `endDate` nulo = recorrência indefinida ("despesa fixa" na tela).
  *
  * @package App\DTOs
  *
@@ -23,7 +22,7 @@ use App\UseCases\Transaction\RegisterTransaction;
  *
  * @updated 21/08/2026
  */
-final readonly class RegisterTransactionData
+final readonly class RegisterRecurringTransactionData
 {
     public function __construct(
         public int $contextId,
@@ -31,10 +30,9 @@ final readonly class RegisterTransactionData
         public string $description,
         public float $amount,
         public StatementEntryType $type,
-        public string $occurredAt,
+        public RecurrenceInterval $interval,
+        public string $startDate,
+        public ?string $endDate = null,
         public ?int $categoryId = null,
-        public ?int $billId = null,
-        public CaptureOrigin $origin = CaptureOrigin::Manual,
-        public ?int $recurringTransactionId = null,
     ) {}
 }

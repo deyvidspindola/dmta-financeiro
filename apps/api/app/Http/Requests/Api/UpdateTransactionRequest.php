@@ -4,19 +4,13 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
-use App\UseCases\Transaction\TransferBetweenAccounts;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/transactions` (lançamento
- * manual — F0). `account_id`, `category_id` e `bill_id` são checados
- * quanto a pertencer ao mesmo contexto no controller, não aqui (regra de
- * negócio, não formato de campo).
- *
+ * Validação de `PATCH /api/v1/contexts/{context}/transactions/{transaction}`.
  * `transfer` não é um tipo aceito aqui — transferência tem endpoint
- * próprio (`POST .../transfers`, {@see TransferBetweenAccounts}),
- * uma única perna não representa uma transferência corretamente.
+ * próprio (`POST .../transfers`), uma única perna não representa ela.
  *
  * @package App\Http\Requests\Api
  *
@@ -28,7 +22,7 @@ use Illuminate\Validation\Rule;
  *
  * @updated 21/08/2026
  */
-final class StoreTransactionRequest extends FormRequest
+final class UpdateTransactionRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -45,7 +39,6 @@ final class StoreTransactionRequest extends FormRequest
             'type' => ['required', Rule::in(['income', 'expense'])],
             'occurred_at' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'bill_id' => ['nullable', 'integer', 'exists:bills,id'],
         ];
     }
 }

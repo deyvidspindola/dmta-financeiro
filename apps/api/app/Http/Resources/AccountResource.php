@@ -36,6 +36,10 @@ final class AccountResource extends JsonResource
             'institution' => $this->institution,
             'initial_balance' => (float) $this->initial_balance,
             'balance' => (float) $this->balance,
+            // Só presente quando o controller carrega a relação (visão
+            // consolidada) — não repete o próprio contexto em toda linha
+            // das listagens aninhadas normais, que já sabem qual é.
+            'context' => new ContextResource($this->whenLoaded('context')),
         ];
     }
 }
