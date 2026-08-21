@@ -40,10 +40,12 @@ Passos:
 1. Checkout, Node 22, `npm ci`.
 2. `npm run build` (Vite gera `apps/web/dist`, build 100% estático — sem
    Node rodando no servidor, como já decidido no documento de concepção).
-3. Deploy do conteúdo de `dist/` via FTP para uma subpasta pública
-   (ex.: `public_html/app/`).
-
-Mesmo par de segredos de FTP do workflow anterior (pode reusar).
+3. Deploy do conteúdo de `dist/` via SSH/rsync (migrado de FTP — DT-06 já
+   cogitava isso) para `$WEB_ROOT/app/`, o **mesmo** document root que
+   `deploy-api.yml` usa, só que numa subpasta. Reusa os mesmos secrets
+   SSH da API — nenhum secret novo. `apps/api/bin/deploy.sh` exclui
+   `app/` do `rsync --delete` dele por causa disso: sem essa exclusão,
+   deployar a API apagaria a pasta do front a cada vez.
 
 ## 3. `build-mobile.yml` — Expo (EAS Build)
 
@@ -66,9 +68,9 @@ começar**, só algo a considerar se a fila incomodar).
 
 | Secret | Usado por | Onde conseguir |
 |---|---|---|
-| `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY` | deploy-api (e deploy-web, se também migrar para SSH) | Painel HostGator — gerar chave dedicada ao deploy, não reusar a pessoal |
-| `FTP_SERVER`, `FTP_USERNAME`, `FTP_PASSWORD` | deploy-web (enquanto ficar em FTP) | Painel HostGator → Contas FTP |
+| `SSH_HOST`, `SSH_USER`, `SSH_PORT`, `SSH_PRIVATE_KEY`, `SSH_KNOWN_HOSTS`, `WEB_ROOT` | deploy-api **e** deploy-web (compartilhados) | Painel HostGator — chave dedicada ao deploy, não reusar a pessoal |
+| `APP_PATH` | deploy-api | Caminho do clone no servidor (fora do document root) |
 | `EXPO_TOKEN` | build-mobile | expo.dev → Access Tokens |
 
-**Nunca** commitar `.env`, credenciais de FTP/SSH ou o token do Expo no
+**Nunca** commitar `.env`, credenciais SSH ou o token do Expo no
 repositório — tudo entra como GitHub Secret.

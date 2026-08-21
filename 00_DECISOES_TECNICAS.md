@@ -53,6 +53,13 @@ etapa de "rota temporária de migração" cogitada antes fica descartada — nã
 mais necessária.
 **Data:** rodada 5.
 
+**Atualização (rodada 6):** `deploy-web.yml` migrado pra SSH/rsync também —
+não fazia sentido manter um segundo conjunto de credenciais (FTP) só pro
+front depois que o SSH já estava configurado e testado pela API. Publica em
+`$WEB_ROOT/app/`, o mesmo document root da API. Isso exigiu excluir `app/`
+do `rsync --delete` de `apps/api/bin/deploy.sh` — sem isso, um deploy da
+API apagaria a pasta do front.
+
 ---
 
 ## Próximos passos imediatos
