@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Caixa IMAP de captura de boletos (F1, D-06)
+    |--------------------------------------------------------------------------
+    |
+    | Desligada por padrão (mesmo padrão do agregador Pluggy, DT-05) — sem
+    | BOLETO_MAILBOX_ENABLED=true no .env, PollBoletoMailbox nem tenta
+    | conectar. Nunca use credencial de conta pessoal aqui: é uma caixa
+    | dedicada só pra receber boleto encaminhado.
+    */
+    'boleto_mailbox' => [
+        'enabled' => (bool) env('BOLETO_MAILBOX_ENABLED', false),
+        'host' => env('BOLETO_MAILBOX_HOST'),
+        'port' => (int) env('BOLETO_MAILBOX_PORT', 993),
+        'encryption' => env('BOLETO_MAILBOX_ENCRYPTION', 'ssl'),
+        'username' => env('BOLETO_MAILBOX_USERNAME'),
+        'password' => env('BOLETO_MAILBOX_PASSWORD'),
+    ],
+
 ];

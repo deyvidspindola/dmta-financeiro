@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BillCaptureController;
 use App\Http\Controllers\Api\V1\BillController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -51,6 +52,12 @@ Route::prefix('v1')->group(function () {
         Route::post('contexts', [ContextController::class, 'store']);
 
         Route::get('dashboard/consolidated', [DashboardController::class, 'consolidated']);
+
+        // Fila de captura por e-mail (F1, D-06) — sem contexto até
+        // confirmar, por isso fora do grupo /contexts/{context} abaixo.
+        Route::get('bill-captures', [BillCaptureController::class, 'index']);
+        Route::post('bill-captures/{capture}/confirm', [BillCaptureController::class, 'confirm']);
+        Route::post('bill-captures/{capture}/reject', [BillCaptureController::class, 'reject']);
 
         Route::prefix('contexts/{context}')->middleware('can:view,context')->scopeBindings()->group(function () {
             Route::get('dashboard', [DashboardController::class, 'show']);
