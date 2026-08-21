@@ -92,8 +92,10 @@ export function TransactionsPage() {
   })
 
   const accounts = accountsQuery.data ?? []
+  // API categories have no income/expense type yet — show all; keep type
+  // filter only when the category actually declares a matching type.
   const categories = (categoriesQuery.data ?? []).filter(
-    (c) => c.type === watchedType,
+    (c) => !c.type || c.type === watchedType,
   )
 
   return (

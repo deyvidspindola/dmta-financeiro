@@ -1,5 +1,6 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
+import { mapBill, toCreateBillBody } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { Bill } from '@/types/models'
 
@@ -7,11 +8,11 @@ export type CreateBillInput = Omit<Bill, 'id' | 'context_id' | 'origin'>
 
 export async function listBills(contextId: string): Promise<Bill[]> {
   if (useMocks) return mockApi.listBills(contextId)
-  return unwrapData(
-    await http.get<Bill[] | { data: Bill[] }>(
-      `/api/v1/contexts/${contextId}/bills`,
-    ),
-  )
+  const payload = await http.get<
+    | Array<Parameters<typeof mapBill>[1]>
+    | { data: Array<Parameters<typeof mapBill>[1]> }
+  >(`/contexts/${contextId}/bills`)
+  return unwrapData(payload).map((row) => mapBill(contextId, row))
 }
 
 export async function createBill(
@@ -19,10 +20,11 @@ export async function createBill(
   payload: CreateBillInput,
 ): Promise<Bill> {
   if (useMocks) return mockApi.createBill(contextId, payload)
-  return unwrapData(
-    await http.post<Bill | { data: Bill }>(
-      `/api/v1/contexts/${contextId}/bills`,
-      payload,
-    ),
+  const created = unwrapData(
+    await http.post<
+      | Parameters<typeof mapBill>[1]
+      | { data: Parameters<typeof mapBill>[1] }
+    >(`/contexts/${contextId}/bills`, toCreateBillBody(payload)),
   )
+  return mapBill(contextId, created)
 }

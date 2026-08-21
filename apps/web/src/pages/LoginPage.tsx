@@ -29,7 +29,7 @@ export function LoginPage() {
 
   const loginForm = useForm<LoginValues>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: 'demo@dmta.local', password: 'password' },
+    defaultValues: { email: 'admin@example.com', password: 'password' },
   })
 
   const mfaForm = useForm<MfaValues>({
@@ -98,7 +98,7 @@ export function LoginPage() {
               {strings.auth.submit}
             </Button>
             <p className="muted small">
-              Mock: demo@dmta.local / password → MFA 123456
+              Dev: admin@example.com / password (MFA ainda não exigido pela API)
             </p>
           </form>
         ) : (

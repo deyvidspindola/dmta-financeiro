@@ -18,18 +18,24 @@ Código em inglês; textos de UI em português via `src/i18n/pt-BR.ts`.
 ## Desenvolvimento local
 
 ```bash
-cp .env.example .env   # VITE_USE_MOCKS=true por padrão
+cp .env.example .env   # aponta para http://127.0.0.1:8090/api/v1, mocks off
 npm install
 npm run dev            # http://localhost:5173
 ```
 
-Credenciais mock:
+Credenciais da API local (Docker):
 
-- e-mail: `demo@dmta.local`
+- e-mail: `admin@example.com`
 - senha: `password`
-- MFA: `123456`
+- MFA: ainda não exigido pelo backend (D-10 pendente)
 
-Com `VITE_USE_MOCKS=false`, as chamadas vão para `VITE_API_BASE_URL` (ou proxy Vite `/api` → Laravel local).
+Para voltar aos fixtures locais: `VITE_USE_MOCKS=true`.
+
+Smoke da camada HTTP (sem browser):
+
+```bash
+npx vite-node scripts/smoke-api.ts
+```
 
 ## Camada HTTP
 

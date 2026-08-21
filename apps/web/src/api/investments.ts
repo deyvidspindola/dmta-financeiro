@@ -1,5 +1,6 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
+import { mapInvestment, toCreateInvestmentBody } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { Investment } from '@/types/models'
 
@@ -9,11 +10,11 @@ export async function listInvestments(
   contextId: string,
 ): Promise<Investment[]> {
   if (useMocks) return mockApi.listInvestments(contextId)
-  return unwrapData(
-    await http.get<Investment[] | { data: Investment[] }>(
-      `/api/v1/contexts/${contextId}/investments`,
-    ),
-  )
+  const payload = await http.get<
+    | Array<Parameters<typeof mapInvestment>[1]>
+    | { data: Array<Parameters<typeof mapInvestment>[1]> }
+  >(`/contexts/${contextId}/investments`)
+  return unwrapData(payload).map((row) => mapInvestment(contextId, row))
 }
 
 export async function createInvestment(
@@ -21,10 +22,14 @@ export async function createInvestment(
   payload: CreateInvestmentInput,
 ): Promise<Investment> {
   if (useMocks) return mockApi.createInvestment(contextId, payload)
-  return unwrapData(
-    await http.post<Investment | { data: Investment }>(
-      `/api/v1/contexts/${contextId}/investments`,
-      payload,
+  const created = unwrapData(
+    await http.post<
+      | Parameters<typeof mapInvestment>[1]
+      | { data: Parameters<typeof mapInvestment>[1] }
+    >(
+      `/contexts/${contextId}/investments`,
+      toCreateInvestmentBody(payload),
     ),
   )
+  return mapInvestment(contextId, created)
 }

@@ -35,7 +35,7 @@ async function request<T>(
   }
 
   const token = getToken()
-  if (token) {
+  if (token && !headers.has('Authorization')) {
     headers.set('Authorization', `Bearer ${token}`)
   }
 
@@ -66,23 +66,27 @@ async function request<T>(
 }
 
 export const http = {
-  get: <T>(path: string) => request<T>(path),
-  post: <T>(path: string, body?: unknown) =>
+  get: <T>(path: string, init?: RequestInit) => request<T>(path, init),
+  post: <T>(path: string, body?: unknown, init?: RequestInit) =>
     request<T>(path, {
+      ...init,
       method: 'POST',
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
-  put: <T>(path: string, body?: unknown) =>
+  put: <T>(path: string, body?: unknown, init?: RequestInit) =>
     request<T>(path, {
+      ...init,
       method: 'PUT',
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
-  patch: <T>(path: string, body?: unknown) =>
+  patch: <T>(path: string, body?: unknown, init?: RequestInit) =>
     request<T>(path, {
+      ...init,
       method: 'PATCH',
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
-  delete: <T>(path: string) => request<T>(path, { method: 'DELETE' }),
+  delete: <T>(path: string, init?: RequestInit) =>
+    request<T>(path, { ...init, method: 'DELETE' }),
 }
 
 /** Unwrap Laravel-style `{ data: T }` envelopes when present. */

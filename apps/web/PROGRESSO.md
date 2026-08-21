@@ -1,44 +1,48 @@
 # Progresso — apps/web (F0)
 
-Atualizado em 2026-08-21.
+Atualizado em 2026-08-21 (integração API real).
 
 ## Feito
 
 - Scaffold React 19 + Vite + TypeScript em `apps/web`
-- Camada HTTP tipada em `src/api/*` (auth, contexts, dashboard, accounts,
-  categories, bills, transactions, creditCards, investments) com troca
-  mock/real via `VITE_USE_MOCKS`
-- Fixtures locais em `src/mocks/store.ts`
-- Login + MFA (fluxo de UI), layout, seletor de contexto
-- Dashboard por contexto e consolidado
-- Telas de cadastro manual: contas, cartões (+ listagem de faturas mock),
-  boletos, lançamentos (`StatementEntry`), investimentos
-- Modal de categoria/subcategoria (`parent_id`) em boletos e lançamentos
-- Strings pt-BR em `src/i18n/pt-BR.ts`
-- `README.md` com stack, setup e credenciais mock
+- **Ligado à API real** (`VITE_USE_MOCKS=false`,
+  `VITE_API_BASE_URL=http://127.0.0.1:8090/api/v1`)
+- Mappers em `src/api/mappers.ts` traduzem o contrato Laravel
+  (`institution`↔`bank_name`, `direction`↔`kind`, `occurred_at`↔`date`,
+  `credit_limit`↔`limit`, `broker`/`initial_amount`/`current_amount`,
+  dashboard `accounts_balance`/`month_*`, etc.) sem mudar a UI
+- Login real: `POST /auth/login` com `device_name`, depois `/auth/me` +
+  `/contexts` para montar a sessão (sem passo MFA — API ainda não pede)
+- Smoke manual via `scripts/smoke-api.ts` + curl: login admin, contexto
+  "Pessoal", dashboard consolidado com saldo/lançamentos reais, criar conta
+  e ver na listagem
+- `npm run build` passa
 
-## Falta do escopo F0 (web)
+## Falta / pendências de integração
 
-- Ligar aos endpoints reais `/api/v1` quando a API do outro agente estabilizar
-  (ajustar só `src/api/*`; desligar mocks)
-- Workflow `deploy-web.yml` (fica no monorepo / CI — fora desta pasta, mas
-  ainda é critério “Pronto” da F0)
-- Polimento: edição/exclusão de registros, filtros, feedback de toast
-- Confirmar contrato exato de MFA/login com o que a API Sanctum expor
+- **MFA/TOTP (D-10):** UI ainda tem o passo, mas a API devolve o token
+  direto — fluxo MFA fica desligado até o backend implementar. Não inventar
+  contrato.
+- Endpoint de faturas de cartão (`CardInvoice`) ainda não existe na API —
+  `listCardInvoices` retorna `[]` no modo real
+- `credit_used` no dashboard mapeado como `0` (campo não vem da API)
+- `Category.type` (receita/despesa) não existe no backend — select mostra
+  todas as categorias
+- Conta sem `type` na API — UI assume `checking` na leitura
+- Workflow `deploy-web.yml` (critério “Pronto” da F0, fora desta pasta)
+- Polimento: edição/exclusão, toasts, filtros
 
-## Dúvidas / decisões locais (não estavam nos docs)
+## Dúvidas / decisões locais
 
-- Vocabulário de lançamento: UI fala “Lançamentos”; tipo/domínio
-  `StatementEntry`; path HTTP provisório `/transactions` — alinhar com a API
-- Dashboard consolidado é só soma de métricas (como F0 pede); cadastros
-  exigem contexto PF/PJ selecionado
-- Valores monetários em `number` decimal no JSON (não centavos) até a API
-  definir o formato
+- Vocabulário: UI “Lançamentos” / domínio `StatementEntry` / path
+  `/transactions` — alinhado com a API atual
+- Cadastros exigem contexto PF/PJ (não consolidado)
+- Valores monetários: `number` decimal no JSON (confirmado)
 
 ## Próximo passo concreto
 
-1. Rodar `npm run dev` e validar o fluxo feliz com mocks.
-2. Quando `apps/api` publicar `/api/v1` (auth + recursos F0), setar
-   `VITE_USE_MOCKS=false` e ajustar paths/payloads em `src/api/*` contra o
-   contrato real.
-3. Abrir/acompanhar PR `feature/f0-web-scaffold` → `main` (sem merge automático).
+1. Quando a API expor MFA, reativar o segundo fator na UI sem reinventar o
+   contrato — só consumir o que vier no login.
+2. Alinhar campos opcionais que a UI ainda simula (`Account.type`,
+   `Category.type`, `credit_used`, faturas) quando o backend os publicar.
+3. Revisar/mergear PR #1 após teste visual no browser (`npm run dev`).

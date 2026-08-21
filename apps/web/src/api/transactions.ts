@@ -1,5 +1,6 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
+import { mapTransaction, toCreateTransactionBody } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { StatementEntry } from '@/types/models'
 
@@ -12,11 +13,11 @@ export async function listTransactions(
   contextId: string,
 ): Promise<StatementEntry[]> {
   if (useMocks) return mockApi.listTransactions(contextId)
-  return unwrapData(
-    await http.get<StatementEntry[] | { data: StatementEntry[] }>(
-      `/api/v1/contexts/${contextId}/transactions`,
-    ),
-  )
+  const payload = await http.get<
+    | Array<Parameters<typeof mapTransaction>[1]>
+    | { data: Array<Parameters<typeof mapTransaction>[1]> }
+  >(`/contexts/${contextId}/transactions`)
+  return unwrapData(payload).map((row) => mapTransaction(contextId, row))
 }
 
 export async function createTransaction(
@@ -24,10 +25,14 @@ export async function createTransaction(
   payload: CreateTransactionInput,
 ): Promise<StatementEntry> {
   if (useMocks) return mockApi.createTransaction(contextId, payload)
-  return unwrapData(
-    await http.post<StatementEntry | { data: StatementEntry }>(
-      `/api/v1/contexts/${contextId}/transactions`,
-      payload,
+  const created = unwrapData(
+    await http.post<
+      | Parameters<typeof mapTransaction>[1]
+      | { data: Parameters<typeof mapTransaction>[1] }
+    >(
+      `/contexts/${contextId}/transactions`,
+      toCreateTransactionBody(payload),
     ),
   )
+  return mapTransaction(contextId, created)
 }

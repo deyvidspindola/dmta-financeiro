@@ -1,3 +1,3 @@
 # Progresso do monorepo
 
-- **F0 / web:** scaffold SPA em andamento na branch `feature/f0-web-scaffold` — detalhes em `apps/web/PROGRESSO.md`.
+- **F0 / web:** SPA ligada à API local na branch `feature/f0-web-scaffold` (PR #1) — ver `apps/web/PROGRESSO.md`.
