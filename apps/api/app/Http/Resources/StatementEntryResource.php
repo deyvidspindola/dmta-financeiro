@@ -44,6 +44,45 @@ final class StatementEntryResource extends JsonResource
             'origin' => $this->origin,
             // Só presente na visão consolidada — ver AccountResource.
             'context' => new ContextResource($this->whenLoaded('context')),
+            // Só presente se for transferência E o controller eager-loadar
+            // transferPair.account.context — nunca lazy-load aqui dentro
+            // (evita N+1 silencioso em listagem).
+            'transfer' => $this->when(
+                $this->transfer_pair_id !== null && $this->relationLoaded('transferPair'),
+                fn () => $this->transferDetails(),
+            ),
+        ];
+    }
+
+    /**
+     * Monta "de onde saiu → pra onde foi" — cada lado com o contexto e a
+     * conta, pra tela mostrar isso ao visualizar/editar um lançamento de
+     * transferência, mesmo quando os dois lados são de contextos
+     * diferentes (PF ⇄ empresa).
+     *
+     * @return array{from: array<string, mixed>, to: array<string, mixed>}
+     */
+    private function transferDetails(): array
+    {
+        /** @var StatementEntry $pair */
+        $pair = $this->transferPair;
+        /** @var StatementEntry $self */
+        $self = $this->resource;
+
+        [$origin, $destination] = $self->isTransferOrigin() ? [$self, $pair] : [$pair, $self];
+
+        return [
+            'from' => $this->legDetails($origin),
+            'to' => $this->legDetails($destination),
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function legDetails(StatementEntry $entry): array
+    {
+        return [
+            'context' => new ContextResource($entry->account->context),
+            'account' => ['id' => $entry->account->id, 'name' => $entry->account->name],
         ];
     }
 }

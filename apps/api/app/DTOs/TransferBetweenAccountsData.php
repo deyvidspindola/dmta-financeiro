@@ -8,6 +8,10 @@ use App\UseCases\Transaction\TransferBetweenAccounts;
 
 /**
  * Entrada do caso de uso {@see TransferBetweenAccounts}.
+ * `fromContextId`/`toContextId` podem ser o mesmo contexto (transferência
+ * comum entre contas) ou diferentes (transferência entre PF e empresa,
+ * ou entre duas empresas) — o caso de uso não distingue os dois casos,
+ * só confere que cada conta pertence ao contexto informado pro seu lado.
  *
  * @package App\DTOs
  *
@@ -22,7 +26,8 @@ use App\UseCases\Transaction\TransferBetweenAccounts;
 final readonly class TransferBetweenAccountsData
 {
     public function __construct(
-        public int $contextId,
+        public int $fromContextId,
+        public int $toContextId,
         public int $fromAccountId,
         public int $toAccountId,
         public float $amount,

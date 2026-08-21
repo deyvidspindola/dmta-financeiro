@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
+use App\Http\Controllers\Api\V1\ShowTransactionController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\UpdateTransactionController;
@@ -91,7 +92,7 @@ Route::prefix('v1')->group(function () {
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
-            Route::get('transactions/{transaction}', [TransactionController::class, 'show']);
+            Route::get('transactions/{transaction}', [ShowTransactionController::class, 'show']);
             Route::patch('transactions/{transaction}', [UpdateTransactionController::class, 'update']);
             Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy']);
             Route::post('transactions/{transaction}/move', [MoveTransactionController::class, 'store']);

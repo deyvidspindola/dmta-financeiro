@@ -18,11 +18,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
  * Lançamentos manuais numa conta (F0) — o mesmo endpoint que F1 vai
- * reaproveitar para e-mail/Telegram, só trocando `origin`. Editar é
- * {@see UpdateTransactionController}, mover pra outro contexto é
- * {@see MoveTransactionController}, transferência entre contas é
- * {@see TransferController} — cada um tem regra própria demais pra
- * caber aqui sem estourar o limite de linhas do controller.
+ * reaproveitar para e-mail/Telegram, só trocando `origin`. Visualizar é
+ * {@see ShowTransactionController}, editar é {@see UpdateTransactionController},
+ * mover pra outro contexto é {@see MoveTransactionController},
+ * transferência entre contas é {@see TransferController} — cada um tem
+ * regra própria demais pra caber aqui sem estourar o limite de linhas.
  *
  * @package App\Http\Controllers\Api\V1
  *
@@ -38,14 +38,12 @@ final class TransactionController extends Controller
 {
     public function index(Context $context): AnonymousResourceCollection
     {
-        $entries = $context->statementEntries()->latest('occurred_at')->get();
+        $entries = $context->statementEntries()
+            ->with('transferPair.account.context')
+            ->latest('occurred_at')
+            ->get();
 
         return StatementEntryResource::collection($entries);
-    }
-
-    public function show(Context $context, StatementEntry $transaction): StatementEntryResource
-    {
-        return new StatementEntryResource($transaction);
     }
 
     public function store(

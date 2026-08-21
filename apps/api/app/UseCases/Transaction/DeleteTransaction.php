@@ -20,7 +20,8 @@ use Illuminate\Support\Facades\DB;
  *
  * Se o lançamento for uma perna de transferência ({@see TransferBetweenAccounts}),
  * apaga as duas pernas junto e reverte o saldo das duas contas — nunca
- * deixa uma transferência pela metade.
+ * deixa uma transferência pela metade, mesmo quando as contas são de
+ * contextos diferentes (PF ⇄ empresa).
  *
  * @package App\UseCases\Transaction
  *
@@ -56,21 +57,14 @@ final class DeleteTransaction
         });
     }
 
-    /**
-     * Reverte o saldo das duas contas e apaga as duas pernas.
-     *
-     * As duas pernas têm `type = transfer` — não dá pra saber por `type`
-     * qual delas foi o débito e qual foi o crédito. {@see TransferBetweenAccounts}
-     * sempre cria a perna de origem (débito) primeiro, então ela sempre
-     * tem o `id` menor; é assim que distinguimos aqui pra reverter cada
-     * lado com o sinal certo.
-     */
+    /** Reverte o saldo das duas contas (mesmo que de contextos diferentes) e apaga as duas pernas. */
     private function deleteTransferPair(StatementEntry $entry): void
     {
         /** @var StatementEntry $pair */
         $pair = StatementEntry::query()->whereKey($entry->transfer_pair_id)->firstOrFail();
 
-        [$debitLeg, $creditLeg] = $entry->id < $pair->id ? [$entry, $pair] : [$pair, $entry];
+        // isTransferOrigin() distingue débito de crédito — ver o método no model.
+        [$debitLeg, $creditLeg] = $entry->isTransferOrigin() ? [$entry, $pair] : [$pair, $entry];
 
         Account::query()->whereKey($debitLeg->account_id)->lockForUpdate()->increment('balance', $debitLeg->amount);
         Account::query()->whereKey($creditLeg->account_id)->lockForUpdate()->decrement('balance', $creditLeg->amount);

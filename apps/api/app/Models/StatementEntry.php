@@ -71,6 +71,21 @@ class StatementEntry extends Model
         return $this->belongsTo(self::class, 'transfer_pair_id');
     }
 
+    /**
+     * Se esta é a perna de origem (débito) de uma transferência, não a de
+     * destino (crédito). As duas pernas têm `type = transfer` — não dá
+     * pra saber por `type` qual é qual. {@see TransferBetweenAccounts}
+     * sempre cria a perna de origem primeiro, então ela sempre tem o
+     * `id` menor; é assim que distinguimos (usado por `DeleteTransaction`
+     * e por `StatementEntryResource` pra montar "de onde → pra onde").
+     *
+     * Só chame depois de confirmar `transfer_pair_id !== null`.
+     */
+    public function isTransferOrigin(): bool
+    {
+        return $this->id < $this->transfer_pair_id;
+    }
+
     /** @return BelongsTo<RecurringTransaction, $this> */
     public function recurringTransaction(): BelongsTo
     {

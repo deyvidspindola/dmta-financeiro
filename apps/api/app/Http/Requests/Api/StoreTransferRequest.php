@@ -7,9 +7,12 @@ namespace App\Http\Requests\Api;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/transfers`. As duas
- * contas são checadas quanto a pertencer ao mesmo contexto e serem
- * diferentes no caso de uso, não aqui (regra de negócio).
+ * Validação de `POST /api/v1/contexts/{context}/transfers`. `to_context_id`
+ * é opcional — omitido, a transferência é dentro do próprio `{context}`
+ * da URL (comportamento de sempre); informado, pode ser qualquer outro
+ * contexto do usuário (PF ⇄ empresa, ou entre duas empresas). Contas
+ * pertencerem mesmo aos contextos informados é checado no caso de uso,
+ * não aqui (regra de negócio, não formato de campo).
  *
  * @package App\Http\Requests\Api
  *
@@ -34,6 +37,7 @@ final class StoreTransferRequest extends FormRequest
         return [
             'from_account_id' => ['required', 'integer', 'exists:accounts,id'],
             'to_account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'to_context_id' => ['nullable', 'integer', 'exists:contexts,id'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'description' => ['required', 'string', 'max:150'],
             'occurred_at' => ['required', 'date'],
