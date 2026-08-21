@@ -18,3 +18,4 @@ deploy_key.pub
 # --- Credenciais coladas na raiz (nunca commitar) ---
 /dados de acesso pluggy.txt
 /Criar um Connect Token.txt
+/email-boleto.txt
