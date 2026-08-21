@@ -1,0 +1,147 @@
+import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+
+export function PageHeader({
+  title,
+  description,
+  actions,
+}: {
+  title: string
+  description?: string
+  actions?: ReactNode
+}) {
+  return (
+    <header className="page-header">
+      <div>
+        <h1>{title}</h1>
+        {description ? <p className="muted">{description}</p> : null}
+      </div>
+      {actions ? <div className="page-header__actions">{actions}</div> : null}
+    </header>
+  )
+}
+
+export function Button({
+  variant = 'primary',
+  className = '',
+  ...props
+}: ButtonHTMLAttributes<HTMLButtonElement> & {
+  variant?: 'primary' | 'ghost' | 'danger'
+}) {
+  return (
+    <button
+      type="button"
+      className={`btn btn--${variant} ${className}`.trim()}
+      {...props}
+    />
+  )
+}
+
+export function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string
+  error?: string
+  children: ReactNode
+}) {
+  return (
+    <label className="field">
+      <span className="field__label">{label}</span>
+      {children}
+      {error ? <span className="field__error">{error}</span> : null}
+    </label>
+  )
+}
+
+export function TextInput(
+  props: InputHTMLAttributes<HTMLInputElement>,
+) {
+  return <input className="input" {...props} />
+}
+
+export function TextSelect(
+  props: SelectHTMLAttributes<HTMLSelectElement>,
+) {
+  return <select className="input" {...props} />
+}
+
+export function EmptyState({ message }: { message: string }) {
+  return <p className="empty-state">{message}</p>
+}
+
+export function LoadingBlock({ label }: { label: string }) {
+  return <p className="muted loading-block">{label}</p>
+}
+
+export function ErrorBanner({ message }: { message: string }) {
+  return <div className="error-banner" role="alert">{message}</div>
+}
+
+export function DataTable({
+  headers,
+  children,
+}: {
+  headers: string[]
+  children: ReactNode
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="data-table">
+        <thead>
+          <tr>
+            {headers.map((header) => (
+              <th key={header}>{header}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>{children}</tbody>
+      </table>
+    </div>
+  )
+}
+
+export function Modal({
+  title,
+  onClose,
+  children,
+}: {
+  title: string
+  onClose: () => void
+  children: ReactNode
+}) {
+  return (
+    <div className="modal-backdrop" role="presentation" onClick={onClose}>
+      <div
+        className="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={title}
+        onClick={(event) => event.stopPropagation()}
+      >
+        <header className="modal__header">
+          <h2>{title}</h2>
+          <button type="button" className="icon-btn" onClick={onClose} aria-label="Fechar">
+            ×
+          </button>
+        </header>
+        <div className="modal__body">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+export function Panel({
+  title,
+  children,
+}: {
+  title?: string
+  children: ReactNode
+}) {
+  return (
+    <section className="panel">
+      {title ? <h2 className="panel__title">{title}</h2> : null}
+      {children}
+    </section>
+  )
+}
