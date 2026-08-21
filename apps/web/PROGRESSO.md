@@ -1,29 +1,28 @@
 # Progresso — apps/web (F0)
 
-Atualizado em 2026-08-21 (MFA/TOTP D-10 ligado).
+Atualizado em 2026-08-21 (polimento: toasts + filtros).
 
 ## Feito
 
 - Scaffold React 19 + Vite + TypeScript em `apps/web`
-- Ligado à API real (`VITE_USE_MOCKS=false`,
-  `VITE_API_BASE_URL=http://127.0.0.1:8090/api/v1`)
-- Mappers, contextos PF+PJ, category.type, 422, faturas de cartão
-- **MFA/TOTP (D-10):**
-  - Login trata `mfa_required` + `mfa_token`
-  - `POST /auth/mfa/verify` com `Authorization: Bearer <mfa_token>`
-  - Tela **Segurança** (`/security`): enroll (QR + secret), confirm, disable
-  - Smoke ponta a ponta: `npx vite-node scripts/smoke-mfa.ts`
+- Ligado à API real + MFA/TOTP, category.type, contextos PF+PJ, 422, faturas
+- **Toasts globais** de sucesso nos cadastros (conta, boleto, lançamento,
+  cartão/fatura, investimento, categoria, MFA)
+- **Filtro de período (mês)** em lançamentos e boletos (client-side; API
+  ainda não filtra) — default = mês atual, opção “Todos”
+- Dashboard: removido o card “Limite usado” enquanto a API não expõe
+  `credit_used` (evita métrica sempre zerada)
 - `npm run build` ok
 
 ## Falta / pendências
 
-- `credit_used` no dashboard ainda `0` (API não expõe)
-- Conta sem `type` na API — leitura assume `checking`
+- **Exclusão (DELETE)** — aguardando endpoints na API; **não** implementar
+  botão de apagar até lá
+- `Account.type` na API (hoje assume `checking` na leitura)
 - Workflow `deploy-web.yml`
-- Polimento: edição/exclusão, toasts globais, filtros de listagem
+- Edição de registros (PATCH), quando a API existir
 
 ## Próximo passo concreto
 
-1. Teste visual: Segurança → ativar MFA → logout → login com app TOTP →
-   desligar MFA.
+1. Quando os destroys da API subirem, plugar botões de exclusão + toast.
 2. Revisar/mergear PR #1.

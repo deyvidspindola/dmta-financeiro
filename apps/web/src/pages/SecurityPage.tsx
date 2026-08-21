@@ -7,6 +7,7 @@ import { authApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import {
   Button,
   ErrorBanner,
@@ -60,6 +61,7 @@ export function SecurityPage() {
       setUser(me)
       setEnroll(null)
       setMessage(strings.security.enrollSuccess)
+      toastSuccess(strings.security.enrollSuccess)
     } catch (err) {
       setError(getErrorMessage(err, strings.auth.invalidMfa))
     } finally {
@@ -77,6 +79,7 @@ export function SecurityPage() {
       setUser(me)
       setEnroll(null)
       setMessage(strings.security.disableSuccess)
+      toastSuccess(strings.security.disableSuccess)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {

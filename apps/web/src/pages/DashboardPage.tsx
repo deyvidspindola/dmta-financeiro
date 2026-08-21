@@ -50,10 +50,6 @@ export function DashboardPage() {
             value={`${formatMoney(data.bills_pending_amount)} (${data.bills_pending_count})`}
           />
           <Metric
-            label={strings.dashboard.creditUsed}
-            value={formatMoney(data.credit_used)}
-          />
-          <Metric
             label={strings.dashboard.investments}
             value={formatMoney(data.investments_total)}
           />

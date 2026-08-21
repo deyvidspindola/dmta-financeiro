@@ -10,6 +10,7 @@ import { BillsPage } from '@/pages/BillsPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
 import { InvestmentsPage } from '@/pages/InvestmentsPage'
 import { SecurityPage } from '@/pages/SecurityPage'
+import { ToastHost } from '@/components/ToastHost'
 import { bindAuthToken } from '@/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -29,6 +30,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <ToastHost />
         <Routes>
           <Route path="/login" element={<LoginPage />} />
           <Route

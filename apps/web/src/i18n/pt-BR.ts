@@ -67,6 +67,7 @@ export const strings = {
     type: 'Tipo',
     balance: 'Saldo inicial',
     empty: 'Nenhuma conta cadastrada.',
+    created: 'Conta cadastrada.',
     types: {
       checking: 'Corrente',
       savings: 'Poupança',
@@ -85,6 +86,8 @@ export const strings = {
     dueDay: 'Dia de vencimento',
     empty: 'Nenhum cartão cadastrado.',
     invoices: 'Faturas',
+    created: 'Cartão cadastrado.',
+    invoiceCreated: 'Fatura registrada.',
   },
 
   bills: {
@@ -98,6 +101,10 @@ export const strings = {
     barcode: 'Código de barras',
     category: 'Categoria',
     empty: 'Nenhum boleto cadastrado.',
+    emptyMonth: 'Nenhum boleto com vencimento neste mês.',
+    period: 'Vencimento',
+    periodAll: 'Todos',
+    created: 'Boleto cadastrado.',
     kinds: {
       payable: 'A pagar',
       receivable: 'A receber',
@@ -120,6 +127,10 @@ export const strings = {
     account: 'Conta',
     category: 'Categoria',
     empty: 'Nenhum lançamento cadastrado.',
+    emptyMonth: 'Nenhum lançamento neste mês.',
+    period: 'Período',
+    periodAll: 'Todos',
+    created: 'Lançamento registrado.',
     types: {
       income: 'Receita',
       expense: 'Despesa',
@@ -135,6 +146,7 @@ export const strings = {
     investedAmount: 'Valor investido',
     currentPosition: 'Posição atual',
     empty: 'Nenhum investimento cadastrado.',
+    created: 'Investimento cadastrado.',
   },
 
   categories: {
@@ -145,6 +157,7 @@ export const strings = {
     parent: 'Categoria-mãe',
     parentNone: 'Nenhuma (categoria raiz)',
     quickAdd: 'Cadastrar categoria',
+    created: 'Categoria cadastrada.',
     types: {
       income: 'Receita',
       expense: 'Despesa',

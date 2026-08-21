@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,9 +6,11 @@ import { z } from 'zod'
 import { accountsApi, categoriesApi, transactionsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
+import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
@@ -22,6 +24,8 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+
+const ALL_PERIODS = 'all'
 
 const schema = z.object({
   description: z.string().min(1, strings.common.required),
@@ -40,6 +44,7 @@ export function TransactionsPage() {
   const contextId = useWritableContextId()
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
+  const [period, setPeriod] = useState(currentMonthKey)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
 
   const { data = [], isLoading, isError } = useQuery({
@@ -47,6 +52,19 @@ export function TransactionsPage() {
     queryFn: () => transactionsApi.listTransactions(listContextId!),
     enabled: Boolean(listContextId),
   })
+
+  const periodOptions = useMemo(() => {
+    const months = new Set<string>([currentMonthKey()])
+    for (const tx of data) {
+      if (tx.date.length >= 7) months.add(tx.date.slice(0, 7))
+    }
+    return [...months].sort((a, b) => b.localeCompare(a))
+  }, [data])
+
+  const filtered = useMemo(() => {
+    if (period === ALL_PERIODS) return data
+    return data.filter((tx) => isInMonth(tx.date, period))
+  }, [data, period])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -85,6 +103,7 @@ export function TransactionsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['transactions'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.transactions.created)
       setOpen(false)
       form.reset({
         description: '',
@@ -118,6 +137,26 @@ export function TransactionsPage() {
         <ErrorBanner message="Selecione um contexto para cadastrar e listar lançamentos." />
       ) : null}
 
+      {listContextId ? (
+        <div className="filter-bar">
+          <Field label={strings.transactions.period}>
+            <TextSelect
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
+            >
+              <option value={ALL_PERIODS}>
+                {strings.transactions.periodAll}
+              </option>
+              {periodOptions.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+        </div>
+      ) : null}
+
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
       {isError ? <ErrorBanner message={strings.common.error} /> : null}
 
@@ -125,7 +164,14 @@ export function TransactionsPage() {
         <EmptyState message={strings.transactions.empty} />
       ) : null}
 
-      {data.length > 0 ? (
+      {!isLoading &&
+      listContextId &&
+      data.length > 0 &&
+      filtered.length === 0 ? (
+        <EmptyState message={strings.transactions.emptyMonth} />
+      ) : null}
+
+      {filtered.length > 0 ? (
         <DataTable
           headers={[
             strings.transactions.date,
@@ -134,7 +180,7 @@ export function TransactionsPage() {
             strings.transactions.amount,
           ]}
         >
-          {data.map((tx) => (
+          {filtered.map((tx) => (
             <tr key={tx.id}>
               <td>{formatDate(tx.date)}</td>
               <td>{tx.description}</td>

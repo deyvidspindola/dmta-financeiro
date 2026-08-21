@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
+import { toastSuccess } from '@/store/toastStore'
 import {
   Button,
   ErrorBanner,
@@ -80,6 +81,7 @@ export function CategoryModal({
       }),
     onSuccess: (category) => {
       void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
+      toastSuccess(strings.categories.created)
       onCreated?.(category.id)
       onClose()
     },

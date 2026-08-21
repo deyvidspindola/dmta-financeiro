@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,9 +6,11 @@ import { z } from 'zod'
 import { billsApi, categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
+import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
@@ -23,6 +25,8 @@ import {
   TextSelect,
 } from '@/components/ui'
 import type { MoneyDirection } from '@/types/models'
+
+const ALL_PERIODS = 'all'
 
 const schema = z.object({
   description: z.string().min(1, strings.common.required),
@@ -48,6 +52,7 @@ export function BillsPage() {
   const contextId = useWritableContextId()
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
+  const [period, setPeriod] = useState(currentMonthKey)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
 
   const { data = [], isLoading, isError } = useQuery({
@@ -55,6 +60,19 @@ export function BillsPage() {
     queryFn: () => billsApi.listBills(listContextId!),
     enabled: Boolean(listContextId),
   })
+
+  const periodOptions = useMemo(() => {
+    const months = new Set<string>([currentMonthKey()])
+    for (const bill of data) {
+      if (bill.due_date.length >= 7) months.add(bill.due_date.slice(0, 7))
+    }
+    return [...months].sort((a, b) => b.localeCompare(a))
+  }, [data])
+
+  const filtered = useMemo(() => {
+    if (period === ALL_PERIODS) return data
+    return data.filter((bill) => isInMonth(bill.due_date, period))
+  }, [data, period])
 
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -97,6 +115,7 @@ export function BillsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.bills.created)
       setOpen(false)
       form.reset()
     },
@@ -122,6 +141,24 @@ export function BillsPage() {
         <ErrorBanner message="Selecione um contexto para cadastrar e listar boletos." />
       ) : null}
 
+      {listContextId ? (
+        <div className="filter-bar">
+          <Field label={strings.bills.period}>
+            <TextSelect
+              value={period}
+              onChange={(event) => setPeriod(event.target.value)}
+            >
+              <option value={ALL_PERIODS}>{strings.bills.periodAll}</option>
+              {periodOptions.map((month) => (
+                <option key={month} value={month}>
+                  {month}
+                </option>
+              ))}
+            </TextSelect>
+          </Field>
+        </div>
+      ) : null}
+
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
       {isError ? <ErrorBanner message={strings.common.error} /> : null}
 
@@ -129,7 +166,14 @@ export function BillsPage() {
         <EmptyState message={strings.bills.empty} />
       ) : null}
 
-      {data.length > 0 ? (
+      {!isLoading &&
+      listContextId &&
+      data.length > 0 &&
+      filtered.length === 0 ? (
+        <EmptyState message={strings.bills.emptyMonth} />
+      ) : null}
+
+      {filtered.length > 0 ? (
         <DataTable
           headers={[
             strings.bills.description,
@@ -139,7 +183,7 @@ export function BillsPage() {
             strings.bills.status,
           ]}
         >
-          {data.map((bill) => (
+          {filtered.map((bill) => (
             <tr key={bill.id}>
               <td>{bill.description}</td>
               <td className="mono">{formatMoney(bill.amount)}</td>

@@ -9,6 +9,7 @@ import { formatDate, formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import {
   Button,
   DataTable,
@@ -93,6 +94,7 @@ export function CreditCardsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['credit-cards'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.creditCards.created)
       setOpen(false)
       cardForm.reset()
     },
@@ -108,6 +110,7 @@ export function CreditCardsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['card-invoices'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.creditCards.invoiceCreated)
       setInvoiceOpen(false)
       invoiceForm.reset({
         credit_card_id: '',

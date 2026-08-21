@@ -9,6 +9,7 @@ import { formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import {
   Button,
   DataTable,
@@ -67,6 +68,7 @@ export function AccountsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['accounts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.accounts.created)
       setOpen(false)
       form.reset()
     },
