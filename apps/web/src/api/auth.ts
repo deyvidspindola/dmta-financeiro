@@ -7,25 +7,48 @@ import type {
   LoginCredentials,
   LoginResult,
   MfaChallenge,
+  User,
 } from '@/types/models'
+
+type ApiUser = {
+  id: string | number
+  name: string
+  email: string
+  mfa_enabled?: boolean
+}
 
 type ApiLoginResponse =
   | {
+      mfa_required: false
       token: string
-      user: { id: string | number; name: string; email: string }
+      user: ApiUser
     }
-  | MfaChallenge
+  | {
+      mfa_required: true
+      mfa_token: string
+    }
+  // Backward-compatible shape without mfa_required
+  | {
+      token: string
+      user: ApiUser
+    }
+
+export type MfaEnrollPayload = {
+  secret: string
+  otpauth_uri: string
+}
 
 async function fetchSession(token: string): Promise<AuthSession> {
   const [me, contextsPayload] = await Promise.all([
-    http.get<{ id: string | number; name: string; email: string }>(
-      '/auth/me',
-      { headers: { Authorization: `Bearer ${token}` } },
-    ),
-    http.get<{ data: Array<Parameters<typeof mapContext>[0]> } | Array<Parameters<typeof mapContext>[0]>>(
-      '/contexts',
-      { headers: { Authorization: `Bearer ${token}` } },
-    ),
+    http.get<ApiUser>('/auth/me', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
+    http.get<
+      | Array<Parameters<typeof mapContext>[0]>
+      | { data: Array<Parameters<typeof mapContext>[0]> }
+    >('/contexts', {
+      headers: { Authorization: `Bearer ${token}` },
+    }),
   ])
 
   const contexts = unwrapData(contextsPayload).map(mapContext)
@@ -49,7 +72,11 @@ export async function login(
   })
 
   if ('mfa_required' in raw && raw.mfa_required === true) {
-    return raw
+    const challenge: MfaChallenge = {
+      mfa_required: true,
+      mfa_token: raw.mfa_token,
+    }
+    return challenge
   }
 
   if (!('token' in raw)) {
@@ -65,15 +92,35 @@ export async function verifyMfa(
 ): Promise<AuthSession> {
   if (useMocks) return mockApi.verifyMfa(mfaToken, code)
 
-  // MFA/TOTP (D-10) is not implemented on the API yet.
-  const raw = await http.post<{ token: string }>('/auth/mfa/verify', {
-    mfa_token: mfaToken,
-    code,
-  })
+  const raw = await http.post<{ token: string; user: ApiUser }>(
+    '/auth/mfa/verify',
+    { code, device_name: 'web' },
+    { headers: { Authorization: `Bearer ${mfaToken}` } },
+  )
   return fetchSession(raw.token)
 }
 
 export async function logout(): Promise<void> {
   if (useMocks) return mockApi.logout()
   await http.post('/auth/logout')
+}
+
+export async function getMe(): Promise<User> {
+  if (useMocks) return mockApi.getMe()
+  return mapUser(await http.get<ApiUser>('/auth/me'))
+}
+
+export async function enrollMfa(): Promise<MfaEnrollPayload> {
+  if (useMocks) return mockApi.enrollMfa()
+  return http.post<MfaEnrollPayload>('/auth/mfa/enroll')
+}
+
+export async function confirmMfa(code: string): Promise<{ mfa_enabled: true }> {
+  if (useMocks) return mockApi.confirmMfa(code)
+  return http.post<{ mfa_enabled: true }>('/auth/mfa/confirm', { code })
+}
+
+export async function disableMfa(): Promise<void> {
+  if (useMocks) return mockApi.disableMfa()
+  await http.delete('/auth/mfa')
 }

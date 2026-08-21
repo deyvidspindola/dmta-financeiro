@@ -11,6 +11,7 @@ const links = [
   { to: '/bills', label: strings.nav.bills },
   { to: '/transactions', label: strings.nav.transactions },
   { to: '/investments', label: strings.nav.investments },
+  { to: '/security', label: strings.nav.security },
 ]
 
 export function AppLayout() {

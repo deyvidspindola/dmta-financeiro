@@ -9,6 +9,7 @@ import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
 import { InvestmentsPage } from '@/pages/InvestmentsPage'
+import { SecurityPage } from '@/pages/SecurityPage'
 import { bindAuthToken } from '@/api'
 import { useAuthStore } from '@/store/authStore'
 
@@ -43,6 +44,7 @@ export default function App() {
             <Route path="bills" element={<BillsPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
             <Route path="investments" element={<InvestmentsPage />} />
+            <Route path="security" element={<SecurityPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

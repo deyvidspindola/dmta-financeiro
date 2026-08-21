@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { authApi } from '@/api'
 import { isMfaChallenge } from '@/types/models'
 import { strings } from '@/i18n/pt-BR'
+import { getErrorMessage } from '@/lib/errors'
 import { useAuthStore } from '@/store/authStore'
 import { Button, ErrorBanner, Field, TextInput } from '@/components/ui'
 
@@ -43,12 +44,13 @@ export function LoginPage() {
       const result = await authApi.login(values)
       if (isMfaChallenge(result)) {
         setMfaToken(result.mfa_token)
+        mfaForm.reset({ code: '' })
         return
       }
       setSession(result)
       void navigate('/')
-    } catch {
-      setError(strings.auth.invalidCredentials)
+    } catch (err) {
+      setError(getErrorMessage(err, strings.auth.invalidCredentials))
     }
   }
 
@@ -59,8 +61,8 @@ export function LoginPage() {
       const session = await authApi.verifyMfa(mfaToken, values.code)
       setSession(session)
       void navigate('/')
-    } catch {
-      setError(strings.auth.invalidMfa)
+    } catch (err) {
+      setError(getErrorMessage(err, strings.auth.invalidMfa))
     }
   }
 
@@ -81,7 +83,11 @@ export function LoginPage() {
               label={strings.auth.email}
               error={loginForm.formState.errors.email?.message}
             >
-              <TextInput type="email" autoComplete="username" {...loginForm.register('email')} />
+              <TextInput
+                type="email"
+                autoComplete="username"
+                {...loginForm.register('email')}
+              />
             </Field>
             <Field
               label={strings.auth.password}
@@ -98,7 +104,7 @@ export function LoginPage() {
               {strings.auth.submit}
             </Button>
             <p className="muted small">
-              Dev: admin@example.com / password (MFA ainda não exigido pela API)
+              Dev: admin@example.com / password — MFA via Segurança, se ativo
             </p>
           </form>
         ) : (

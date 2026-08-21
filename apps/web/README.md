@@ -27,7 +27,8 @@ Credenciais da API local (Docker):
 
 - e-mail: `admin@example.com`
 - senha: `password`
-- MFA: ainda não exigido pelo backend (D-10 pendente)
+- MFA: opcional — ative em **Segurança** (`/security`); o login passa a pedir
+  o código TOTP
 
 Para voltar aos fixtures locais: `VITE_USE_MOCKS=true`.
 
@@ -35,6 +36,7 @@ Smoke da camada HTTP (sem browser):
 
 ```bash
 npx vite-node scripts/smoke-api.ts
+npx vite-node scripts/smoke-mfa.ts   # enroll → login com MFA → disable
 ```
 
 ## Camada HTTP

@@ -20,12 +20,13 @@ function id(prefix: string): string {
   return `${prefix}_${crypto.randomUUID().slice(0, 8)}`
 }
 
-const user: User = {
+let user: User = {
   id: 'user_1',
   name: 'Deyvid Spindola',
   email: 'demo@dmta.local',
   mfa_enabled: true,
 }
+
 
 const contexts: Context[] = [
   { id: 'ctx_pf', type: 'pf', name: 'Pessoa Física', company_id: null },
@@ -242,6 +243,34 @@ export const mockApi = {
 
   async logout(): Promise<void> {
     await delay(80)
+  },
+
+  async getMe(): Promise<User> {
+    await delay()
+    return { ...user }
+  },
+
+  async enrollMfa(): Promise<{ secret: string; otpauth_uri: string }> {
+    await delay()
+    const secret = 'JBSWY3DPEHPK3PXP'
+    return {
+      secret,
+      otpauth_uri: `otpauth://totp/DMTA%20Financeiro:demo@dmta.local?secret=${secret}&issuer=DMTA%20Financeiro`,
+    }
+  },
+
+  async confirmMfa(code: string): Promise<{ mfa_enabled: true }> {
+    await delay()
+    if (code !== '123456') {
+      throw Object.assign(new Error('Código MFA inválido.'), { status: 422 })
+    }
+    user = { ...user, mfa_enabled: true }
+    return { mfa_enabled: true }
+  },
+
+  async disableMfa(): Promise<void> {
+    await delay()
+    user = { ...user, mfa_enabled: false }
   },
 
   async listContexts(): Promise<Context[]> {

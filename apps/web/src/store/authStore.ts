@@ -16,6 +16,7 @@ interface AuthState {
     user: User
     contexts: Context[]
   }) => void
+  setUser: (user: User) => void
   setActiveScope: (scope: ActiveScope) => void
   clearSession: () => void
 }
@@ -34,6 +35,7 @@ export const useAuthStore = create<AuthState>()(
           contexts,
           activeScope: contexts[0]?.id ?? CONSOLIDATED,
         }),
+      setUser: (user) => set({ user }),
       setActiveScope: (activeScope) => set({ activeScope }),
       clearSession: () =>
         set({

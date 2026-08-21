@@ -14,6 +14,7 @@ export const strings = {
     logout: 'Sair',
     context: 'Contexto',
     consolidated: 'Consolidado',
+    security: 'Segurança',
   },
 
   auth: {
@@ -28,6 +29,21 @@ export const strings = {
     mfaBack: 'Voltar',
     invalidCredentials: 'E-mail ou senha inválidos.',
     invalidMfa: 'Código MFA inválido.',
+  },
+
+  security: {
+    title: 'Segurança',
+    mfaStatus: 'Autenticação em duas etapas (TOTP)',
+    mfaEnabled: 'Ativada',
+    mfaDisabled: 'Desativada',
+    enroll: 'Configurar MFA',
+    confirm: 'Confirmar código',
+    disable: 'Desligar MFA',
+    secretLabel: 'Chave secreta (digite manualmente se não puder escanear)',
+    qrHint: 'Escaneie o QR no aplicativo autenticador (Google Authenticator, Authy, etc.).',
+    codeHint: 'Digite o código de 6 dígitos gerado pelo app.',
+    enrollSuccess: 'MFA ativado. No próximo login será pedido o código.',
+    disableSuccess: 'MFA desligado.',
   },
 
   dashboard: {
