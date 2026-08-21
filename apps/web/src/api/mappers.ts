@@ -11,12 +11,17 @@ import type {
   CaptureOrigin,
   CardInvoice,
   Category,
+  Company,
   Context,
+  ContextRef,
   CreditCard,
   DashboardSummary,
+  EntryType,
   Investment,
   InvoiceStatus,
   MoneyDirection,
+  RecurrenceInterval,
+  RecurringTransaction,
   StatementEntry,
   User,
 } from '@/types/models'
@@ -47,21 +52,75 @@ export function mapUser(raw: {
   }
 }
 
+export function mapCompany(raw: {
+  id: string | number
+  name: string
+  document?: string | null
+}): Company {
+  return {
+    id: asId(raw.id),
+    name: raw.name,
+    document: raw.document ?? null,
+  }
+}
+
+export function mapContextRef(raw: {
+  id: string | number
+  type: 'pf' | 'pj' | 'company'
+  name: string
+  company?: {
+    id: string | number
+    name: string
+    document?: string | null
+  } | null
+}): ContextRef {
+  return {
+    id: asId(raw.id),
+    type: raw.type === 'pf' ? 'pf' : 'pj',
+    name: raw.name,
+    company: raw.company ? mapCompany(raw.company) : null,
+  }
+}
+
 export function mapContext(raw: {
   id: string | number
   type: 'pf' | 'pj' | 'company'
   name: string
-  company?: { id: string | number } | null
+  company?: {
+    id: string | number
+    name: string
+    document?: string | null
+  } | null
   company_id?: string | number | null
 }): Context {
+  const company = raw.company ? mapCompany(raw.company) : null
   const companyId =
-    raw.company_id ?? (raw.company ? raw.company.id : null) ?? null
+    raw.company_id ?? company?.id ?? null
   return {
     id: asId(raw.id),
     // API uses `company`; UI domain keeps `pj` from the conception docs.
     type: raw.type === 'pf' ? 'pf' : 'pj',
     name: raw.name,
     company_id: companyId === null ? null : asId(companyId),
+    company,
+  }
+}
+
+export function toCreateCompanyContextBody(payload: {
+  name: string
+  company_name: string
+  company_document: string | null
+}): {
+  type: 'company'
+  name: string
+  company_name: string
+  company_document: string | null
+} {
+  return {
+    type: 'company',
+    name: payload.name,
+    company_name: payload.company_name,
+    company_document: payload.company_document,
   }
 }
 
@@ -75,16 +134,19 @@ export function mapAccount(
     type: AccountType
     balance: number
     initial_balance?: number
+    context?: Parameters<typeof mapContextRef>[0] | null
   },
 ): Account {
+  const context = raw.context ? mapContextRef(raw.context) : null
   return {
     id: asId(raw.id),
-    context_id: contextId,
+    context_id: context?.id ?? contextId,
     name: raw.name,
     bank_name: raw.institution ?? raw.bank_name ?? null,
     type: raw.type,
     balance: Number(raw.balance),
     currency: 'BRL',
+    context,
   }
 }
 
@@ -172,11 +234,13 @@ export function mapBill(
     category_id?: string | number | null
     barcode?: string | null
     origin?: CaptureOrigin
+    context?: Parameters<typeof mapContextRef>[0] | null
   },
 ): Bill {
+  const context = raw.context ? mapContextRef(raw.context) : null
   return {
     id: asId(raw.id),
-    context_id: contextId,
+    context_id: context?.id ?? contextId,
     description: raw.description,
     amount: Number(raw.amount),
     due_date: raw.due_date,
@@ -188,6 +252,7 @@ export function mapBill(
         : asId(raw.category_id),
     barcode: raw.barcode ?? null,
     origin: mapOrigin(raw.origin),
+    context,
   }
 }
 
@@ -248,31 +313,50 @@ export function mapTransaction(
     category_id?: string | number | null
     description: string
     amount: number
-    type: MoneyDirection
+    type: EntryType
     occurred_at?: string
     date?: string
     origin?: CaptureOrigin
+    bill_id?: string | number | null
+    transfer_pair_id?: string | number | null
+    recurring_transaction_id?: string | number | null
+    context?: Parameters<typeof mapContextRef>[0] | null
   },
 ): StatementEntry {
+  const context = raw.context ? mapContextRef(raw.context) : null
   return {
     id: asId(raw.id),
-    context_id: contextId,
+    context_id: context?.id ?? contextId,
     account_id: asId(raw.account_id),
     category_id:
       raw.category_id === null || raw.category_id === undefined
-        ? ''
+        ? null
         : asId(raw.category_id),
     description: raw.description,
     amount: Number(raw.amount),
     type: raw.type,
     date: raw.occurred_at ?? raw.date ?? '',
     origin: mapOrigin(raw.origin),
+    bill_id:
+      raw.bill_id === null || raw.bill_id === undefined
+        ? null
+        : asId(raw.bill_id),
+    transfer_pair_id:
+      raw.transfer_pair_id === null || raw.transfer_pair_id === undefined
+        ? null
+        : asId(raw.transfer_pair_id),
+    recurring_transaction_id:
+      raw.recurring_transaction_id === null ||
+      raw.recurring_transaction_id === undefined
+        ? null
+        : asId(raw.recurring_transaction_id),
+    context,
   }
 }
 
 export function toCreateTransactionBody(payload: {
   account_id: string
-  category_id: string
+  category_id: string | null
   description: string
   amount: number
   type: MoneyDirection
@@ -292,6 +376,132 @@ export function toCreateTransactionBody(payload: {
     amount: payload.amount,
     type: payload.type,
     occurred_at: payload.date,
+  }
+}
+
+export function toUpdateTransactionBody(payload: {
+  account_id: string
+  category_id: string | null
+  description: string
+  amount: number
+  type: MoneyDirection
+  date: string
+}): {
+  account_id: number
+  category_id: number | null
+  description: string
+  amount: number
+  type: MoneyDirection
+  occurred_at: string
+} {
+  return toCreateTransactionBody(payload)
+}
+
+export function toCreateTransferBody(payload: {
+  from_account_id: string
+  to_account_id: string
+  amount: number
+  description: string
+  occurred_at: string
+}): {
+  from_account_id: number
+  to_account_id: number
+  amount: number
+  description: string
+  occurred_at: string
+} {
+  return {
+    from_account_id: asApiId(payload.from_account_id),
+    to_account_id: asApiId(payload.to_account_id),
+    amount: payload.amount,
+    description: payload.description,
+    occurred_at: payload.occurred_at,
+  }
+}
+
+export function toMoveTransactionBody(payload: {
+  target_context_id: string
+  target_account_id: string
+  target_category_id: string | null
+}): {
+  target_context_id: number
+  target_account_id: number
+  target_category_id: number | null
+} {
+  return {
+    target_context_id: asApiId(payload.target_context_id),
+    target_account_id: asApiId(payload.target_account_id),
+    target_category_id: payload.target_category_id
+      ? asApiId(payload.target_category_id)
+      : null,
+  }
+}
+
+export function mapRecurringTransaction(
+  contextId: string,
+  raw: {
+    id: string | number
+    account_id: string | number
+    category_id?: string | number | null
+    description: string
+    amount: number
+    type: MoneyDirection
+    interval: RecurrenceInterval
+    start_date: string
+    end_date?: string | null
+    next_occurrence_date: string
+    is_fixed: boolean
+    active: boolean
+  },
+): RecurringTransaction {
+  return {
+    id: asId(raw.id),
+    context_id: contextId,
+    account_id: asId(raw.account_id),
+    category_id:
+      raw.category_id === null || raw.category_id === undefined
+        ? null
+        : asId(raw.category_id),
+    description: raw.description,
+    amount: Number(raw.amount),
+    type: raw.type,
+    interval: raw.interval,
+    start_date: raw.start_date,
+    end_date: raw.end_date ?? null,
+    next_occurrence_date: raw.next_occurrence_date,
+    is_fixed: raw.is_fixed,
+    active: raw.active,
+  }
+}
+
+export function toCreateRecurringBody(payload: {
+  account_id: string
+  category_id: string | null
+  description: string
+  amount: number
+  type: MoneyDirection
+  interval: RecurrenceInterval
+  start_date: string
+  end_date: string | null
+}): {
+  account_id: number
+  category_id: number | null
+  description: string
+  amount: number
+  type: MoneyDirection
+  interval: RecurrenceInterval
+  start_date: string
+  end_date: string | null
+} {
+  return {
+    account_id: asApiId(payload.account_id),
+    category_id: payload.category_id ? asApiId(payload.category_id) : null,
+    description: payload.description,
+    amount: payload.amount,
+    type: payload.type,
+    interval: payload.interval,
+    start_date: payload.start_date,
+    end_date: payload.end_date,
   }
 }
 

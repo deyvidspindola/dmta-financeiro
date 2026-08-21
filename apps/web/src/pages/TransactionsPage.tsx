@@ -2,9 +2,15 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { ArrowLeftRight, FolderInput, Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
-import { accountsApi, categoriesApi, transactionsApi } from '@/api'
+import {
+  accountsApi,
+  categoriesApi,
+  consolidatedApi,
+  transactionsApi,
+  transfersApi,
+} from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
 import { currentMonthKey, isInMonth } from '@/lib/dates'
@@ -26,34 +32,81 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+import type { StatementEntry } from '@/types/models'
 
 const ALL_PERIODS = 'all'
 
-const schema = z.object({
+const entrySchema = z.object({
   description: z.string().min(1, strings.common.required),
   amount: z.coerce.number().positive(),
   date: z.string().min(1, strings.common.required),
   type: z.enum(['income', 'expense']),
   account_id: z.string().min(1, strings.common.required),
-  category_id: z.string().min(1, strings.common.required),
+  category_id: z.string().nullable(),
 })
 
-type FormValues = z.infer<typeof schema>
+const transferSchema = z
+  .object({
+    from_account_id: z.string().min(1, strings.common.required),
+    to_account_id: z.string().min(1, strings.common.required),
+    amount: z.coerce.number().positive(),
+    description: z.string().min(1, strings.common.required),
+    occurred_at: z.string().min(1, strings.common.required),
+  })
+  .refine((v) => v.from_account_id !== v.to_account_id, {
+    message: strings.transfers.sameAccount,
+    path: ['to_account_id'],
+  })
+
+const moveSchema = z.object({
+  target_context_id: z.string().min(1, strings.common.required),
+  target_account_id: z.string().min(1, strings.common.required),
+  target_category_id: z.string().nullable(),
+})
+
+type EntryFormValues = z.infer<typeof entrySchema>
+type TransferFormValues = z.infer<typeof transferSchema>
+type MoveFormValues = z.infer<typeof moveSchema>
+
+function canMutateEntry(tx: StatementEntry): boolean {
+  return !tx.transfer_pair_id && !tx.bill_id && tx.type !== 'transfer'
+}
+
+const emptyEntry: EntryFormValues = {
+  description: '',
+  amount: 0,
+  date: new Date().toISOString().slice(0, 10),
+  type: 'expense',
+  account_id: '',
+  category_id: null,
+}
 
 export function TransactionsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
+  const contexts = useAuthStore((s) => s.contexts)
   const contextId = useWritableContextId()
-  const [open, setOpen] = useState(false)
-  const [categoryOpen, setCategoryOpen] = useState(false)
-  const [period, setPeriod] = useState(currentMonthKey)
-  const listContextId = activeScope === CONSOLIDATED ? null : activeScope
+  const isConsolidated = activeScope === CONSOLIDATED
 
-  const { data = [], isLoading, isError } = useQuery({
-    queryKey: ['transactions', listContextId],
-    queryFn: () => transactionsApi.listTransactions(listContextId!),
-    enabled: Boolean(listContextId),
+  const [period, setPeriod] = useState(currentMonthKey)
+  const [entryOpen, setEntryOpen] = useState(false)
+  const [editing, setEditing] = useState<StatementEntry | null>(null)
+  const [transferOpen, setTransferOpen] = useState(false)
+  const [moving, setMoving] = useState<StatementEntry | null>(null)
+  const [categoryOpen, setCategoryOpen] = useState(false)
+
+  const isEdit = editing !== null
+
+  const listQuery = useQuery({
+    queryKey: ['transactions', activeScope],
+    queryFn: () =>
+      isConsolidated
+        ? consolidatedApi.listConsolidatedTransactions()
+        : transactionsApi.listTransactions(activeScope),
+    enabled: isConsolidated || Boolean(activeScope),
   })
+
+  const data = listQuery.data ?? []
 
   const periodOptions = useMemo(() => {
     const months = new Set<string>([currentMonthKey()])
@@ -68,166 +121,331 @@ export function TransactionsPage() {
     return data.filter((tx) => isInMonth(tx.date, period))
   }, [data, period])
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const form = useForm<EntryFormValues>({
+    resolver: zodResolver(entrySchema),
+    defaultValues: emptyEntry,
+  })
+
+  const transferForm = useForm<TransferFormValues>({
+    resolver: zodResolver(transferSchema),
     defaultValues: {
-      description: '',
+      from_account_id: '',
+      to_account_id: '',
       amount: 0,
-      date: new Date().toISOString().slice(0, 10),
-      type: 'expense',
-      account_id: '',
-      category_id: '',
+      description: '',
+      occurred_at: new Date().toISOString().slice(0, 10),
+    },
+  })
+
+  const moveForm = useForm<MoveFormValues>({
+    resolver: zodResolver(moveSchema),
+    defaultValues: {
+      target_context_id: '',
+      target_account_id: '',
+      target_category_id: null,
     },
   })
 
   const watchedType = form.watch('type')
+  const targetContextId = moveForm.watch('target_context_id')
 
   useEffect(() => {
-    form.setValue('category_id', '')
-  }, [watchedType, form])
+    if (!isEdit) form.setValue('category_id', null)
+  }, [watchedType, form, isEdit])
+
+  useEffect(() => {
+    moveForm.setValue('target_account_id', '')
+    moveForm.setValue('target_category_id', null)
+  }, [targetContextId, moveForm])
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', contextId],
     queryFn: () => accountsApi.listAccounts(contextId!),
-    enabled: Boolean(contextId) && open,
+    enabled:
+      Boolean(contextId) && (entryOpen || transferOpen) && !isConsolidated,
   })
 
   const categoriesQuery = useQuery({
     queryKey: ['categories', contextId, watchedType],
     queryFn: () =>
       categoriesApi.listCategories(contextId!, { type: watchedType }),
-    enabled: Boolean(contextId) && open,
+    enabled: Boolean(contextId) && entryOpen && !isConsolidated,
   })
 
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
-      transactionsApi.createTransaction(contextId!, values),
+  const moveAccountsQuery = useQuery({
+    queryKey: ['accounts', targetContextId],
+    queryFn: () => accountsApi.listAccounts(targetContextId),
+    enabled: Boolean(targetContextId) && Boolean(moving),
+  })
+
+  const moveCategoriesQuery = useQuery({
+    queryKey: [
+      'categories',
+      targetContextId,
+      moving?.type === 'income' ? 'income' : 'expense',
+    ],
+    queryFn: () =>
+      categoriesApi.listCategories(targetContextId, {
+        type: moving?.type === 'income' ? 'income' : 'expense',
+      }),
+    enabled:
+      Boolean(targetContextId) &&
+      Boolean(moving) &&
+      moving?.type !== 'transfer',
+  })
+
+  function openCreate() {
+    setEditing(null)
+    form.reset(emptyEntry)
+    setEntryOpen(true)
+  }
+
+  function openEdit(tx: StatementEntry) {
+    if (!canMutateEntry(tx)) return
+    setEditing(tx)
+    form.reset({
+      description: tx.description,
+      amount: tx.amount,
+      date: tx.date,
+      type: tx.type === 'transfer' ? 'expense' : tx.type,
+      account_id: tx.account_id,
+      category_id: tx.category_id,
+    })
+    setEntryOpen(true)
+  }
+
+  function closeEntry() {
+    setEntryOpen(false)
+    setEditing(null)
+    form.reset(emptyEntry)
+  }
+
+  function openMove(tx: StatementEntry) {
+    if (!canMutateEntry(tx)) return
+    setMoving(tx)
+    moveForm.reset({
+      target_context_id: '',
+      target_account_id: '',
+      target_category_id: null,
+    })
+  }
+
+  async function invalidateMoney() {
+    await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+    await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+  }
+
+  const saveMutation = useMutation({
+    mutationFn: (values: EntryFormValues) => {
+      const payload = {
+        ...values,
+        category_id: values.category_id || null,
+      }
+      if (isEdit && editing) {
+        return transactionsApi.updateTransaction(
+          editing.context_id,
+          editing.id,
+          payload,
+        )
+      }
+      return transactionsApi.createTransaction(contextId!, payload)
+    },
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.transactions.created)
-      setOpen(false)
-      form.reset({
-        description: '',
+      await invalidateMoney()
+      toastSuccess(
+        isEdit
+          ? strings.transactions.updated
+          : strings.transactions.created,
+      )
+      closeEntry()
+    },
+  })
+
+  const transferMutation = useMutation({
+    mutationFn: (values: TransferFormValues) =>
+      transfersApi.createTransfer(contextId!, values),
+    onSuccess: async () => {
+      await invalidateMoney()
+      toastSuccess(strings.transfers.created)
+      setTransferOpen(false)
+      transferForm.reset({
+        from_account_id: '',
+        to_account_id: '',
         amount: 0,
-        date: new Date().toISOString().slice(0, 10),
-        type: 'expense',
-        account_id: '',
-        category_id: '',
+        description: '',
+        occurred_at: new Date().toISOString().slice(0, 10),
       })
     },
   })
 
-  const deleteMutation = useMutation({
-    mutationFn: (transactionId: string) =>
-      transactionsApi.deleteTransaction(contextId!, transactionId),
+  const moveMutation = useMutation({
+    mutationFn: (values: MoveFormValues) =>
+      transactionsApi.moveTransaction(moving!.context_id, moving!.id, {
+        target_context_id: values.target_context_id,
+        target_account_id: values.target_account_id,
+        target_category_id: values.target_category_id || null,
+      }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      await invalidateMoney()
+      toastSuccess(strings.transactions.moved)
+      setMoving(null)
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (tx: StatementEntry) =>
+      transactionsApi.deleteTransaction(tx.context_id, tx.id),
+    onSuccess: async () => {
+      await invalidateMoney()
       toastSuccess(strings.transactions.deleted)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete(transactionId: string) {
+  function handleDelete(tx: StatementEntry) {
     if (!window.confirm(strings.transactions.confirmDelete)) return
-    deleteMutation.mutate(transactionId)
+    deleteMutation.mutate(tx)
   }
 
   const accounts = accountsQuery.data ?? []
   const categories = categoriesQuery.data ?? []
+  const moveAccounts = moveAccountsQuery.data ?? []
+  const moveCategories = moveCategoriesQuery.data ?? []
+  const otherContexts = contexts.filter(
+    (c) => !moving || c.id !== moving.context_id,
+  )
+
+  const headers = [
+    ...(isConsolidated ? [strings.common.context] : []),
+    strings.transactions.date,
+    strings.transactions.description,
+    strings.transactions.type,
+    strings.transactions.amount,
+    strings.common.actions,
+  ]
 
   return (
     <div className="stack">
       <PageHeader
         title={strings.transactions.title}
         actions={
-          <Button
-            onClick={() => setOpen(true)}
-            disabled={!contextId || activeScope === CONSOLIDATED}
-          >
-            {strings.transactions.create}
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setTransferOpen(true)}
+              disabled={!contextId || isConsolidated}
+            >
+              {strings.transfers.create}
+            </Button>
+            <Button
+              onClick={openCreate}
+              disabled={!contextId || isConsolidated}
+            >
+              {strings.transactions.create}
+            </Button>
+          </>
         }
       />
 
-      {activeScope === CONSOLIDATED ? (
-        <ErrorBanner message="Selecione um contexto para cadastrar e listar lançamentos." />
+      {isConsolidated ? (
+        <p className="muted small">{strings.common.consolidatedHint}</p>
       ) : null}
 
-      {listContextId ? (
-        <div className="filter-bar">
-          <Field label={strings.transactions.period}>
-            <TextSelect
-              value={period}
-              onChange={(event) => setPeriod(event.target.value)}
-            >
-              <option value={ALL_PERIODS}>
-                {strings.transactions.periodAll}
+      <div className="filter-bar">
+        <Field label={strings.transactions.period}>
+          <TextSelect
+            value={period}
+            onChange={(event) => setPeriod(event.target.value)}
+          >
+            <option value={ALL_PERIODS}>
+              {strings.transactions.periodAll}
+            </option>
+            {periodOptions.map((month) => (
+              <option key={month} value={month}>
+                {month}
               </option>
-              {periodOptions.map((month) => (
-                <option key={month} value={month}>
-                  {month}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-        </div>
+            ))}
+          </TextSelect>
+        </Field>
+      </div>
+
+      {listQuery.isLoading ? (
+        <LoadingBlock label={strings.common.loading} />
+      ) : null}
+      {listQuery.isError ? (
+        <ErrorBanner message={getErrorMessage(listQuery.error)} />
       ) : null}
 
-      {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
-      {isError ? <ErrorBanner message={strings.common.error} /> : null}
-
-      {!isLoading && listContextId && data.length === 0 ? (
+      {!listQuery.isLoading && data.length === 0 ? (
         <EmptyState message={strings.transactions.empty} />
       ) : null}
 
-      {!isLoading &&
-      listContextId &&
-      data.length > 0 &&
-      filtered.length === 0 ? (
+      {!listQuery.isLoading && data.length > 0 && filtered.length === 0 ? (
         <EmptyState message={strings.transactions.emptyMonth} />
       ) : null}
 
       {filtered.length > 0 ? (
-        <DataTable
-          headers={[
-            strings.transactions.date,
-            strings.transactions.description,
-            strings.transactions.type,
-            strings.transactions.amount,
-            strings.common.actions,
-          ]}
-        >
+        <DataTable headers={headers}>
           {filtered.map((tx) => (
-            <tr key={tx.id}>
+            <tr key={`${tx.context_id}-${tx.id}`}>
+              {isConsolidated ? (
+                <td>{tx.context?.name ?? '—'}</td>
+              ) : null}
               <td>{formatDate(tx.date)}</td>
-              <td>{tx.description}</td>
-              <td>{strings.transactions.types[tx.type]}</td>
+              <td>
+                {tx.description}
+                {tx.recurring_transaction_id ? (
+                  <span className="muted small"> · recorrente</span>
+                ) : null}
+              </td>
+              <td>
+                {tx.type === 'transfer'
+                  ? strings.transactions.types.transfer
+                  : strings.transactions.types[tx.type]}
+              </td>
               <td className="mono">{formatMoney(tx.amount)}</td>
               <td className="actions-cell">
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => handleDelete(tx.id)}
-                  disabled={deleteMutation.isPending || !contextId}
-                />
+                {!isConsolidated && canMutateEntry(tx) ? (
+                  <>
+                    <IconButton
+                      label={strings.common.edit}
+                      icon={Pencil}
+                      onClick={() => openEdit(tx)}
+                    />
+                    <IconButton
+                      label={strings.transactions.move}
+                      icon={FolderInput}
+                      onClick={() => openMove(tx)}
+                    />
+                  </>
+                ) : null}
+                {!isConsolidated ? (
+                  <IconButton
+                    label={strings.common.delete}
+                    icon={Trash2}
+                    variant="danger"
+                    onClick={() => handleDelete(tx)}
+                    disabled={deleteMutation.isPending}
+                  />
+                ) : null}
               </td>
             </tr>
           ))}
         </DataTable>
       ) : null}
 
-      {open && contextId ? (
+      {entryOpen && contextId ? (
         <Modal
-          title={strings.transactions.create}
-          onClose={() => setOpen(false)}
+          title={
+            isEdit ? strings.transactions.edit : strings.transactions.create
+          }
+          onClose={closeEntry}
         >
           <form
             className="form-grid"
             onSubmit={form.handleSubmit((values) =>
-              mutation.mutateAsync(values),
+              saveMutation.mutateAsync(values),
             )}
           >
             <Field
@@ -240,7 +458,11 @@ export function TransactionsPage() {
               label={strings.transactions.amount}
               error={form.formState.errors.amount?.message}
             >
-              <TextInput type="number" step="0.01" {...form.register('amount')} />
+              <TextInput
+                type="number"
+                step="0.01"
+                {...form.register('amount')}
+              />
             </Field>
             <Field
               label={strings.transactions.date}
@@ -271,12 +493,13 @@ export function TransactionsPage() {
                 ))}
               </TextSelect>
             </Field>
-            <Field
-              label={strings.transactions.category}
-              error={form.formState.errors.category_id?.message}
-            >
+            <Field label={strings.transactions.category}>
               <div className="field-row">
-                <TextSelect {...form.register('category_id')}>
+                <TextSelect
+                  {...form.register('category_id', {
+                    setValueAs: (v: string) => (v === '' ? null : v),
+                  })}
+                >
                   <option value="">{strings.common.select}</option>
                   {categories.map((cat) => (
                     <option key={cat.id} value={cat.id}>
@@ -293,15 +516,170 @@ export function TransactionsPage() {
                 </Button>
               </div>
             </Field>
-            {mutation.isError ? (
-              <ErrorBanner message={getErrorMessage(mutation.error)} />
+            {saveMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(saveMutation.error)} />
             ) : null}
             <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
+              <Button type="button" variant="ghost" onClick={closeEntry}>
                 {strings.common.cancel}
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={saveMutation.isPending}>
                 {strings.common.save}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {transferOpen && contextId ? (
+        <Modal
+          title={strings.transfers.create}
+          onClose={() => setTransferOpen(false)}
+        >
+          <form
+            className="form-grid"
+            onSubmit={transferForm.handleSubmit((values) =>
+              transferMutation.mutateAsync(values),
+            )}
+          >
+            <Field
+              label={strings.transfers.from}
+              error={transferForm.formState.errors.from_account_id?.message}
+            >
+              <TextSelect {...transferForm.register('from_account_id')}>
+                <option value="">{strings.common.select}</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field
+              label={strings.transfers.to}
+              error={transferForm.formState.errors.to_account_id?.message}
+            >
+              <TextSelect {...transferForm.register('to_account_id')}>
+                <option value="">{strings.common.select}</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field
+              label={strings.transactions.amount}
+              error={transferForm.formState.errors.amount?.message}
+            >
+              <TextInput
+                type="number"
+                step="0.01"
+                {...transferForm.register('amount')}
+              />
+            </Field>
+            <Field
+              label={strings.transactions.description}
+              error={transferForm.formState.errors.description?.message}
+            >
+              <TextInput {...transferForm.register('description')} />
+            </Field>
+            <Field
+              label={strings.transactions.date}
+              error={transferForm.formState.errors.occurred_at?.message}
+            >
+              <TextInput
+                type="date"
+                {...transferForm.register('occurred_at')}
+              />
+            </Field>
+            {transferMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(transferMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setTransferOpen(false)}
+              >
+                {strings.common.cancel}
+              </Button>
+              <Button type="submit" disabled={transferMutation.isPending}>
+                <ArrowLeftRight size={16} aria-hidden />{' '}
+                {strings.common.save}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {moving ? (
+        <Modal
+          title={strings.transactions.moveTitle}
+          onClose={() => setMoving(null)}
+        >
+          <p className="muted small">
+            {moving.description} · {formatMoney(moving.amount)}
+          </p>
+          <form
+            className="form-grid"
+            onSubmit={moveForm.handleSubmit((values) =>
+              moveMutation.mutateAsync(values),
+            )}
+          >
+            <Field
+              label={strings.transactions.targetContext}
+              error={moveForm.formState.errors.target_context_id?.message}
+            >
+              <TextSelect {...moveForm.register('target_context_id')}>
+                <option value="">{strings.common.select}</option>
+                {otherContexts.map((ctx) => (
+                  <option key={ctx.id} value={ctx.id}>
+                    {ctx.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field
+              label={strings.transactions.targetAccount}
+              error={moveForm.formState.errors.target_account_id?.message}
+            >
+              <TextSelect {...moveForm.register('target_account_id')}>
+                <option value="">{strings.common.select}</option>
+                {moveAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label={strings.transactions.category}>
+              <TextSelect
+                {...moveForm.register('target_category_id', {
+                  setValueAs: (v: string) => (v === '' ? null : v),
+                })}
+              >
+                <option value="">{strings.common.select}</option>
+                {moveCategories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.parent_id ? `↳ ${cat.name}` : cat.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            {moveMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(moveMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setMoving(null)}
+              >
+                {strings.common.cancel}
+              </Button>
+              <Button type="submit" disabled={moveMutation.isPending}>
+                {strings.transactions.move}
               </Button>
             </div>
           </form>
