@@ -1,8 +1,10 @@
 <?php
 
+use App\Exceptions\Domain\DomainException;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
@@ -19,4 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*') || $request->expectsJson(),
         );
+
+        // Violação de regra de negócio (app/Exceptions/Domain/*) é erro do
+        // cliente, não do servidor — 422, igual a uma falha de validação,
+        // nunca 500.
+        $exceptions->render(fn (DomainException $e) => new JsonResponse(['message' => $e->getMessage()], 422));
     })->create();

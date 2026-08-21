@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Domain;
 
-use InvalidArgumentException;
-
 /**
  * Lançada quando a categoria-mãe informada não pertence ao mesmo contexto
  * da subcategoria sendo criada — categoria nunca atravessa contexto.
@@ -20,7 +18,7 @@ use InvalidArgumentException;
  *
  * @updated 21/08/2026
  */
-final class CategoryParentMismatchException extends InvalidArgumentException
+final class CategoryParentMismatchException extends DomainException
 {
     public function __construct()
     {

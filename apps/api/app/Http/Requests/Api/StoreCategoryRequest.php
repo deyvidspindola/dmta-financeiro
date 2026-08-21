@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Requests\Api;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 /**
  * Validação de `POST /api/v1/contexts/{context}/categories` — consumido
@@ -27,11 +28,12 @@ final class StoreCategoryRequest extends FormRequest
         return true;
     }
 
-    /** @return array<string, list<string>> */
+    /** @return array<string, list<mixed>> */
     public function rules(): array
     {
         return [
             'name' => ['required', 'string', 'max:100'],
+            'type' => ['required', Rule::in(['expense', 'income'])],
             'parent_id' => ['nullable', 'integer', 'exists:categories,id'],
         ];
     }

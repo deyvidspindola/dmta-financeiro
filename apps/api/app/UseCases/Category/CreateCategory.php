@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace App\UseCases\Category;
 
+use App\Enums\CategoryType;
 use App\Exceptions\Domain\CategoryParentMismatchException;
+use App\Exceptions\Domain\CategoryTypeMismatchException;
 use App\Models\Category;
 
 /**
@@ -23,17 +25,23 @@ use App\Models\Category;
  */
 final class CreateCategory
 {
-    /** @throws CategoryParentMismatchException Se `parentId` for de outro contexto. */
-    public function execute(int $contextId, string $name, ?int $parentId = null): Category
+    /**
+     * @throws CategoryParentMismatchException Se `parentId` for de outro contexto.
+     * @throws CategoryTypeMismatchException Se `type` divergir do tipo da categoria-mãe.
+     */
+    public function execute(int $contextId, string $name, CategoryType $type, ?int $parentId = null): Category
     {
         if ($parentId !== null) {
-            $parentBelongsToContext = Category::query()
-                ->whereKey($parentId)
-                ->where('context_id', $contextId)
-                ->exists();
+            /** @var Category|null $parent */
+            $parent = Category::query()->whereKey($parentId)->where('context_id', $contextId)->first();
 
-            if (! $parentBelongsToContext) {
+            if ($parent === null) {
                 throw new CategoryParentMismatchException;
+            }
+
+            // @phpstan-ignore-next-line notIdentical.alwaysTrue (cast CategoryType da migration — larastan não infere casts() aqui)
+            if ($parent->type !== $type) {
+                throw new CategoryTypeMismatchException;
             }
         }
 
@@ -41,6 +49,7 @@ final class CreateCategory
             'context_id' => $contextId,
             'parent_id' => $parentId,
             'name' => $name,
+            'type' => $type->value,
         ]);
     }
 }

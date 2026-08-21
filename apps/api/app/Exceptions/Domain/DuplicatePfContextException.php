@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Domain;
 
-use RuntimeException;
-
 /**
  * Lançada quando o usuário já tem um contexto `pf` e uma segunda tentativa
  * de criação chega — um usuário tem no máximo um contexto pessoa física.
@@ -20,7 +18,7 @@ use RuntimeException;
  *
  * @updated 21/08/2026
  */
-final class DuplicatePfContextException extends RuntimeException
+final class DuplicatePfContextException extends DomainException
 {
     public function __construct()
     {

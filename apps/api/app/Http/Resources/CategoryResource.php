@@ -31,6 +31,8 @@ final class CategoryResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            // @phpstan-ignore-next-line property.nonObject (cast CategoryType da migration)
+            'type' => $this->type->value,
             'parent_id' => $this->parent_id,
         ];
     }

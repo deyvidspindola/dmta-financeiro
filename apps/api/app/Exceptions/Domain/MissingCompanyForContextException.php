@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 namespace App\Exceptions\Domain;
 
-use InvalidArgumentException;
-
 /**
  * Lançada ao tentar criar um contexto `company` sem informar a empresa.
  *
@@ -19,7 +17,7 @@ use InvalidArgumentException;
  *
  * @updated 21/08/2026
  */
-final class MissingCompanyForContextException extends InvalidArgumentException
+final class MissingCompanyForContextException extends DomainException
 {
     public function __construct()
     {

@@ -7,6 +7,7 @@ namespace Database\Seeders;
 use App\DTOs\CreateContextData;
 use App\DTOs\RegisterAccountData;
 use App\DTOs\RegisterTransactionData;
+use App\Enums\CategoryType;
 use App\Enums\ContextType;
 use App\Enums\StatementEntryType;
 use App\Models\Company;
@@ -84,8 +85,9 @@ class DatabaseSeeder extends Seeder
             initialBalance: 1000.0,
         ));
 
-        $category = app(CreateCategory::class)->execute($context->id, 'Alimentação');
-        app(CreateCategory::class)->execute($context->id, 'Moradia');
+        $category = app(CreateCategory::class)->execute($context->id, 'Alimentação', CategoryType::Expense);
+        app(CreateCategory::class)->execute($context->id, 'Moradia', CategoryType::Expense);
+        app(CreateCategory::class)->execute($context->id, 'Salário', CategoryType::Income);
 
         app(RegisterTransaction::class)->execute(new RegisterTransactionData(
             contextId: $context->id,
@@ -120,5 +122,8 @@ class DatabaseSeeder extends Seeder
             institution: 'Banco de teste',
             initialBalance: 5000.0,
         ));
+
+        app(CreateCategory::class)->execute($context->id, 'Despesas operacionais', CategoryType::Expense);
+        app(CreateCategory::class)->execute($context->id, 'Receita de serviços', CategoryType::Income);
     }
 }
