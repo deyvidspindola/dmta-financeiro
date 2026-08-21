@@ -5,10 +5,9 @@ declare(strict_types=1);
 namespace App\UseCases\Auth;
 
 use App\Models\User;
+use App\Services\AuthRateLimiterService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\RateLimiter;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 /**
@@ -34,8 +33,9 @@ use Illuminate\Validation\ValidationException;
  */
 final class LoginUser
 {
-    /** Máximo de tentativas de login por janela de um minuto. */
-    private const MAX_ATTEMPTS = 5;
+    public function __construct(
+        private readonly AuthRateLimiterService $rateLimiter,
+    ) {}
 
     /**
      * Autentica e atualiza last_login_at.
@@ -49,17 +49,17 @@ final class LoginUser
      */
     public function execute(string $email, string $password, bool $remember): User
     {
-        $this->ensureIsNotRateLimited($email);
+        $this->rateLimiter->ensureIsNotRateLimited($email);
 
         if (! Auth::attempt(['email' => $email, 'password' => $password], $remember)) {
-            RateLimiter::hit($this->throttleKey($email));
+            $this->rateLimiter->registerFailure($email);
 
             throw ValidationException::withMessages([
                 'email' => __('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey($email));
+        $this->rateLimiter->clear($email);
 
         /** @var User $user */
         $user = Auth::user();
@@ -69,31 +69,5 @@ final class LoginUser
         });
 
         return $user;
-    }
-
-    /**
-     * Bloqueia se já houve MAX_ATTEMPTS falhas na janela de um minuto.
-     *
-     * @throws ValidationException Quando o limite foi atingido.
-     */
-    private function ensureIsNotRateLimited(string $email): void
-    {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey($email), self::MAX_ATTEMPTS)) {
-            return;
-        }
-
-        $seconds = RateLimiter::availableIn($this->throttleKey($email));
-
-        throw ValidationException::withMessages([
-            'email' => __('auth.throttle', ['seconds' => $seconds]),
-        ]);
-    }
-
-    /**
-     * Chave do RateLimiter só pelo e-mail (não inclui IP).
-     */
-    private function throttleKey(string $email): string
-    {
-        return 'login:'.Str::lower($email);
     }
 }

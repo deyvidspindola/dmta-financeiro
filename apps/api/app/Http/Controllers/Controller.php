@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers;
 
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
+
 /**
  * Controller base do projeto.
  *
- * Não implementa nada por si só — só existe para os controllers reais
- * herdarem. Controller nunca tem `if` de regra de negócio (ver
- * CONVENTIONS.md): no máximo delega a um UseCase e formata a resposta.
+ * Só dá aos controllers reais o `$this->authorize()` de Policy (ver
+ * `AuthorizesRequests`) — não implementa nada de regra própria. Controller
+ * nunca tem `if` de regra de negócio (ver CONVENTIONS.md): no máximo
+ * delega a um UseCase e formata a resposta.
  *
  * @package App\Http\Controllers
  *
@@ -19,9 +22,9 @@ namespace App\Http\Controllers;
  *
  * @since   18/08/2026
  *
- * @updated 18/08/2026
+ * @updated 21/08/2026
  */
 abstract class Controller
 {
-    //
+    use AuthorizesRequests;
 }
