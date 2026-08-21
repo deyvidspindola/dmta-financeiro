@@ -15,6 +15,13 @@ use Illuminate\Validation\ValidationException;
  * nem sessão — é o padrão de token pessoal recomendado para cliente
  * externo, checando a senha direto.
  *
+ * Se o usuário tem MFA confirmado (D-10), não devolve o token de acesso
+ * ainda — devolve um token "pendente" (ability `mfa-pending`, expira em
+ * 5 minutos, não abre nenhuma outra rota) que só serve pra chamar
+ * `POST /auth/mfa/verify`. O contrato deixa isso explícito no formato do
+ * array de retorno, não num campo opcional que o cliente possa ignorar
+ * por engano.
+ *
  * @package App\UseCases\Auth
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
@@ -33,7 +40,7 @@ final class IssueApiToken
 
     /**
      * @param  string  $deviceName  Identifica o token na lista de sessões do usuário.
-     * @return array{user: User, token: string}
+     * @return array{mfaRequired: true, mfaToken: string}|array{mfaRequired: false, user: User, token: string}
      *
      * @throws ValidationException Credenciais inválidas ou rate limit atingido.
      */
@@ -54,7 +61,14 @@ final class IssueApiToken
         $this->rateLimiter->clear($email);
         $user->forceFill(['last_login_at' => now()])->save();
 
+        if ($user->hasMfaEnabled()) {
+            $mfaToken = $user->createToken('mfa-pending', ['mfa-pending'], now()->addMinutes(5))->plainTextToken;
+
+            return ['mfaRequired' => true, 'mfaToken' => $mfaToken];
+        }
+
         return [
+            'mfaRequired' => false,
             'user' => $user,
             'token' => $user->createToken($deviceName)->plainTextToken,
         ];

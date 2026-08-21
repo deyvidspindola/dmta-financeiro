@@ -26,6 +26,12 @@ use Illuminate\Http\Request;
  */
 final class AuthController extends Controller
 {
+    /**
+     * Se o usuário tem MFA (D-10), devolve `mfa_required: true` +
+     * `mfa_token` — o front chama `POST /auth/mfa/verify` com esse token
+     * e o código do app autenticador para receber o token de acesso de
+     * verdade. Sem MFA, devolve o token direto, como antes.
+     */
     public function login(LoginRequest $request, IssueApiToken $useCase): JsonResponse
     {
         $result = $useCase->execute(
@@ -34,7 +40,12 @@ final class AuthController extends Controller
             $request->string('device_name')->toString(),
         );
 
+        if ($result['mfaRequired']) {
+            return response()->json(['mfa_required' => true, 'mfa_token' => $result['mfaToken']]);
+        }
+
         return response()->json([
+            'mfa_required' => false,
             'token' => $result['token'],
             'user' => [
                 'id' => $result['user']->id,
@@ -57,6 +68,7 @@ final class AuthController extends Controller
             'id' => $request->user()->id,
             'name' => $request->user()->name,
             'email' => $request->user()->email,
+            'mfa_enabled' => $request->user()->hasMfaEnabled(),
         ]);
     }
 }

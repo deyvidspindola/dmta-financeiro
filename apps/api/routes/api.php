@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\CreditCardController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
+use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -25,9 +26,20 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    // Token "pendente" do login com MFA (ability mfa-pending) só entra
+    // aqui — não abre nenhuma outra rota da API. Ver IssueApiToken.
+    Route::middleware(['auth:sanctum', 'ability:mfa-pending'])->group(function () {
+        Route::post('auth/mfa/verify', [MfaController::class, 'verify']);
+    });
+
+    // Token de acesso normal (ability api, ou '*' dos tokens antigos).
+    Route::middleware(['auth:sanctum', 'ability:api'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+
+        Route::post('auth/mfa/enroll', [MfaController::class, 'enroll']);
+        Route::post('auth/mfa/confirm', [MfaController::class, 'confirm']);
+        Route::delete('auth/mfa', [MfaController::class, 'disable']);
 
         Route::get('contexts', [ContextController::class, 'index']);
         Route::post('contexts', [ContextController::class, 'store']);
