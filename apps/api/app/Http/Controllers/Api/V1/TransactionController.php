@@ -11,7 +11,10 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreTransactionRequest;
 use App\Http\Resources\StatementEntryResource;
 use App\Models\Context;
+use App\Models\StatementEntry;
+use App\UseCases\Transaction\DeleteTransaction;
 use App\UseCases\Transaction\RegisterTransaction;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -60,5 +63,16 @@ final class TransactionController extends Controller
         ));
 
         return new StatementEntryResource($entry);
+    }
+
+    /** Apaga o lançamento e desfaz o efeito no saldo/boleto — ver {@see DeleteTransaction}. */
+    public function destroy(Context $context, StatementEntry $transaction, DeleteTransaction $useCase): JsonResponse
+    {
+        $this->assertOwnsContext($context);
+        $this->assertBelongsToContext($context, $transaction);
+
+        $useCase->execute($transaction);
+
+        return response()->json(status: 204);
     }
 }

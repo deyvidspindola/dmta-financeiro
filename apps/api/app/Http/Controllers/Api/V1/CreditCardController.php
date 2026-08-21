@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCreditCardRequest;
 use App\Http\Resources\CreditCardResource;
 use App\Models\Context;
+use App\Models\CreditCard;
 use App\UseCases\CreditCard\RegisterCreditCard;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -54,5 +56,16 @@ final class CreditCardController extends Controller
         ));
 
         return new CreditCardResource($card);
+    }
+
+    /** Apaga o cartão e, em cascata (FK), as faturas dele. */
+    public function destroy(Context $context, CreditCard $creditCard): JsonResponse
+    {
+        $this->assertOwnsContext($context);
+        $this->assertBelongsToContext($context, $creditCard);
+
+        $creditCard->delete();
+
+        return response()->json(status: 204);
     }
 }

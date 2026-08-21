@@ -10,7 +10,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreInvestmentRequest;
 use App\Http\Resources\InvestmentResource;
 use App\Models\Context;
+use App\Models\Investment;
 use App\UseCases\Investment\RegisterInvestment;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -55,5 +57,16 @@ final class InvestmentController extends Controller
         ));
 
         return new InvestmentResource($investment);
+    }
+
+    /** Apaga o investimento e, em cascata (FK), o histórico de aportes dele. */
+    public function destroy(Context $context, Investment $investment): JsonResponse
+    {
+        $this->assertOwnsContext($context);
+        $this->assertBelongsToContext($context, $investment);
+
+        $investment->delete();
+
+        return response()->json(status: 204);
     }
 }

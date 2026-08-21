@@ -10,8 +10,10 @@ use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreBillRequest;
 use App\Http\Resources\BillResource;
+use App\Models\Bill;
 use App\Models\Context;
 use App\UseCases\Bill\RegisterBill;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -54,5 +56,20 @@ final class BillController extends Controller
         ));
 
         return new BillResource($bill);
+    }
+
+    /**
+     * Apaga o boleto. Não desfaz um lançamento já vinculado — o
+     * `statement_entries.bill_id` só fica nulo (ver migration), o
+     * dinheiro que já se moveu continua movido.
+     */
+    public function destroy(Context $context, Bill $bill): JsonResponse
+    {
+        $this->assertOwnsContext($context);
+        $this->assertBelongsToContext($context, $bill);
+
+        $bill->delete();
+
+        return response()->json(status: 204);
     }
 }

@@ -66,7 +66,8 @@ class StatementEntry extends Model
     /** Sinal (+1/-1) do impacto deste lançamento no saldo da conta. */
     public function balanceSign(): int
     {
-        return $this->type === StatementEntryType::Income->value ? 1 : -1;
+        // @phpstan-ignore-next-line identical.alwaysFalse (cast StatementEntryType confirmado em runtime — larastan erra os dois lados dessa inferência)
+        return $this->type === StatementEntryType::Income ? 1 : -1;
     }
 
     /**

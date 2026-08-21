@@ -51,23 +51,28 @@ Route::prefix('v1')->group(function () {
 
             Route::get('accounts', [AccountController::class, 'index']);
             Route::post('accounts', [AccountController::class, 'store']);
+            Route::delete('accounts/{account}', [AccountController::class, 'destroy']);
 
             Route::get('categories', [CategoryController::class, 'index']);
             Route::post('categories', [CategoryController::class, 'store']);
 
             Route::get('bills', [BillController::class, 'index']);
             Route::post('bills', [BillController::class, 'store']);
+            Route::delete('bills/{bill}', [BillController::class, 'destroy']);
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
+            Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy']);
 
             Route::get('credit-cards', [CreditCardController::class, 'index']);
             Route::post('credit-cards', [CreditCardController::class, 'store']);
+            Route::delete('credit-cards/{creditCard}', [CreditCardController::class, 'destroy']);
             Route::get('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'index']);
             Route::post('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'store']);
 
             Route::get('investments', [InvestmentController::class, 'index']);
             Route::post('investments', [InvestmentController::class, 'store']);
+            Route::delete('investments/{investment}', [InvestmentController::class, 'destroy']);
             Route::get('investments/{investment}/contributions', [InvestmentContributionController::class, 'index']);
             Route::post('investments/{investment}/contributions', [InvestmentContributionController::class, 'store']);
         });

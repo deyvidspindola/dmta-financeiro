@@ -86,7 +86,8 @@ class Context extends Model
     /** Se este é o contexto pessoa física do usuário. */
     public function isPf(): bool
     {
-        return $this->type === ContextType::Pf->value;
+        // @phpstan-ignore-next-line identical.alwaysFalse (cast ContextType confirmado em runtime — larastan erra os dois lados dessa inferência)
+        return $this->type === ContextType::Pf;
     }
 
     /**

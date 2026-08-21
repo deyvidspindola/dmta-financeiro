@@ -9,8 +9,10 @@ use App\Http\Controllers\Api\V1\Concerns\AuthorizesContext;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreAccountRequest;
 use App\Http\Resources\AccountResource;
+use App\Models\Account;
 use App\Models\Context;
 use App\UseCases\Account\RegisterAccount;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -49,5 +51,16 @@ final class AccountController extends Controller
         ));
 
         return new AccountResource($account);
+    }
+
+    /** Apaga a conta e, em cascata (FK), todo lançamento dela — sem confirmação extra nesta fase. */
+    public function destroy(Context $context, Account $account): JsonResponse
+    {
+        $this->assertOwnsContext($context);
+        $this->assertBelongsToContext($context, $account);
+
+        $account->delete();
+
+        return response()->json(status: 204);
     }
 }

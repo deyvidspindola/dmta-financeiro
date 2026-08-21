@@ -46,7 +46,8 @@ class CardInvoice extends Model
     /** Se a fatura já foi paga. */
     public function isPaid(): bool
     {
-        return $this->status === CardInvoiceStatus::Paid->value;
+        // @phpstan-ignore-next-line identical.alwaysFalse (cast CardInvoiceStatus confirmado em runtime — larastan erra os dois lados dessa inferência)
+        return $this->status === CardInvoiceStatus::Paid;
     }
 
     /**
