@@ -1,0 +1,158 @@
+@import "tailwindcss";
+@import "../../vendor/tallstackui/tallstackui/css/v4.css";
+
+@plugin "@tailwindcss/forms";
+
+@source "../../vendor/tallstackui/tallstackui/**/*.php";
+@source "../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php";
+@source "../../app/Providers/**/*.php";
+@source "../../resources/views/**/*.blade.php";
+@source "../../lang/**/*.php";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
+ * Tokens de cor — design system único do template (área /admin).
+ * Um projeto derivado pode trocar só estas variáveis para mudar a marca
+ * inteira sem tocar em nenhuma tela. Nunca use hex direto em Blade —
+ * é exatamente para isso que os tokens abaixo existem.
+ */
+:root {
+  --background:           #FFFFFF;
+  --surface:              #F3F5FA;
+  --shell:                #F3F5FA;
+  --field:                #EFF2F9;
+  --border:               #EDF0F7;
+
+  --foreground:           #0F1729;
+  --body:                 #3A4560;
+  --secondary-foreground: #4C5877;
+  --muted-foreground:     #9AA3B8;
+
+  --primary:              #3454F0;
+  --primary-strong:       #263FCB;
+  --primary-soft:         #EEF2FF;
+  --success:              #16A34A;
+  --success-soft:         #ECFDF3;
+  --warning:              #D97706;
+  --warning-soft:         #FFFBEB;
+  --destructive:          #DC2626;
+  --destructive-soft:     #FEF2F2;
+
+  --primary-50:  #EEF2FF;
+  --primary-100: #E0E7FF;
+  --primary-200: #C7D3FE;
+  --primary-300: #A5B4FC;
+  --primary-400: #4F6EF7;
+  --primary-500: #4F6EF7;
+  --primary-600: #3454F0;
+  --primary-700: #263FCB;
+  --primary-800: #1E33A3;
+  --primary-900: #172787;
+  --primary-950: #0F1A5C;
+}
+
+.dark {
+  --background:           #17181B;
+  --surface:              #0A0A0C;
+  --shell:                #131416;
+  --field:                #1C1D22;
+  --border:               rgb(255 255 255 / 0.06);
+
+  --foreground:           #FCFBF9;
+  --body:                 #F3F1EC;
+  --secondary-foreground: #A6A9B1;
+  --muted-foreground:     #83868F;
+
+  --primary:              #8FABFF;
+  --primary-strong:       #C5D4FF;
+  --primary-soft:         #1A1F2E;
+  --success:              #4ADE80;
+  --success-soft:         #12241D;
+  --warning:              #FBBF24;
+  --warning-soft:         #2A2113;
+  --destructive:          #F87171;
+  --destructive-soft:     #2C1418;
+
+  --primary-50:  #0A0A0C;
+  --primary-100: #172787;
+  --primary-200: #1E33A3;
+  --primary-300: #263FCB;
+  --primary-400: #3454F0;
+  --primary-500: #4F6EF7;
+  --primary-600: #8FABFF;
+  --primary-700: #A8BFFF;
+  --primary-800: #C5D4FF;
+  --primary-900: #E0E8FF;
+  --primary-950: #F2F5FF;
+}
+
+@theme inline {
+  --color-background:           var(--background);
+  --color-canvas:               var(--background);
+  --color-surface:              var(--surface);
+  --color-shell:                var(--shell);
+  --color-field:                var(--field);
+  --color-border:               var(--border);
+  --color-foreground:           var(--foreground);
+  --color-body:                 var(--body);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground:     var(--muted-foreground);
+  --color-primary:              var(--primary);
+  --color-primary-strong:       var(--primary-strong);
+  --color-primary-soft:         var(--primary-soft);
+  --color-success:              var(--success);
+  --color-success-soft:         var(--success-soft);
+  --color-warning:              var(--warning);
+  --color-warning-soft:         var(--warning-soft);
+  --color-destructive:          var(--destructive);
+  --color-destructive-soft:     var(--destructive-soft);
+
+  --color-primary-50:  var(--primary-50);
+  --color-primary-100: var(--primary-100);
+  --color-primary-200: var(--primary-200);
+  --color-primary-300: var(--primary-300);
+  --color-primary-400: var(--primary-400);
+  --color-primary-500: var(--primary-500);
+  --color-primary-600: var(--primary-600);
+  --color-primary-700: var(--primary-700);
+  --color-primary-800: var(--primary-800);
+  --color-primary-900: var(--primary-900);
+  --color-primary-950: var(--primary-950);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --radius-card:  1rem;
+  --radius-field: 0.75rem;
+
+  --shadow-card: 0 1px 2px rgba(15, 23, 41, 0.03), 0 20px 44px -28px rgba(15, 23, 41, 0.16);
+}
+
+.screen-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.screen-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+/* Marca — gradiente indigo usado no ícone do topo da sidebar e no painel de auth */
+.brand-mark {
+  background-image: linear-gradient(to bottom right, #4f6ef7, #263fcb);
+  box-shadow: 0 6px 16px -6px rgb(52 84 240 / 0.55);
+}
+
+/* Painel lateral do layout de autenticação — grade sutil sobre primary-950 */
+.auth-brand-panel {
+  background-color: var(--primary-950);
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.06) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.06) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+::selection {
+  background: #c7d3fe;
+  color: #0f1729;
+}

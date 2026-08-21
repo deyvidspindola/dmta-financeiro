@@ -1,0 +1,9 @@
+---
+description: Testes
+globs: tests/**/*.php
+alwaysApply: false
+---
+Pest. Um comportamento por teste, nome descrevendo a regra em português.
+Teste de domínio não toca banco quando possível.
+Não teste framework. Teste regra de negócio, autorização e caminho de erro.
+Não escreva teste que não foi pedido (ver CLAUDE.md) — quando pedirem, siga este arquivo.

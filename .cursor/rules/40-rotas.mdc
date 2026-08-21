@@ -1,0 +1,20 @@
+---
+description: Rotas — URL PT, nome EN, prefixo /admin. Fonte: CONVENTIONS.md
+globs: routes/**/*.php
+alwaysApply: false
+---
+
+| | Idioma | Exemplo |
+|---|---|---|
+| URL | Português, kebab-case, sem acento | `/admin/usuarios` · `/admin/perfil` |
+| Nome | Inglês, dot.case | `admin.users.index` · `admin.profile` |
+
+No código **nunca** hardcode URL — só `route('admin.users.edit', $user)`.
+
+Um só prefixo de área: `/admin` → nome `admin.` (definido em `routes/admin.php`, incluído por
+`routes/web.php`). Rotas públicas/de autenticação (`/`, `/entrar`, `/sair`) ficam em
+`routes/web.php` mesmo, fora do grupo `admin.`.
+
+Se o projeto derivado deste template crescer para mais de uma área autenticada (ex.: um portal
+de cliente além do `/admin`), replique o padrão: `routes/<area>.php` + prefixo de rota e de nome
+próprios — não misture duas áreas no mesmo arquivo.

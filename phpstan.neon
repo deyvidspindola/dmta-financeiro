@@ -1,0 +1,26 @@
+# =============================================================================
+# Análise estática — Larastan sobre PHPStan
+#
+# O nível sobe junto com o projeto. Subir cedo demais produz ruído que ninguém
+# lê; nunca subir deixa passar bug de verdade.
+# =============================================================================
+
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+
+    paths:
+        - app
+        - routes
+        - database
+
+    # Nível inicial do template. Suba conforme o projeto derivado amadurece
+    # (a biblioteca de componentes estabiliza, a cobertura de testes cresce).
+    level: 5
+
+    excludePaths:
+        # Helpers globais confundem o analisador e já têm limite de 10 linhas.
+        - app/Support/helpers.php
+        # Migrations mudam de forma o tempo todo e não têm regra de negócio.
+        - database/migrations

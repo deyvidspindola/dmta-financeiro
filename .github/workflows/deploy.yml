@@ -1,0 +1,140 @@
+name: Deploy
+
+# TEMPLATE — este workflow só funciona depois que o projeto derivado
+# configurar os secrets do GitHub Environment (staging/production). Sem
+# eles, o job falha na etapa "Configurar SSH" — de propósito, para não
+# tentar um deploy incompleto silenciosamente.
+#
+# Use bin/setup-github-deploy-secrets.sh (ou o skill Claude Code
+# deploy-laravel-hostgator) para gerar a chave e cadastrar os secrets.
+#
+# main       → homologação, automático
+# production → produção, com aprovação manual (environment protection)
+#
+# O deploy não repete os testes: ele só roda se o CI do mesmo commit passou.
+# A configuração de SSH é feita à mão, sem action de terceiro, porque é o
+# único ponto do pipeline que manipula a chave privada do servidor.
+
+on:
+  push:
+    branches: [main, production]
+  workflow_dispatch:          # permite disparar manualmente pela interface
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: false   # nunca cancelar um deploy no meio
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ github.ref_name == 'production' && 'Produção' || 'Homologação' }}
+    runs-on: ubuntu-latest
+
+    # O environment traz duas coisas: os segredos daquele ambiente e,
+    # no caso de produção, a exigência de aprovação manual.
+    environment:
+      name: ${{ github.ref_name == 'production' && 'production' || 'staging' }}
+      url: ${{ vars.APP_URL }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # --- Assets ---------------------------------------------------------
+      # Buildados aqui e enviados prontos: o servidor compartilhado não
+      # precisa de Node, e o deploy não depende do que estiver instalado lá.
+      # Composer entra antes do Vite porque app.css importa o CSS do
+      # TallStackUI em vendor/.
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v6
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências PHP
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Buildar assets
+        run: |
+          npm ci
+          npm run build
+
+      # --- SSH ------------------------------------------------------------
+
+      - name: Configurar SSH
+        env:
+          SSH_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Chave pública do servidor guardada como segredo — mais seguro que
+          # ssh-keyscan, que confia cegamente em quem responder primeiro.
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
+
+      # --- Envio ----------------------------------------------------------
+
+      - name: Enviar assets
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_PATH: ${{ secrets.APP_PATH }}
+        run: |
+          rsync -az --delete \
+            -e "ssh -p $SSH_PORT -i ~/.ssh/id_ed25519" \
+            public/build/ \
+            "$SSH_USER@$SSH_HOST:$APP_PATH/public/build/"
+
+      - name: Executar deploy no servidor
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          APP_PATH: ${{ secrets.APP_PATH }}
+          WEB_ROOT: ${{ secrets.WEB_ROOT }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          ssh -p "$SSH_PORT" -i ~/.ssh/id_ed25519 \
+            "$SSH_USER@$SSH_HOST" \
+            "cd $APP_PATH && WEB_ROOT='$WEB_ROOT' ./bin/deploy.sh $BRANCH"
+
+      # --- Verificação ----------------------------------------------------
+
+      - name: Verificar se a aplicação respondeu
+        run: |
+          for i in 1 2 3 4 5; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' "${{ vars.APP_URL }}/up" || true)
+            if [ "$code" = "200" ]; then
+              echo "Aplicação respondeu 200."
+              exit 0
+            fi
+            echo "Tentativa $i: HTTP $code. Aguardando..."
+            sleep 5
+          done
+          echo "::error::A aplicação não respondeu 200 após o deploy."
+          exit 1
+
+      - name: Avisar falha
+        if: failure()
+        run: echo "::error::Deploy falhou em ${{ github.ref_name }} — verifique o log e o Sentry."

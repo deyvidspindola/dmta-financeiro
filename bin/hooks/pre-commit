@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+#
+# Hook de pre-commit do template. Instalado por `make setup`.
+# Roda o portão de qualidade antes de cada commit.
+#
+# Para pular em caso excepcional:  git commit --no-verify
+# Se você estiver usando isso com frequência, o problema é a regra, não o hook.
+
+set -e
+
+if ! docker compose ps --status running --quiet app > /dev/null 2>&1; then
+    echo ""
+    echo "  ⚠  contêineres não estão rodando — 'make up' antes de commitar"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo "  Verificando padrões antes do commit..."
+echo ""
+
+make check

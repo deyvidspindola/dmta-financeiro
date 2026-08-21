@@ -1,0 +1,169 @@
+name: CI
+
+# Roda em todo PR e em todo push para as branches permanentes.
+# É o mesmo `make check` do ambiente local, executado num servidor limpo —
+# o que pega "funciona na minha máquina" antes de virar problema no deploy.
+#
+# Este workflow não depende de nenhum secret: roda de verdade em qualquer
+# fork/clone deste template, sem configuração adicional.
+
+on:
+  pull_request:
+  push:
+    branches: [main, production]
+
+# Cancela execuções antigas do mesmo branch quando chega commit novo.
+# Economiza minutos e evita fila de builds obsoletos.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PHP_VERSION: '8.3'
+  NODE_VERSION: '22'
+
+jobs:
+  quality:
+    name: Estilo, análise estática e padrões
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, gd, zip, intl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v6
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: PSR-12 (Pint)
+        run: ./vendor/bin/pint --test
+
+      - name: Análise estática (PHPStan)
+        run: ./vendor/bin/phpstan analyse --memory-limit=512M --no-progress
+
+      - name: Padrões de código (CONVENTIONS.md)
+        run: php bin/check-standards.php
+
+  tests:
+    name: Testes
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_DATABASE: testing
+          MYSQL_ROOT_PASSWORD: secret
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd="mysqladmin ping -psecret"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          extensions: mbstring, pdo_mysql, gd, zip, intl, fileinfo
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v6
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      # welcome.blade.php e os layouts usam @vite — sem o manifest, qualquer
+      # teste que renderize essas views falha com ViteManifestNotFoundException.
+      - name: Buildar assets
+        run: |
+          npm ci
+          npm run build
+
+      - name: Preparar ambiente
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Rodar testes
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: testing
+          DB_USERNAME: root
+          DB_PASSWORD: secret
+        run: php artisan test
+
+  assets:
+    name: Build dos assets
+    runs-on: ubuntu-latest
+    steps:
+      # O app.css importa CSS/sources do TallStackUI em vendor/ — sem
+      # Composer o Vite falha com "Can't resolve .../v4.css".
+      - uses: actions/checkout@v7
+
+      - name: Preparar PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ env.PHP_VERSION }}
+          coverage: none
+          tools: composer:v2
+
+      - name: Cache do Composer
+        uses: actions/cache@v6
+        with:
+          path: vendor
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      - name: Instalar dependências PHP
+        run: composer install --prefer-dist --no-interaction --no-progress --no-scripts
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Instalar e buildar
+        run: |
+          npm ci
+          npm run build
+
+      # Guarda o resultado para um eventual job de deploy reaproveitar,
+      # em vez de buildar duas vezes.
+      - name: Guardar artefato
+        uses: actions/upload-artifact@v7
+        with:
+          name: build
+          path: public/build
+          retention-days: 3

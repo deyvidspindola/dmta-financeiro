@@ -1,0 +1,25 @@
+---
+description: Camadas PHP
+globs: app/**/*.php
+alwaysApply: false
+---
+
+Caso de uso: `final`, um `execute()` (ou `__invoke` quando um pacote de terceiro exige — ver
+`App\UseCases\Search\HandleCommandPaletteSelection`), dependências injetadas via type-hint no
+método, `DB::transaction` aqui e só aqui, dispara evento no fim se precisar. Não notifica —
+listener notifica.
+
+Service: sem estado, sem transação própria, sem conhecer request.
+
+Componente Livewire: localiza, autoriza (`$this->authorize`), delega ao caso de uso, reage. Zero
+decisão de negócio. Formulário com upload usa `Livewire\WithFileUploads` — arquivo enviado vira
+`Illuminate\Http\UploadedFile` no UseCase, nunca é salvo direto no componente (ver
+`App\UseCases\Admin\Profile\UpdateAvatar`).
+
+Controller: no máximo delega. Sem `if` de regra. Prefira um controller invocável por rota
+(`__invoke`) quando a rota não é parte de um CRUD com Livewire — ver
+`App\Http\Controllers\Auth\LogoutController`.
+
+Helper: sem lógica, sem banco, até 10 linhas.
+
+Model: relações, casts, scopes, acessor simples (ex.: `User::initial()`). Nada além.

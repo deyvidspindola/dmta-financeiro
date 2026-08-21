@@ -1,0 +1,67 @@
+services:
+  web:
+    image: nginx:alpine
+    # 8090 (não 8080) para não colidir com outros projetos Laravel já
+    # rodando nesta máquina (ex.: portal-do-cliente usa 8080).
+    ports: ["8090:80"]
+    volumes:
+      - .:/var/www/html
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on: [app]
+
+  app:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    volumes:
+      - .:/var/www/html
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: laravel_base
+      MYSQL_ROOT_PASSWORD: secret
+    ports: ["3308:3306"]          # 3308 evita conflito com outros projetos locais
+    volumes: [dbdata:/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-psecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  node:
+    image: node:22-alpine
+    working_dir: /var/www/html
+    volumes: [.:/var/www/html]
+    ports: ["5175:5173"]
+    command: sh -c "npm install && npm run dev"
+
+  # Replica o cron do painel de hospedagem compartilhada. É o que faz a
+  # fila local se comportar exatamente como vai se comportar em produção
+  # — sem queue:work como serviço permanente, sem Redis, sem WebSocket.
+  scheduler:
+    build:
+      context: ./docker/php
+      args:
+        UID: ${UID:-1000}
+        GID: ${GID:-1000}
+    volumes:
+      - .:/var/www/html
+      - ./docker/php.ini:/usr/local/etc/php/conf.d/local.ini:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    command: sh -c "while true; do php artisan schedule:run --no-interaction; sleep 60; done"
+
+  mailpit:
+    image: axllent/mailpit
+    ports: ["8027:8025", "1027:1025"]
+
+volumes:
+  dbdata:

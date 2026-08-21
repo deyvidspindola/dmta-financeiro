@@ -1,0 +1,38 @@
+---
+description: Blade e Livewire
+globs: ["resources/views/**/*.blade.php","app/Livewire/**/*.php"]
+alwaysApply: false
+---
+
+## Componentes — sempre por trás de wrapper
+Diferente de outros projetos da empresa: aqui **todo** componente do TallStackUI usado numa tela
+de negócio passa por um wrapper em `resources/views/components/form/` ou `.../ui/` —
+`<x-form.input>`, `<x-form.password>`, `<x-ui.button>`, `<x-ui.card>`, `<x-ui.avatar>`,
+`<x-ui.dropdown>`. Nunca `<x-input>`, `<x-button>` etc. direto numa tela. Motivo: trocar o
+TallStackUI por outra lib no futuro vira mudar um arquivo, não recompilar todas as telas.
+`bin/check-standards.php` reforça a parte disso que dá pra checar automaticamente (HTML cru).
+Componente sem equivalente na lib (ex.: `<x-form.file>`, upload) é o único caso em que o próprio
+wrapper contém a tag nativa — e só ele.
+
+## Cor e estilo
+Só token: `bg-canvas` `bg-surface` `bg-field` `text-foreground` `text-body` `text-muted-foreground`
+`border-border` `text-primary` `text-destructive` `text-success` e variações `-soft`/`-strong`.
+Nunca `bg-white`, `text-slate-*`, `bg-blue-*`, `text-[#hex]`.
+
+## Livewire 4
+- Todo `@foreach`/bloco de lista com `wire:key` estável
+- Todo botão de ação com `wire:loading` (`wire:loading.attr="disabled"` ou `wire:target`)
+- Confirmação de ação destrutiva usa o dialog do TallStackUI
+  (`$this->dialog()->question(...)->confirm(__(...), 'metodo')->send()`), não `window.confirm`
+- Nada de inicializar JS em `DOMContentLoaded` — use Alpine (`x-data`, `x-on:click`)
+- Componente do TallStackUI com slot de gatilho customizado (`action`, ver `<x-dropdown>`) não
+  ganha `x-on:click` sozinho — quem chama tem que colocar (ver `x-admin.user-menu`)
+
+## HTML cru é proibido em tela
+Fora de `resources/views/components/`, **nunca** escreva `<input>` `<button>` `<select>`
+`<textarea>` `<table>` `<label>`. Use `<x-form.*>` e `<x-ui.*>`. `bin/check-standards.php` falha
+o `make check` se isso acontecer.
+
+## Responsivo
+`grid-cols-1` primeiro, `lg:` depois. Toda listagem precisa de estado vazio (e vazio-por-filtro,
+com texto diferente, se houver busca).

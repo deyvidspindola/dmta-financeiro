@@ -1,0 +1,13 @@
+---
+description: Nomenclatura de banco e código. Fonte: CONVENTIONS.md
+globs: ["database/**/*.php","app/Models/**/*.php"]
+alwaysApply: false
+---
+
+- Tabela: plural, snake_case, inglês — `users`, `personal_access_tokens`
+- Coluna: snake_case, inglês — `avatar_path`, `last_login_at`
+- Migration nova: `database/migrations/AAAA_MM_DD_HHMMSS_verbo_descricao.php`, sempre com `up()`
+  e `down()` reversível — ver `2026_08_18_200000_add_avatar_path_to_users_table.php` como
+  exemplo de migration aditiva simples
+- Model: `$fillable` (ou o atributo `#[Fillable]`), `casts()`, relações, scopes, acessor
+  trivial — nunca regra de negócio (isso é UseCase)

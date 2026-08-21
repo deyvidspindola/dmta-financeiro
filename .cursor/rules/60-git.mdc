@@ -1,0 +1,32 @@
+---
+description: Git, branches, commits e make check. Fonte: CONVENTIONS.md
+alwaysApply: true
+---
+
+## Branches
+- `main`: integração / homologação — evite commit direto em projeto com mais de uma pessoa
+- `production`: o que está no ar; merge de `main` só após validação
+- `feat/…` · `fix/…` · `hotfix/…` (sai de `production`) · `refactor/…` · `chore/…` · `docs/…`
+- Nome: `tipo/descricao-curta`, inglês, minúsculas, hífen
+- Nunca versionar: `.env`, `storage/` (exceto `.gitkeep`), `vendor/`, `node_modules/`
+
+## Commits
+Conventional Commits: **tipo em inglês, descrição em português**, imperativo, minúscula, sem
+ponto final.
+
+```
+feat(admin): adiciona tela de perfil com troca de senha
+fix(search): corrige clique do dropdown que não abria
+```
+
+Tipos: `feat` `fix` `refactor` `perf` `test` `docs` `chore` `style` `ci`
+Escopos comuns: `admin` `auth` `search` `domain` `deps` `ci` — use o que fizer sentido para o
+que mudou, não force um destes se não encaixar.
+Um commit, um assunto. Se a mensagem precisa de "e", provavelmente são dois commits.
+
+## Qualidade
+```bash
+make check    # lint + stan + standards + test
+```
+`bin/check-standards.php` verifica limites de tamanho, PHPDoc, `env()` fora de config,
+transaction só em UseCases, e HTML cru fora de `resources/views/components/`.
