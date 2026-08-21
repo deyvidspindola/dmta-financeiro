@@ -282,9 +282,13 @@ export const mockApi = {
     return row
   },
 
-  async listCategories(contextId: string): Promise<Category[]> {
+  async listCategories(
+    contextId: string,
+    type?: Category['type'],
+  ): Promise<Category[]> {
     await delay()
-    return byContext(categories, contextId)
+    const rows = byContext(categories, contextId)
+    return type ? rows.filter((c) => c.type === type) : rows
   },
 
   async createCategory(
@@ -292,6 +296,17 @@ export const mockApi = {
     payload: Omit<Category, 'id' | 'context_id'>,
   ): Promise<Category> {
     await delay()
+    if (payload.parent_id) {
+      const parent = categories.find((c) => c.id === payload.parent_id)
+      if (parent && parent.type !== payload.type) {
+        throw Object.assign(
+          new Error(
+            'A subcategoria precisa ter o mesmo tipo (despesa/receita) da categoria-mãe.',
+          ),
+          { status: 422 },
+        )
+      }
+    }
     const row: Category = {
       id: id('cat'),
       context_id: contextId,
@@ -363,6 +378,25 @@ export const mockApi = {
   async listInvoices(contextId: string): Promise<CardInvoice[]> {
     await delay()
     return byContext(invoices, contextId)
+  },
+
+  async createInvoice(
+    contextId: string,
+    creditCardId: string,
+    payload: { reference_month: string; amount: number; due_date: string },
+  ): Promise<CardInvoice> {
+    await delay()
+    const row: CardInvoice = {
+      id: id('inv'),
+      credit_card_id: creditCardId,
+      context_id: contextId,
+      reference_month: payload.reference_month.slice(0, 7),
+      amount: payload.amount,
+      due_date: payload.due_date,
+      status: 'open',
+    }
+    invoices = [...invoices, row]
+    return row
   },
 
   async listInvestments(contextId: string): Promise<Investment[]> {

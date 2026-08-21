@@ -1,48 +1,33 @@
 # Progresso — apps/web (F0)
 
-Atualizado em 2026-08-21 (integração API real).
+Atualizado em 2026-08-21 (category.type + contextos PJ + 422).
 
 ## Feito
 
 - Scaffold React 19 + Vite + TypeScript em `apps/web`
-- **Ligado à API real** (`VITE_USE_MOCKS=false`,
+- Ligado à API real (`VITE_USE_MOCKS=false`,
   `VITE_API_BASE_URL=http://127.0.0.1:8090/api/v1`)
-- Mappers em `src/api/mappers.ts` traduzem o contrato Laravel
-  (`institution`↔`bank_name`, `direction`↔`kind`, `occurred_at`↔`date`,
-  `credit_limit`↔`limit`, `broker`/`initial_amount`/`current_amount`,
-  dashboard `accounts_balance`/`month_*`, etc.) sem mudar a UI
-- Login real: `POST /auth/login` com `device_name`, depois `/auth/me` +
-  `/contexts` para montar a sessão (sem passo MFA — API ainda não pede)
-- Smoke manual via `scripts/smoke-api.ts` + curl: login admin, contexto
-  "Pessoal", dashboard consolidado com saldo/lançamentos reais, criar conta
-  e ver na listagem
-- `npm run build` passa
+- Mappers em `src/api/mappers.ts` (inclui `company`→`pj` no Context)
+- Login real sem MFA (API ainda não exige)
+- **Seletor de contexto:** Consolidado + Pessoal (pf) + Exemplo Serviços (pj)
+- **Category.type:** listagem com `?type=`, POST exige `type`; modal herda o
+  tipo do formulário; selects de lançamento/boleto filtram por tipo
+- **422 de regra de negócio:** `getErrorMessage` + `ErrorBanner` nos
+  formulários (mensagem PT da API)
+- **Faturas de cartão:** `GET/POST .../credit-cards/{id}/invoices` plugado
+- Smoke: `scripts/smoke-api.ts`; `npm run build` ok
 
-## Falta / pendências de integração
+## Falta / pendências
 
-- **MFA/TOTP (D-10):** UI ainda tem o passo, mas a API devolve o token
-  direto — fluxo MFA fica desligado até o backend implementar. Não inventar
-  contrato.
-- Endpoint de faturas de cartão (`CardInvoice`) ainda não existe na API —
-  `listCardInvoices` retorna `[]` no modo real
-- `credit_used` no dashboard mapeado como `0` (campo não vem da API)
-- `Category.type` (receita/despesa) não existe no backend — select mostra
-  todas as categorias
-- Conta sem `type` na API — UI assume `checking` na leitura
-- Workflow `deploy-web.yml` (critério “Pronto” da F0, fora desta pasta)
-- Polimento: edição/exclusão, toasts, filtros
-
-## Dúvidas / decisões locais
-
-- Vocabulário: UI “Lançamentos” / domínio `StatementEntry` / path
-  `/transactions` — alinhado com a API atual
-- Cadastros exigem contexto PF/PJ (não consolidado)
-- Valores monetários: `number` decimal no JSON (confirmado)
+- **MFA/TOTP (D-10)** — UI mantém o passo; API ainda devolve token direto
+- `credit_used` no dashboard ainda `0` (API não expõe)
+- Conta sem `type` na API — leitura assume `checking`
+- Workflow `deploy-web.yml`
+- Polimento: edição/exclusão, toasts globais, filtros de listagem
 
 ## Próximo passo concreto
 
-1. Quando a API expor MFA, reativar o segundo fator na UI sem reinventar o
-   contrato — só consumir o que vier no login.
-2. Alinhar campos opcionais que a UI ainda simula (`Account.type`,
-   `Category.type`, `credit_used`, faturas) quando o backend os publicar.
-3. Revisar/mergear PR #1 após teste visual no browser (`npm run dev`).
+1. Teste visual no browser: login fresco, seletor com 3 opções, criar
+   lançamento filtrando categorias por tipo, forçar 422 de subcategoria.
+2. Quando MFA existir na API, só consumir o desafio — não inventar contrato.
+3. Revisar/mergear PR #1.

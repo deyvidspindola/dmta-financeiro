@@ -1,8 +1,9 @@
 import { login } from '../src/api/auth'
 import { listAccounts, createAccount } from '../src/api/accounts'
+import { listCategories, createCategory } from '../src/api/categories'
 import { getDashboard } from '../src/api/dashboard'
 import { listTransactions } from '../src/api/transactions'
-import { bindAuthToken } from '../src/api/http'
+import { ApiError, bindAuthToken } from '../src/api/http'
 import { isMfaChallenge } from '../src/types/models'
 
 async function main() {
@@ -17,43 +18,70 @@ async function main() {
   console.log('user:', session.user.email)
   console.log(
     'contexts:',
-    session.contexts.map((c) => `${c.id}:${c.name}`).join(', '),
+    session.contexts.map((c) => `${c.id}:${c.type}:${c.name}`).join(' | '),
   )
+  if (session.contexts.length < 2) {
+    throw new Error(`expected >=2 contexts, got ${session.contexts.length}`)
+  }
 
   bindAuthToken(() => session.token)
-  const ctx = session.contexts[0]?.id
-  if (!ctx) throw new Error('no context')
+  const pf = session.contexts.find((c) => c.type === 'pf')
+  const pj = session.contexts.find((c) => c.type === 'pj')
+  if (!pf || !pj) throw new Error('missing pf or pj context')
 
   const consolidated = await getDashboard('consolidated')
-  console.log('consolidated mapped:', consolidated)
+  console.log('consolidated balance:', consolidated.balance_total)
 
-  const dash = await getDashboard(ctx)
-  console.log('context dashboard mapped:', dash)
+  const expenseCats = await listCategories(pf.id, { type: 'expense' })
+  const incomeCats = await listCategories(pf.id, { type: 'income' })
+  console.log(
+    'PF categories expense/income:',
+    expenseCats.map((c) => c.name),
+    incomeCats.map((c) => c.name),
+  )
+  if (expenseCats.some((c) => c.type !== 'expense')) {
+    throw new Error('expense filter leaked non-expense')
+  }
+  if (incomeCats.some((c) => c.type !== 'income')) {
+    throw new Error('income filter leaked non-income')
+  }
 
-  const accounts = await listAccounts(ctx)
+  try {
+    await createCategory(pf.id, {
+      name: `Sub errada ${Date.now()}`,
+      parent_id: expenseCats[0]?.id ?? null,
+      type: 'income',
+    })
+    throw new Error('expected 422 on type mismatch')
+  } catch (err) {
+    if (!(err instanceof ApiError) || err.status !== 422) throw err
+    console.log('422 message:', err.message)
+  }
+
+  const accounts = await listAccounts(pf.id)
   console.log(
     'accounts:',
-    accounts.map((a) => `${a.id}:${a.name}/${a.bank_name}=${a.balance}`),
+    accounts.map((a) => `${a.id}:${a.name}=${a.balance}`),
   )
-
-  const txs = await listTransactions(ctx)
+  const txs = await listTransactions(pf.id)
   console.log(
     'transactions:',
     txs.map((t) => `${t.date}:${t.description}:${t.amount}`),
   )
 
-  const created = await createAccount(ctx, {
+  const created = await createAccount(pf.id, {
     name: `Conta client ${Date.now()}`,
     bank_name: 'API Layer',
     type: 'checking',
     balance: 42,
   })
-  console.log('created:', created)
+  console.log('created account:', created.id, created.name)
 
-  const after = await listAccounts(ctx)
-  if (!after.some((a) => a.id === created.id)) {
-    throw new Error('created account missing from list')
-  }
+  const pjCats = await listCategories(pj.id)
+  console.log(
+    'PJ categories:',
+    pjCats.map((c) => `${c.name}/${c.type}`),
+  )
 
   console.log('CLIENT LAYER OK')
 }

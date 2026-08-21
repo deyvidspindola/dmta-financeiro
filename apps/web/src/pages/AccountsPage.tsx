@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { accountsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import {
@@ -152,6 +153,9 @@ export function AccountsPage() {
             >
               <TextInput type="number" step="0.01" {...form.register('balance')} />
             </Field>
+            {mutation.isError ? (
+              <ErrorBanner message={getErrorMessage(mutation.error)} />
+            ) : null}
             <div className="form-actions">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 {strings.common.cancel}

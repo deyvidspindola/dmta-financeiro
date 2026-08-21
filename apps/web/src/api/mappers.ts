@@ -7,11 +7,13 @@ import type {
   BillKind,
   BillStatus,
   CaptureOrigin,
+  CardInvoice,
   Category,
   Context,
   CreditCard,
   DashboardSummary,
   Investment,
+  InvoiceStatus,
   MoneyDirection,
   StatementEntry,
   User,
@@ -45,7 +47,7 @@ export function mapUser(raw: {
 
 export function mapContext(raw: {
   id: string | number
-  type: 'pf' | 'pj'
+  type: 'pf' | 'pj' | 'company'
   name: string
   company?: { id: string | number } | null
   company_id?: string | number | null
@@ -54,7 +56,8 @@ export function mapContext(raw: {
     raw.company_id ?? (raw.company ? raw.company.id : null) ?? null
   return {
     id: asId(raw.id),
-    type: raw.type,
+    // API uses `company`; UI domain keeps `pj` from the conception docs.
+    type: raw.type === 'pf' ? 'pf' : 'pj',
     name: raw.name,
     company_id: companyId === null ? null : asId(companyId),
   }
@@ -101,7 +104,7 @@ export function mapCategory(
     id: string | number
     name: string
     parent_id: string | number | null
-    type?: MoneyDirection
+    type: MoneyDirection
   },
 ): Category {
   return {
@@ -109,17 +112,19 @@ export function mapCategory(
     context_id: contextId,
     name: raw.name,
     parent_id: raw.parent_id === null ? null : asId(raw.parent_id),
-    ...(raw.type ? { type: raw.type } : {}),
+    type: raw.type,
   }
 }
 
 export function toCreateCategoryBody(payload: {
   name: string
   parent_id: string | null
-}): { name: string; parent_id: number | null } {
+  type: MoneyDirection
+}): { name: string; parent_id: number | null; type: MoneyDirection } {
   return {
     name: payload.name,
     parent_id: payload.parent_id === null ? null : asApiId(payload.parent_id),
+    type: payload.type,
   }
 }
 
@@ -303,6 +308,49 @@ export function mapInvestment(
     institution: raw.broker ?? raw.institution ?? null,
     invested_amount: Number(raw.initial_amount ?? raw.invested_amount ?? 0),
     current_position: Number(raw.current_amount ?? raw.current_position ?? 0),
+  }
+}
+
+export function mapCardInvoice(
+  contextId: string,
+  creditCardId: string,
+  raw: {
+    id: string | number
+    reference_month: string
+    total_amount?: number
+    amount?: number
+    due_date: string
+    status: InvoiceStatus
+  },
+): CardInvoice {
+  return {
+    id: asId(raw.id),
+    credit_card_id: creditCardId,
+    context_id: contextId,
+    reference_month: raw.reference_month,
+    amount: Number(raw.total_amount ?? raw.amount ?? 0),
+    due_date: raw.due_date,
+    status: raw.status,
+  }
+}
+
+export function toCreateCardInvoiceBody(payload: {
+  reference_month: string
+  amount: number
+  due_date: string
+}): {
+  reference_month: string
+  total_amount: number
+  due_date: string
+} {
+  const referenceMonth =
+    /^\d{4}-\d{2}$/.test(payload.reference_month)
+      ? `${payload.reference_month}-01`
+      : payload.reference_month
+  return {
+    reference_month: referenceMonth,
+    total_amount: payload.amount,
+    due_date: payload.due_date,
   }
 }
 

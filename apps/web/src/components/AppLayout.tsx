@@ -18,6 +18,11 @@ export function AppLayout() {
   const { user, contexts, activeScope, setActiveScope, clearSession } =
     useAuthStore()
 
+  const orderedContexts = [...contexts].sort((a, b) => {
+    if (a.type === b.type) return a.name.localeCompare(b.name, 'pt-BR')
+    return a.type === 'pf' ? -1 : 1
+  })
+
   async function handleLogout() {
     try {
       await authApi.logout()
@@ -66,7 +71,7 @@ export function AppLayout() {
               onChange={(event) => setActiveScope(event.target.value)}
             >
               <option value={CONSOLIDATED}>{strings.nav.consolidated}</option>
-              {contexts.map((ctx) => (
+              {orderedContexts.map((ctx) => (
                 <option key={ctx.id} value={ctx.id}>
                   {ctx.name}
                 </option>

@@ -49,8 +49,7 @@ export interface Category {
   context_id: string
   name: string
   parent_id: string | null
-  /** Absent when the API does not expose income/expense (current F0). */
-  type?: MoneyDirection
+  type: MoneyDirection
 }
 
 export interface Bill {

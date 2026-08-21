@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { billsApi, categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { CategoryModal } from '@/components/CategoryModal'
@@ -21,6 +22,7 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+import type { MoneyDirection } from '@/types/models'
 
 const schema = z.object({
   description: z.string().min(1, strings.common.required),
@@ -33,6 +35,12 @@ const schema = z.object({
 })
 
 type FormValues = z.infer<typeof schema>
+
+function categoryTypeForBillKind(
+  kind: FormValues['kind'],
+): MoneyDirection {
+  return kind === 'receivable' ? 'income' : 'expense'
+}
 
 export function BillsPage() {
   const queryClient = useQueryClient()
@@ -48,12 +56,6 @@ export function BillsPage() {
     enabled: Boolean(listContextId),
   })
 
-  const categoriesQuery = useQuery({
-    queryKey: ['categories', contextId],
-    queryFn: () => categoriesApi.listCategories(contextId!),
-    enabled: Boolean(contextId) && open,
-  })
-
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -65,6 +67,20 @@ export function BillsPage() {
       category_id: null,
       barcode: '',
     },
+  })
+
+  const watchedKind = form.watch('kind')
+  const categoryType = categoryTypeForBillKind(watchedKind)
+
+  useEffect(() => {
+    form.setValue('category_id', null)
+  }, [watchedKind, form])
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories', contextId, categoryType],
+    queryFn: () =>
+      categoriesApi.listCategories(contextId!, { type: categoryType }),
+    enabled: Boolean(contextId) && open,
   })
 
   const mutation = useMutation({
@@ -208,6 +224,9 @@ export function BillsPage() {
             <Field label={strings.bills.barcode}>
               <TextInput {...form.register('barcode')} />
             </Field>
+            {mutation.isError ? (
+              <ErrorBanner message={getErrorMessage(mutation.error)} />
+            ) : null}
             <div className="form-actions">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 {strings.common.cancel}
@@ -225,6 +244,7 @@ export function BillsPage() {
           contextId={contextId}
           open={categoryOpen}
           onClose={() => setCategoryOpen(false)}
+          defaultType={categoryType}
           onCreated={(categoryId) => form.setValue('category_id', categoryId)}
         />
       ) : null}

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { accountsApi, categoriesApi, transactionsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { CategoryModal } from '@/components/CategoryModal'
@@ -47,18 +48,6 @@ export function TransactionsPage() {
     enabled: Boolean(listContextId),
   })
 
-  const accountsQuery = useQuery({
-    queryKey: ['accounts', contextId],
-    queryFn: () => accountsApi.listAccounts(contextId!),
-    enabled: Boolean(contextId) && open,
-  })
-
-  const categoriesQuery = useQuery({
-    queryKey: ['categories', contextId],
-    queryFn: () => categoriesApi.listCategories(contextId!),
-    enabled: Boolean(contextId) && open,
-  })
-
   const form = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -72,6 +61,23 @@ export function TransactionsPage() {
   })
 
   const watchedType = form.watch('type')
+
+  useEffect(() => {
+    form.setValue('category_id', '')
+  }, [watchedType, form])
+
+  const accountsQuery = useQuery({
+    queryKey: ['accounts', contextId],
+    queryFn: () => accountsApi.listAccounts(contextId!),
+    enabled: Boolean(contextId) && open,
+  })
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories', contextId, watchedType],
+    queryFn: () =>
+      categoriesApi.listCategories(contextId!, { type: watchedType }),
+    enabled: Boolean(contextId) && open,
+  })
 
   const mutation = useMutation({
     mutationFn: (values: FormValues) =>
@@ -92,11 +98,7 @@ export function TransactionsPage() {
   })
 
   const accounts = accountsQuery.data ?? []
-  // API categories have no income/expense type yet — show all; keep type
-  // filter only when the category actually declares a matching type.
-  const categories = (categoriesQuery.data ?? []).filter(
-    (c) => !c.type || c.type === watchedType,
-  )
+  const categories = categoriesQuery.data ?? []
 
   return (
     <div className="stack">
@@ -217,6 +219,9 @@ export function TransactionsPage() {
                 </Button>
               </div>
             </Field>
+            {mutation.isError ? (
+              <ErrorBanner message={getErrorMessage(mutation.error)} />
+            ) : null}
             <div className="form-actions">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 {strings.common.cancel}

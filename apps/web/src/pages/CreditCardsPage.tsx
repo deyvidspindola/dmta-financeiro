@@ -6,6 +6,7 @@ import { z } from 'zod'
 import { creditCardsApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
+import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import {
@@ -18,9 +19,10 @@ import {
   Modal,
   PageHeader,
   TextInput,
+  TextSelect,
 } from '@/components/ui'
 
-const schema = z.object({
+const cardSchema = z.object({
   name: z.string().min(1, strings.common.required),
   brand: z.string().optional(),
   limit: z.coerce.number().positive(),
@@ -28,13 +30,22 @@ const schema = z.object({
   due_day: z.coerce.number().int().min(1).max(31),
 })
 
-type FormValues = z.infer<typeof schema>
+const invoiceSchema = z.object({
+  credit_card_id: z.string().min(1, strings.common.required),
+  reference_month: z.string().min(1, strings.common.required),
+  amount: z.coerce.number().nonnegative(),
+  due_date: z.string().min(1, strings.common.required),
+})
+
+type CardFormValues = z.infer<typeof cardSchema>
+type InvoiceFormValues = z.infer<typeof invoiceSchema>
 
 export function CreditCardsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
   const [open, setOpen] = useState(false)
+  const [invoiceOpen, setInvoiceOpen] = useState(false)
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
 
   const cardsQuery = useQuery({
@@ -49,8 +60,8 @@ export function CreditCardsPage() {
     enabled: Boolean(listContextId),
   })
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
+  const cardForm = useForm<CardFormValues>({
+    resolver: zodResolver(cardSchema),
     defaultValues: {
       name: '',
       brand: '',
@@ -60,8 +71,18 @@ export function CreditCardsPage() {
     },
   })
 
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) =>
+  const invoiceForm = useForm<InvoiceFormValues>({
+    resolver: zodResolver(invoiceSchema),
+    defaultValues: {
+      credit_card_id: '',
+      reference_month: new Date().toISOString().slice(0, 7),
+      amount: 0,
+      due_date: '',
+    },
+  })
+
+  const cardMutation = useMutation({
+    mutationFn: (values: CardFormValues) =>
       creditCardsApi.createCreditCard(contextId!, {
         name: values.name,
         brand: values.brand || null,
@@ -73,7 +94,27 @@ export function CreditCardsPage() {
       await queryClient.invalidateQueries({ queryKey: ['credit-cards'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
       setOpen(false)
-      form.reset()
+      cardForm.reset()
+    },
+  })
+
+  const invoiceMutation = useMutation({
+    mutationFn: (values: InvoiceFormValues) =>
+      creditCardsApi.createCardInvoice(contextId!, values.credit_card_id, {
+        reference_month: values.reference_month,
+        amount: values.amount,
+        due_date: values.due_date,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['card-invoices'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      setInvoiceOpen(false)
+      invoiceForm.reset({
+        credit_card_id: '',
+        reference_month: new Date().toISOString().slice(0, 7),
+        amount: 0,
+        due_date: '',
+      })
     },
   })
 
@@ -85,12 +126,21 @@ export function CreditCardsPage() {
       <PageHeader
         title={strings.creditCards.title}
         actions={
-          <Button
-            onClick={() => setOpen(true)}
-            disabled={!contextId || activeScope === CONSOLIDATED}
-          >
-            {strings.creditCards.create}
-          </Button>
+          <>
+            <Button
+              variant="ghost"
+              onClick={() => setInvoiceOpen(true)}
+              disabled={!contextId || activeScope === CONSOLIDATED || cards.length === 0}
+            >
+              Nova fatura
+            </Button>
+            <Button
+              onClick={() => setOpen(true)}
+              disabled={!contextId || activeScope === CONSOLIDATED}
+            >
+              {strings.creditCards.create}
+            </Button>
+          </>
         }
       />
 
@@ -102,7 +152,7 @@ export function CreditCardsPage() {
         <LoadingBlock label={strings.common.loading} />
       ) : null}
       {cardsQuery.isError ? (
-        <ErrorBanner message={strings.common.error} />
+        <ErrorBanner message={getErrorMessage(cardsQuery.error)} />
       ) : null}
 
       {!cardsQuery.isLoading && listContextId && cards.length === 0 ? (
@@ -166,42 +216,110 @@ export function CreditCardsPage() {
         >
           <form
             className="form-grid"
-            onSubmit={form.handleSubmit((values) =>
-              mutation.mutateAsync(values),
+            onSubmit={cardForm.handleSubmit((values) =>
+              cardMutation.mutateAsync(values),
             )}
           >
             <Field
               label={strings.creditCards.name}
-              error={form.formState.errors.name?.message}
+              error={cardForm.formState.errors.name?.message}
             >
-              <TextInput {...form.register('name')} />
+              <TextInput {...cardForm.register('name')} />
             </Field>
             <Field label={strings.creditCards.brand}>
-              <TextInput {...form.register('brand')} />
+              <TextInput {...cardForm.register('brand')} />
             </Field>
             <Field
               label={strings.creditCards.limit}
-              error={form.formState.errors.limit?.message}
+              error={cardForm.formState.errors.limit?.message}
             >
-              <TextInput type="number" step="0.01" {...form.register('limit')} />
+              <TextInput type="number" step="0.01" {...cardForm.register('limit')} />
             </Field>
             <Field
               label={strings.creditCards.closingDay}
-              error={form.formState.errors.closing_day?.message}
+              error={cardForm.formState.errors.closing_day?.message}
             >
-              <TextInput type="number" {...form.register('closing_day')} />
+              <TextInput type="number" {...cardForm.register('closing_day')} />
             </Field>
             <Field
               label={strings.creditCards.dueDay}
-              error={form.formState.errors.due_day?.message}
+              error={cardForm.formState.errors.due_day?.message}
             >
-              <TextInput type="number" {...form.register('due_day')} />
+              <TextInput type="number" {...cardForm.register('due_day')} />
             </Field>
+            {cardMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(cardMutation.error)} />
+            ) : null}
             <div className="form-actions">
               <Button type="button" variant="ghost" onClick={() => setOpen(false)}>
                 {strings.common.cancel}
               </Button>
-              <Button type="submit" disabled={mutation.isPending}>
+              <Button type="submit" disabled={cardMutation.isPending}>
+                {strings.common.save}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {invoiceOpen && contextId ? (
+        <Modal title="Nova fatura" onClose={() => setInvoiceOpen(false)}>
+          <form
+            className="form-grid"
+            onSubmit={invoiceForm.handleSubmit((values) =>
+              invoiceMutation.mutateAsync(values),
+            )}
+          >
+            <Field
+              label={strings.creditCards.name}
+              error={invoiceForm.formState.errors.credit_card_id?.message}
+            >
+              <TextSelect {...invoiceForm.register('credit_card_id')}>
+                <option value="">{strings.common.select}</option>
+                {cards.map((card) => (
+                  <option key={card.id} value={card.id}>
+                    {card.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field
+              label="Referência (mês)"
+              error={invoiceForm.formState.errors.reference_month?.message}
+            >
+              <TextInput
+                type="month"
+                {...invoiceForm.register('reference_month')}
+              />
+            </Field>
+            <Field
+              label={strings.bills.amount}
+              error={invoiceForm.formState.errors.amount?.message}
+            >
+              <TextInput
+                type="number"
+                step="0.01"
+                {...invoiceForm.register('amount')}
+              />
+            </Field>
+            <Field
+              label={strings.bills.dueDate}
+              error={invoiceForm.formState.errors.due_date?.message}
+            >
+              <TextInput type="date" {...invoiceForm.register('due_date')} />
+            </Field>
+            {invoiceMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(invoiceMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setInvoiceOpen(false)}
+              >
+                {strings.common.cancel}
+              </Button>
+              <Button type="submit" disabled={invoiceMutation.isPending}>
                 {strings.common.save}
               </Button>
             </div>

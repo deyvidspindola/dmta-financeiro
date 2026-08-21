@@ -5,7 +5,16 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { z } from 'zod'
 import { categoriesApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
-import { Button, Field, Modal, TextInput, TextSelect } from '@/components/ui'
+import { getErrorMessage } from '@/lib/errors'
+import {
+  Button,
+  ErrorBanner,
+  Field,
+  Modal,
+  TextInput,
+  TextSelect,
+} from '@/components/ui'
+import type { MoneyDirection } from '@/types/models'
 
 const schema = z.object({
   name: z.string().min(1, strings.common.required),
@@ -20,7 +29,8 @@ interface CategoryModalProps {
   open: boolean
   onClose: () => void
   onCreated?: (categoryId: string) => void
-  defaultType?: 'income' | 'expense'
+  /** Inherited from the form that opened the modal (locked in the UI). */
+  defaultType?: MoneyDirection
 }
 
 export function CategoryModal({
@@ -32,8 +42,9 @@ export function CategoryModal({
 }: CategoryModalProps) {
   const queryClient = useQueryClient()
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', contextId],
-    queryFn: () => categoriesApi.listCategories(contextId),
+    queryKey: ['categories', contextId, defaultType],
+    queryFn: () =>
+      categoriesApi.listCategories(contextId, { type: defaultType }),
     enabled: open && Boolean(contextId),
   })
 
@@ -41,6 +52,7 @@ export function CategoryModal({
     register,
     handleSubmit,
     reset,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
@@ -50,6 +62,8 @@ export function CategoryModal({
       parent_id: null,
     },
   })
+
+  const selectedType = watch('type')
 
   useEffect(() => {
     if (open) {
@@ -73,7 +87,9 @@ export function CategoryModal({
 
   if (!open) return null
 
-  const roots = categories.filter((c) => c.parent_id === null)
+  const roots = categories.filter(
+    (c) => c.parent_id === null && c.type === selectedType,
+  )
 
   return (
     <Modal title={strings.categories.create} onClose={onClose}>
@@ -84,11 +100,13 @@ export function CategoryModal({
         <Field label={strings.categories.name} error={errors.name?.message}>
           <TextInput {...register('name')} autoFocus />
         </Field>
-        <Field label={strings.categories.type} error={errors.type?.message}>
-          <TextSelect {...register('type')}>
-            <option value="expense">{strings.categories.types.expense}</option>
-            <option value="income">{strings.categories.types.income}</option>
-          </TextSelect>
+        <Field label={strings.categories.type}>
+          <input type="hidden" {...register('type')} />
+          <p className="muted small">
+            {strings.categories.types[defaultType]}
+            {' — '}
+            herdado do formulário atual
+          </p>
         </Field>
         <Field label={strings.categories.parent}>
           <TextSelect
@@ -105,7 +123,7 @@ export function CategoryModal({
           </TextSelect>
         </Field>
         {mutation.isError ? (
-          <p className="field__error">{strings.common.error}</p>
+          <ErrorBanner message={getErrorMessage(mutation.error)} />
         ) : null}
         <div className="form-actions">
           <Button type="button" variant="ghost" onClick={onClose}>
