@@ -35,3 +35,7 @@ deploy_key
 deploy_key.pub
 *.pem
 /.deploy-setup
+
+# --- Credenciais coladas na raiz (nunca commitar) ---
+/dados de acesso pluggy.txt
+/Criar um Connect Token.txt

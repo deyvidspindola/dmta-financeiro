@@ -1,0 +1,56 @@
+name: Deploy (web)
+
+# React 19 + Vite, build 100% estático — sem Node rodando no servidor.
+# Só dispara quando apps/web muda. Ver docs/02_CI_CD.md.
+#
+# TEMPLATE: apps/web ainda não existe (entra na F0, depois da API). Este
+# workflow fica inofensivo até lá — sem apps/web/package.json o job de build
+# falha rápido, e sem apps/web/** mudando ele nem dispara.
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/web/**']
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: apps/web
+
+jobs:
+  deploy:
+    name: Build e publicação
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Preparar Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Buildar
+        run: npm run build
+
+      - name: Publicar via FTP
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          local-dir: ./dist/
+          server-dir: ./app/
