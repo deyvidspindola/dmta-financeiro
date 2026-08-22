@@ -22,10 +22,14 @@ e Telegram. Pluggy continua fora (F2).
       do simulador, sem integração nova.
 
 ### Motor de obrigações recorrentes (capítulo 07)
-- [ ] Cadastro manual de DARF/DAS com vencimento recorrente, lembrete e
+- [x] Cadastro manual de DARF/DAS com vencimento recorrente, lembrete e
       marcação de pago — **sem** Integra Contador (D-07 segue aberta). Sem
       recálculo automático de juros/multa nesta fase — isso é justamente o
-      que falta e motiva revisitar D-07 depois.
+      que falta e motiva revisitar D-07 depois. `RecurringBill` +
+      `GenerateRecurringBillEntries` (job diário, gera `Bill` normal —
+      "marcação de pago" reusa o fluxo já existente de lançamento
+      vinculado a boleto). "Lembrete" é `days_until_due` calculado em
+      `Bill`, sem canal de notificação (D-11). Falta a tela em `apps/web`.
 
 ### Motor de e-mail (capítulo 06.3, D-06) — interface em `../03_INTERFACES_PLUGAVEIS.md`
 - [ ] Criar caixa IMAP dedicada (`boletos@seudominio.com.br`) — ação manual sua,

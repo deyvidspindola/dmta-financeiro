@@ -68,6 +68,16 @@ class Bill extends Model
     }
 
     /**
+     * Dias até o vencimento (negativo se já venceu). Base do "lembrete"
+     * pedido pelo motor de obrigações recorrentes — sem canal de
+     * notificação nesta fase (D-11), só indicador visual na tela.
+     */
+    public function daysUntilDue(): int
+    {
+        return (int) Carbon::today()->diffInDays($this->due_date, false);
+    }
+
+    /**
      * Converte atributos para tipos de domínio.
      *
      * @return array<string, string>

@@ -58,8 +58,30 @@ Remover um worktree que não serve mais:
 git worktree remove ../dmta-financeiro-claude-nome-da-tarefa
 ```
 
+## Divisão de tarefas — fechar a F1 (22/08/2026)
+
+Pra não pisar no mesmo arquivo, a F1 foi dividida por camada:
+
+- **Claude Code (API/backend, `dmta-financeiro-claude`):**
+  1. ✅ Motor de obrigações recorrentes (DARF/DAS) — `claude/motor-obrigacoes-recorrentes`.
+  2. Simulador de compromisso (`SimulateInstallmentPurchase`, CET, cenários, fluxo de caixa, "mês mais apertado").
+  3. Metas financeiras (`CreateGoal`/`UpdateGoalProgress`).
+  4. Webhook do bot do Telegram (`POST /api/v1/webhooks/telegram`).
+- **Cursor (`apps/web`, `dmta-financeiro-cursor`):**
+  1. Responsividade mobile — prioridade, é o único acesso mobile
+     enquanto a F3 (Expo) não existe. Breakpoint único em 860px
+     (`src/styles/global.css:637`) não é suficiente; testar em
+     360–430px reais.
+  2. `OriginBadge` também na listagem de Transactions (só está em
+     Bills/BillCaptures hoje).
+  3. Telas para o que for saindo da API acima, conforme os endpoints
+     ficarem prontos (recurring-bills já disponível).
+
+Cada PR mergeado em `main` deve ser puxado pelo outro lado
+(`git fetch && git rebase origin/main`) antes de continuar.
+
 ## Branches ativos agora
 
-- `claude/redirect-login-home` — redirecionar a home pra tela de login.
-- `cursor/work` — placeholder, renomeie (`git branch -m cursor/nome-real`)
-  quando souber em cima do que vai trabalhar.
+- `claude/motor-obrigacoes-recorrentes` — motor de obrigações recorrentes (DARF/DAS), pronto pra PR.
+- `cursor/work` — placeholder, renomeie (`git branch -m cursor/mobile-responsivo`)
+  e comece pela responsividade mobile (prioridade 1 acima).

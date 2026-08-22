@@ -39,6 +39,7 @@ final class BillResource extends JsonResource
             'origin' => $this->origin,
             'category_id' => $this->category_id,
             'is_overdue' => $this->isOverdue(),
+            'days_until_due' => $this->daysUntilDue(),
             // @phpstan-ignore-next-line method.nonObject (cast 'datetime' da migration)
             'paid_at' => $this->paid_at?->toIso8601String(),
             // Só presente na visão consolidada — ver AccountResource.

@@ -20,7 +20,15 @@
   o Docker local antes do deploy (saldo, isolamento de contexto, reversão
   de transferência/edição) — detalhes na seção "F0 / api" abaixo.
 
-Atualizado em 21/08/2026.
+- **22/08/2026 — dividindo o que falta pra fechar a F1 entre Claude Code e
+  Cursor** (workflow pareado, `docs/04_WORKFLOW_PAREADO.md`): Claude Code
+  fica com API/backend (motor de obrigações recorrentes concluído nesta
+  rodada; simulador de compromisso e metas financeiras em seguida).
+  Cursor fica com `apps/web`: responsividade mobile (prioridade — é o
+  único acesso mobile enquanto F3/Expo não existe) e as telas que
+  consomem o que for saindo da API.
+
+Atualizado em 22/08/2026.
 
 ## F0 / api (PR #2 — `feature/f0-modelo-de-dados`)
 
@@ -74,6 +82,27 @@ Atualizado em 21/08/2026.
   transferência, pra tela mostrar "de onde saiu → pra onde foi" ao
   visualizar. Validado cross-context via curl: saldo, visualização pelos
   dois lados, apagar por qualquer lado reverte os dois saldos.
+
+## F1 / api — motor de obrigações recorrentes (branch `claude/motor-obrigacoes-recorrentes`)
+
+- `RecurringBill` (regra: contexto, categoria, descrição, valor, direção
+  payable/receivable, intervalo, `next_due_date`, `reminder_days_before`,
+  `active`) + `POST/GET/DELETE contexts/{context}/recurring-bills`,
+  mesmo padrão de `RecurringTransaction`.
+- `GenerateRecurringBillEntries` (job diário, `withoutOverlapping`,
+  agendado em `routes/console.php`): materializa `Bill` (`status:
+  pending`) pra cada ocorrência vencida, avança `next_due_date`,
+  desativa a regra sozinha quando passa de `end_date`. Uma regra atrasada
+  gera todas as ocorrências perdidas, uma por vez, nunca pula.
+- "Marcação de pago" não precisou de nada novo: pagar o `Bill` gerado é
+  o mesmo fluxo que já existe pra qualquer boleto (lançamento com
+  `bill_id`, ver `RegisterTransaction`).
+- "Lembrete" nesta fase é `Bill::daysUntilDue()`, exposto como
+  `days_until_due` no `BillResource` — indicador visual, sem canal de
+  notificação (D-11, uso pessoal).
+- Falta: tela em `apps/web` pra cadastrar/listar regras e mostrar o
+  indicador de "vence em breve" (ver divisão de tarefas no topo deste
+  arquivo).
 
 ## F0 / web (PR #1 — `feature/f0-web-scaffold`)
 
