@@ -65,6 +65,12 @@ class Context extends Model
         return $this->hasMany(Bill::class);
     }
 
+    /** @return HasMany<Debt, $this> */
+    public function debts(): HasMany
+    {
+        return $this->hasMany(Debt::class);
+    }
+
     /** @return HasMany<StatementEntry, $this> */
     public function statementEntries(): HasMany
     {

@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\BillStatus;
+use App\Enums\DebtDirection;
+use App\Enums\DebtStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Context;
+use App\Models\Debt;
 use App\Models\StatementEntry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
@@ -20,6 +23,8 @@ use Illuminate\Support\Carbon;
  * Também monta a série de evolução mensal (receita/despesa/saldo) que
  * alimenta os gráficos e relatórios por período do dashboard — mesma
  * regra de "só exibir, nunca decidir saldo" das outras leituras daqui.
+ * Dívidas pendentes entram só como indicador de ciência — nunca somadas
+ * a `month_income`/`month_expense` (ver docblock de {@see Debt}).
  *
  * @package App\Services
  *
@@ -71,6 +76,17 @@ final class DashboardSummaryService
                 ->whereMonth('occurred_at', $now->month)
                 ->sum('amount'),
             'investments_total' => (float) $context->investments()->sum('current_amount'),
+            'pending_debts_count' => $context->debts()
+                ->where('status', DebtStatus::Pending->value)
+                ->count(),
+            'pending_debts_i_owe_amount' => (float) $context->debts()
+                ->where('status', DebtStatus::Pending->value)
+                ->where('direction', DebtDirection::IOwe->value)
+                ->sum('amount'),
+            'pending_debts_owed_to_me_amount' => (float) $context->debts()
+                ->where('status', DebtStatus::Pending->value)
+                ->where('direction', DebtDirection::OwedToMe->value)
+                ->sum('amount'),
         ];
     }
 
@@ -93,6 +109,9 @@ final class DashboardSummaryService
             'month_income' => (float) $perContext->sum('month_income'),
             'month_expense' => (float) $perContext->sum('month_expense'),
             'investments_total' => (float) $perContext->sum('investments_total'),
+            'pending_debts_count' => (int) $perContext->sum('pending_debts_count'),
+            'pending_debts_i_owe_amount' => (float) $perContext->sum('pending_debts_i_owe_amount'),
+            'pending_debts_owed_to_me_amount' => (float) $perContext->sum('pending_debts_owed_to_me_amount'),
         ];
 
         return ['contexts' => $perContext->values()->all(), 'totals' => $totals];

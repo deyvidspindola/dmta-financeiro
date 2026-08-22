@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\V1\ConsolidatedController;
 use App\Http\Controllers\Api\V1\ContextController;
 use App\Http\Controllers\Api\V1\CreditCardController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\DebtController;
 use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
@@ -92,6 +93,12 @@ Route::prefix('v1')->group(function () {
             Route::post('bills', [BillController::class, 'store']);
             Route::patch('bills/{bill}', [BillController::class, 'update']);
             Route::delete('bills/{bill}', [BillController::class, 'destroy']);
+
+            Route::get('debts', [DebtController::class, 'index']);
+            Route::post('debts', [DebtController::class, 'store']);
+            Route::patch('debts/{debt}', [DebtController::class, 'update']);
+            Route::post('debts/{debt}/settle', [DebtController::class, 'settle']);
+            Route::delete('debts/{debt}', [DebtController::class, 'destroy']);
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
