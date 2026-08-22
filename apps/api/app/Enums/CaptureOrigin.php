@@ -26,4 +26,7 @@ enum CaptureOrigin: string
     case Telegram = 'telegram';
     case Scanner = 'scanner';
     case Aggregator = 'aggregator';
+
+    /** Planilha de extrato bancário enviada pelo usuário (fallback manual, capítulo 05.3). */
+    case Import = 'import';
 }

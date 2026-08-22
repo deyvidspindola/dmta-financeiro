@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\V1\PayBillController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
+use App\Http\Controllers\Api\V1\StatementImportController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\UpdateTransactionController;
@@ -85,6 +86,8 @@ Route::prefix('v1')->group(function () {
             Route::post('accounts', [AccountController::class, 'store']);
             Route::patch('accounts/{account}', [AccountController::class, 'update']);
             Route::delete('accounts/{account}', [AccountController::class, 'destroy']);
+            Route::get('accounts/{account}/statement-imports/template', [StatementImportController::class, 'template']);
+            Route::post('accounts/{account}/statement-imports', [StatementImportController::class, 'store']);
 
             Route::get('categories', [CategoryController::class, 'index']);
             Route::post('categories', [CategoryController::class, 'store']);
