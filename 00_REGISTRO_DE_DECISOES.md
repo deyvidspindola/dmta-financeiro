@@ -65,6 +65,10 @@ Documento complementar ao PDF de concepção (v1.3). IDs batem com o capítulo 1
 **Decisão:** Não perseguir por ora. Mesma lógica de D-11: sem intenção de virar produto, não compensa uma integração de dados de mercado só para um cálculo acompanhável manualmente. Posição e aportes manuais continuam sendo o suficiente.
 **Data:** rodada 3.
 
+### D-15 — Dívidas pendentes fora do balanço
+**Decisão:** Pedido novo em produção (22/08/2026, rodada de melhorias com Cursor+Claude Code em paralelo): entidade `Debt` própria para registrar ciência de compromissos (empréstimo entre pessoas, parcelamento informal) que **nunca** entram como lançamento no balanço mensal — sem `account_id`, sem `StatementEntry`, sem afetar `month_income`/`month_expense`. Só soma em indicadores próprios do dashboard (`pending_debts_count`, `pending_debts_i_owe_amount`, `pending_debts_owed_to_me_amount`). Se a quitação de fato move dinheiro de uma conta, isso é um lançamento manual à parte — as duas coisas não se fundem de propósito, pra não haver dupla contagem nem decisão automática de saldo.
+**Data:** rodada 7 (22/08/2026).
+
 ---
 
 ## ABERTA
