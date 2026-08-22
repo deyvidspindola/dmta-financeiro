@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
+use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
 use App\Http\Controllers\Api\V1\TransactionController;
@@ -102,6 +103,10 @@ Route::prefix('v1')->group(function () {
             Route::get('recurring-transactions', [RecurringTransactionController::class, 'index']);
             Route::post('recurring-transactions', [RecurringTransactionController::class, 'store']);
             Route::delete('recurring-transactions/{recurringTransaction}', [RecurringTransactionController::class, 'destroy']);
+
+            Route::get('recurring-bills', [RecurringBillController::class, 'index']);
+            Route::post('recurring-bills', [RecurringBillController::class, 'store']);
+            Route::delete('recurring-bills/{recurringBill}', [RecurringBillController::class, 'destroy']);
 
             Route::get('credit-cards', [CreditCardController::class, 'index']);
             Route::post('credit-cards', [CreditCardController::class, 'store']);

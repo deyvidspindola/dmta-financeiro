@@ -6,7 +6,16 @@
 # =============================================================================
 
 # .env.docker guarda UID/GID do host (bash não permite export UID=)
-DC      := docker compose $(if $(wildcard .env.docker),--env-file .env.docker)
+#
+# COMPOSE_PROJECT_NAME deriva do nome da pasta duas acima de apps/api (a
+# raiz do worktree: dmta-financeiro, dmta-financeiro-claude,
+# dmta-financeiro-cursor — ver docs/04_WORKFLOW_PAREADO.md) em vez do
+# default do Compose (basename do diretório atual, "api", igual nos três
+# worktrees). Sem isso, subir a stack em qualquer um dos três reaproveita
+# os containers/volumes dos outros dois — mesmo nome de projeto, mesmo
+# `api-app-1`, banco de um worktree servindo código de outro sem avisar.
+PROJECT_NAME := $(notdir $(abspath $(CURDIR)/../..))
+DC      := COMPOSE_PROJECT_NAME=$(PROJECT_NAME) docker compose $(if $(wildcard .env.docker),--env-file .env.docker)
 APP     := $(DC) exec -T app
 NODE    := $(DC) exec -T node
 

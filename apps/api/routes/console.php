@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\GenerateRecurringBillEntries;
 use App\Jobs\GenerateRecurringTransactionEntries;
 use App\Jobs\PollBoletoMailbox;
 use Illuminate\Foundation\Inspiring;
@@ -27,5 +28,12 @@ Schedule::job(new PollBoletoMailbox)
 // Materializa ocorrências de lançamento recorrente/despesa fixa vencidas.
 // Diário basta — recorrência nunca tem granularidade menor que "dia".
 Schedule::job(new GenerateRecurringTransactionEntries)
+    ->daily()
+    ->withoutOverlapping();
+
+// Materializa boletos de obrigação recorrente vencidos (DARF/DAS e
+// afins, capítulo 07) — mesmo espírito do job acima, mas gera Bill em
+// vez de StatementEntry.
+Schedule::job(new GenerateRecurringBillEntries)
     ->daily()
     ->withoutOverlapping();

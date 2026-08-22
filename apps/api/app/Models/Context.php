@@ -105,6 +105,12 @@ class Context extends Model
         return $this->hasMany(RecurringTransaction::class);
     }
 
+    /** @return HasMany<RecurringBill, $this> */
+    public function recurringBills(): HasMany
+    {
+        return $this->hasMany(RecurringBill::class);
+    }
+
     /** Se este é o contexto pessoa física do usuário. */
     public function isPf(): bool
     {
