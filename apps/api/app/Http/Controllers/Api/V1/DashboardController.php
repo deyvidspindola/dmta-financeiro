@@ -34,4 +34,20 @@ final class DashboardController extends Controller
     {
         return response()->json($service->consolidated($request->user()));
     }
+
+    /** Série mensal (receita/despesa/saldo) de um contexto — `?months=` entre 1 e 24, padrão 6. */
+    public function evolution(Request $request, Context $context, DashboardSummaryService $service): JsonResponse
+    {
+        return response()->json([
+            'series' => $service->evolutionForContext($context, $request->integer('months') ?: null),
+        ]);
+    }
+
+    /** Mesma série, consolidada entre todos os contextos do usuário. */
+    public function consolidatedEvolution(Request $request, DashboardSummaryService $service): JsonResponse
+    {
+        return response()->json([
+            'series' => $service->evolutionConsolidated($request->user(), $request->integer('months') ?: null),
+        ]);
+    }
 }
