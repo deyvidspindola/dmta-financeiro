@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AccountController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillCaptureController;
 use App\Http\Controllers\Api\V1\BillController;
+use App\Http\Controllers\Api\V1\BillImportController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ConsolidatedController;
@@ -15,6 +16,7 @@ use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
+use App\Http\Controllers\Api\V1\PayBillController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
@@ -93,6 +95,9 @@ Route::prefix('v1')->group(function () {
             Route::post('bills', [BillController::class, 'store']);
             Route::patch('bills/{bill}', [BillController::class, 'update']);
             Route::delete('bills/{bill}', [BillController::class, 'destroy']);
+            Route::post('bills/{bill}/pay', [PayBillController::class, 'store']);
+            Route::get('bills/import/template', [BillImportController::class, 'template']);
+            Route::post('bills/import', [BillImportController::class, 'store']);
 
             Route::get('debts', [DebtController::class, 'index']);
             Route::post('debts', [DebtController::class, 'store']);
