@@ -58,6 +58,7 @@ Route::prefix('v1')->group(function () {
         Route::post('contexts', [ContextController::class, 'store']);
 
         Route::get('dashboard/consolidated', [DashboardController::class, 'consolidated']);
+        Route::get('dashboard/consolidated/evolution', [DashboardController::class, 'consolidatedEvolution']);
 
         // Visão consolidada de listagem (não só totais do dashboard) —
         // fora do grupo /contexts/{context} de propósito, já que junta
@@ -74,6 +75,7 @@ Route::prefix('v1')->group(function () {
 
         Route::prefix('contexts/{context}')->middleware('can:view,context')->scopeBindings()->group(function () {
             Route::get('dashboard', [DashboardController::class, 'show']);
+            Route::get('dashboard/evolution', [DashboardController::class, 'evolution']);
 
             Route::get('accounts', [AccountController::class, 'index']);
             Route::post('accounts', [AccountController::class, 'store']);
