@@ -27,8 +27,90 @@
   Cursor fica com `apps/web`: responsividade mobile (prioridade — é o
   único acesso mobile enquanto F3/Expo não existe) e as telas que
   consomem o que for saindo da API.
+- **Rodada de melhorias pedidas em produção (22/08/2026)** — lista longa
+  vinda direto do dono do projeto, dividida com o Cursor pelo workflow
+  pareado (`docs/04_WORKFLOW_PAREADO.md`). Lado API/backend (Claude
+  Code), 5 PRs abertos pra `main`, cada um com `make check` verde e
+  validação por curl documentada no próprio PR:
+  - **#9** — motor de obrigações recorrentes (DARF/DAS), já em
+    andamento antes da lista chegar.
+  - **#10** — dashboard: `pending_bills_count`/`overdue_bills_amount`
+    (contagem e valor de boletos em aberto/atraso) + `GET
+    dashboard/evolution` e `.../consolidated/evolution` (série mensal
+    receita/despesa/saldo, base dos gráficos e relatórios por período).
+  - **#11** — dívidas pendentes (`Debt`, D-15 nova): registra ciência de
+    compromisso sem entrar no balanço mensal, indicadores próprios no
+    dashboard.
+  - **#12** — pagamento rápido de boleto num clique
+    (`POST bills/{bill}/pay`) + importação em massa de boletos via
+    planilha CSV (`GET .../bills/import/template`,
+    `POST .../bills/import`, tolerante a erro por linha).
+  - **#13** — importação de extrato bancário via CSV (fallback manual
+    do capítulo 05.3/D-06, independente do Pluggy/F2), com
+    deduplicação — reenviar o mesmo arquivo é seguro.
+  - **Já estava pronto e só precisava ser confirmado:** transferência
+    entre contextos diferentes (PF ⇄ empresa, `to_context_id` em
+    `POST transfers`, PR #8) e lançamento recorrente via
+    `POST recurring-transactions` — o pedido de "campo no modal em vez
+    de tela dedicada" não precisa de nada novo na API, é só o
+    `apps/web` chamar esse endpoint (em vez de `transactions`) quando o
+    campo "é recorrente?" estiver marcado.
+  - **Backlog que ficou pra próxima rodada** (não coberto ainda, ver
+    seção dedicada abaixo): itens de fatura de cartão + importação de
+    PDF com parcelas automáticas; importação de extrato/boleto em
+    Excel/PDF (só CSV saiu nesta rodada); telas em `apps/web` pra tudo
+    isso; auditoria de performance de carregamento; catálogo de
+    paridade com o Mobills.
 
 Atualizado em 22/08/2026.
+
+## Backlog — 22/08/2026 (não coberto nesta rodada)
+
+Registrado aqui pra não se perder entre sessões — nenhum destes tem PR
+ainda.
+
+- **Fatura de cartão: importar PDF, extrair parcelas, abrir próximas
+  faturas automaticamente.** Maior item em aberto. `CardInvoice` hoje
+  só registra o resumo (F0, ver docblock do model) — falta
+  `CardInvoiceItem` (linha por lançamento/parcela) e um
+  `CardInvoicePdfReader` seguindo o mesmo padrão de interface plugável
+  de `EmailBoletoReaderInterface` (`docs/03_INTERFACES_PLUGAVEIS.md`).
+  `smalot/pdfparser` já é dependência do projeto (usado pelo motor de
+  e-mail) — dá pra extrair texto, mas o layout de fatura varia demais
+  entre bandeiras/bancos pra confiar num regex genérico sem validar
+  contra um PDF real. Plano: itens extraídos entram como
+  `pending_confirmation` (mesmo espírito de `PendingBillCapture` — nunca
+  confirma sozinho), parcela com `installment_total > 1` só materializa
+  as próximas faturas depois de confirmado. Precisa de pelo menos uma
+  fatura real (PDF) do usuário pra calibrar o parser antes de escrever
+  a implementação de produção.
+- **Importação de extrato/boleto em Excel (.xlsx) e extrato em PDF.**
+  CSV saiu nesta rodada (PRs #12/#13). Excel provavelmente compensa
+  `maatwebsite/laravel-excel` (parser de XLSX do zero não é "menos de
+  um dia de trabalho" — foge da regra de não instalar pacote á-toa).
+  Extrato em PDF é o mesmo problema de layout variável da fatura de
+  cartão acima — mesma dependência (`smalot/pdfparser`), mesma
+  necessidade de um PDF real pra calibrar.
+- **`apps/web`** (Cursor): telas pra tudo que já está pronto na API —
+  botão "pagar" no boleto, upload de planilha (boletos e extrato) com
+  resumo de sucesso/falha por linha, cards de boletos em aberto/atraso
+  e dívidas no dashboard, gráfico de evolução mensal (`GET
+  dashboard/evolution`), campo "é recorrente?" no modal de lançamento
+  chamando `POST recurring-transactions`, botão de transferência
+  cross-context (PF ⇄ empresa) usando `to_context_id`. Ver divisão de
+  tarefas em `docs/04_WORKFLOW_PAREADO.md`.
+- **Performance de carregamento** — pedido explícito, ainda sem
+  auditoria de verdade. As queries novas desta rodada já saem
+  agregadas (evolução mensal é 1 query por período, não 1 por mês), mas
+  o grosso da lentidão relatada é provavelmente do lado
+  `apps/web` (bundle, paginação, quantidade de requisições por tela) —
+  precisa profiling real (Network tab + Laravel Telescope/Debugbar
+  local) antes de otimizar às cegas.
+- **Paridade com o Mobills** — pedido genérico ("pegar as ideias dele").
+  Vale uma conversa dedicada pra transformar isso numa lista concreta
+  (orçamento por categoria com barra de progresso, metas visuais,
+  etc.) em vez de adivinhar o que o Mobills faz — a F1 já cobre boa
+  parte (metas financeiras, simulador) por decisão própria (D-04, D-13).
 
 ## F0 / api (PR #2 — `feature/f0-modelo-de-dados`)
 
