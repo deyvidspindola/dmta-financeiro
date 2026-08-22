@@ -82,6 +82,52 @@ Cada PR mergeado em `main` deve ser puxado pelo outro lado
 
 ## Branches ativos agora
 
-- `claude/motor-obrigacoes-recorrentes` — motor de obrigações recorrentes (DARF/DAS), pronto pra PR.
-- `cursor/work` — placeholder, renomeie (`git branch -m cursor/mobile-responsivo`)
-  e comece pela responsividade mobile (prioridade 1 acima).
+- `claude/redirect-login-home` — redirecionar a home pra tela de login.
+- `cursor/work` — placeholder, renomeie (`git branch -m cursor/nome-real`)
+  quando souber em cima do que vai trabalhar.
+- Lado Claude Code: nenhum branch aberto no momento — os 5 PRs da
+  rodada de 22/08/2026 (#9-13) já foram mergeados em `main` e os
+  branches remotos apagados (ver seção abaixo).
+
+## Rodada de melhorias pedidas em produção (22/08/2026)
+
+Lista longa vinda direto do dono do projeto. Lado API/backend (Claude
+Code) abriu 5 PRs pra `main`, cada um independente e pequeno o
+suficiente pra revisar/mergear separado — detalhes e validação por
+curl em cada PR, resumo também em `PROGRESSO.md`:
+
+- #9 motor de obrigações recorrentes · #10 dashboard (boletos
+  abertos/atraso + gráfico de evolução mensal) · #11 dívidas pendentes
+  (D-15) · #12 pagamento rápido de boleto + importação em massa via CSV
+  · #13 importação de extrato bancário via CSV.
+
+Depois de puxar esses PRs (`git fetch && git rebase origin/main`), o
+que sobra pro lado `apps/web` — nenhum item aqui precisa de endpoint
+novo, é consumir o que já está pronto:
+
+1. Card no dashboard com boletos em aberto/atraso (contagem + valor) e
+   dívidas pendentes (a pagar/a receber separados).
+2. Gráfico de evolução mensal (`GET dashboard/evolution` e
+   `.../consolidated/evolution`, `?months=`) — biblioteca 100%
+   client-side, sem serviço externo (mesmo critério do simulador, F1).
+3. Botão "pagar" no boleto → modal simples (conta + data opcional)
+   chamando `POST bills/{bill}/pay`.
+4. Telas de importação (boletos e extrato): botão "baixar modelo" +
+   upload do CSV preenchido, mostrando o resumo
+   `{imported, duplicates?, failed}` depois do envio.
+5. Campo "é recorrente?" no modal de lançamento — quando marcado,
+   chamar `POST recurring-transactions` em vez de `POST transactions`
+   (pedido explícito: não precisa de tela dedicada, só esse campo a
+   mais no mesmo modal).
+6. Botão de transferência entre contextos diferentes (PF ⇄ empresa) —
+   `POST transfers` já aceita `to_context_id` opcional (PR #8, já em
+   `main`), só falta a UI deixar escolher um contexto de destino
+   diferente do de origem.
+7. Cadastro de dívida (modal, como categorias) — `POST
+   contexts/{context}/debts`.
+
+Backlog maior (fatura de cartão com PDF/parcelas automáticas,
+Excel/PDF de extrato, auditoria de performance, paridade com Mobills)
+está detalhado em `PROGRESSO.md`, seção "Backlog — 22/08/2026" — nenhum
+tem PR ainda, todos exigem mais decisão/calibração antes de implementar
+às cegas.
