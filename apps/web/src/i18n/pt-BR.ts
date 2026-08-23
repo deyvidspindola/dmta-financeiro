@@ -167,6 +167,7 @@ export const strings = {
     create: 'Transferir',
     from: 'Conta de origem',
     to: 'Conta de destino',
+    toContext: 'Contexto de destino',
     created: 'Transferência registrada.',
     sameAccount: 'Origem e destino precisam ser contas diferentes.',
   },

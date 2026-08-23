@@ -7,6 +7,8 @@ import type { StatementEntry } from '@/types/models'
 export type CreateTransferInput = {
   from_account_id: string
   to_account_id: string
+  /** Contexto da conta de destino — PF ⇄ empresa quando diferente da origem. */
+  to_context_id: string
   amount: number
   description: string
   occurred_at: string
@@ -35,7 +37,10 @@ export async function createTransfer(
             to: Parameters<typeof mapTransaction>[1]
           }
         }
-    >(`/contexts/${contextId}/transfers`, toCreateTransferBody(payload)),
+    >(
+      `/contexts/${contextId}/transfers`,
+      toCreateTransferBody(payload, contextId),
+    ),
   )
 
   return {
