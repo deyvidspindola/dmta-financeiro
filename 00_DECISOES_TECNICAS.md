@@ -60,6 +60,69 @@ front depois que o SSH já estava configurado e testado pela API. Publica em
 do `rsync --delete` de `apps/api/bin/deploy.sh` — sem isso, um deploy da
 API apagaria a pasta do front.
 
+### DT-07 — Descriptografia de PDF de boleto sem binário externo
+**Contexto:** `PR #20` (`ignoreEncryption`) resolveu o caso de boleto
+marcado como "encrypted" só por restrição de impressão/cópia (senha de
+usuário vazia — conteúdo não é de fato protegido). Ficou faltando o caso
+de PDF com senha de usuário real, não-vazia — sem ela, `smalot/pdfparser`
+não consegue ler o texto, e o boleto era descartado em silêncio pelo
+`catch` genérico do `BoletoMailboxPoller`.
+
+**Opções descartadas:**
+- `qpdf`/`pdftk` via `Process`/`shell_exec` — HostGator compartilhado
+  historicamente bloqueia `shell_exec`/`proc_open` por padrão ("risco de
+  segurança", segundo relatos do próprio suporte deles), e nada no
+  projeto usa `Process` hoje — dependência não confirmada no ambiente de
+  produção real.
+- API paga na nuvem (ConvertAPI, Cloudmersive, Apryse etc.) — dependência
+  externa paga e envio do PDF (dado financeiro) a terceiro, incompatível
+  com D-11 (uso pessoal, sem intenção de produtizar, sem serviço externo
+  desnecessário).
+- Não existe hoje lib PHP pura mantida que remova senha de PDF — verificado
+  por busca antes de decidir (regra da skill `padroes-laravel-dmta`).
+
+**Decisão:** implementar o "Standard Security Handler" do PDF (ISO 32000)
+à mão, em PHP puro, em `App\Domain\Capture\PdfDecryption` — RC4 (40/128
+bits, R2/R3) e AES-128 (V4/R4/AESV2) via chave derivada por objeto, usando
+`openssl_decrypt`/`hash()` do próprio PHP (extensão `openssl` já exigida
+pela skill) pra AES/MD5 — só o RC4 é implementado na mão (PHP não expõe
+RC4 de forma confiável via OpenSSL 3.x). Sem `composer require` novo.
+
+**Escopo aceito conscientemente (documentar se um PDF real quebrar):**
+- Só PDF clássico (tabela xref + trailer texto) — PDF 1.5+ com
+  cross-reference stream / object streams comprimidos lança
+  `UnsupportedEncryptedPdfException` (vira `password_required`, nunca
+  quebra o job).
+- Só RC4 e AES-128 (R2/R3/R4 — o handler "clássico", o mais comum em
+  gerador de boleto). **AES-256 (R5/R6, V5/AESV3) fica fora desta
+  rodada** — o "hardened hash" (Algoritmo 2.B da ISO 32000-2) é bem mais
+  intrincado e sem amostra real pra validar não compensa o risco de um
+  bug sutil de criptografia silencioso; um PDF R5/R6 cai em
+  `UnsupportedEncryptedPdfException` (`password_required`) em vez de
+  tentar e falhar sem avisar. Revisitar se aparecer um boleto real assim.
+- Só o **conteúdo dos streams** é descriptografado (é o que
+  `PdfBoletoReader`/`smalot pdfparser` usa pra extrair texto). Strings
+  literais dentro de dicionários (metadado tipo `/Title`, `/Author`)
+  continuam cifradas no PDF de saída — sem risco de corromper a estrutura
+  (o produtor original já escreveu essas strings com o escape de
+  parênteses/barra correto pro texto cifrado, a cifragem é só semântica,
+  não sintática), só ficam ilegíveis, o que não afeta a extração do
+  boleto.
+- **Sem amostra real de boleto com senha à mão** nesta rodada — mesma
+  ressalva do PR #20. Algoritmo segue a spec ISO 32000-1 §7.6 à risca e
+  tem teste unitário de ida-e-volta (cifra com a própria implementação,
+  decifra e compara), mas só um PDF de banco real calibra os casos de
+  borda de layout (RC4 vs AES, R2 vs R3 vs R4 vs R6).
+
+**Dado que falta no domínio:** não existe CPF/CNPJ/data de nascimento
+cadastrado em `User`/`Company` hoje — em vez de expandir esse schema pra
+uma feature lateral, cada `BoletoPasswordRule` carrega o dado bruto que
+precisa em `rule_params` (JSON), próprio da regra, não do usuário/empresa.
+`resolveCandidates()` gera variações plausíveis (CPF: 11/5/4 dígitos;
+data: `ddMMyyyy`/`ddMMyy`/`MMddyyyy`/`yyyyMMdd`) — "não garante acerto,
+só lista o que tentar", como já dizia o contrato da interface.
+**Data:** rodada 7 (23/08/2026).
+
 ---
 
 ## Próximos passos imediatos

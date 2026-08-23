@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillCaptureController;
 use App\Http\Controllers\Api\V1\BillController;
 use App\Http\Controllers\Api\V1\BillImportController;
+use App\Http\Controllers\Api\V1\BoletoPasswordRuleController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ConsolidatedController;
@@ -79,6 +80,13 @@ Route::prefix('v1')->group(function () {
         Route::post('bill-captures/poll', [PollBillCapturesController::class, 'store']);
         Route::post('bill-captures/{capture}/confirm', [BillCaptureController::class, 'confirm']);
         Route::post('bill-captures/{capture}/reject', [BillCaptureController::class, 'reject']);
+        // Boleto com PDF protegido por senha (DT-07) — resolve manualmente
+        // uma pendência password_required, e o cadastro das regras que
+        // tentam abrir sozinho da próxima vez.
+        Route::post('bill-captures/{capture}/unlock', [BillCaptureController::class, 'unlock']);
+        Route::get('boleto-password-rules', [BoletoPasswordRuleController::class, 'index']);
+        Route::post('boleto-password-rules', [BoletoPasswordRuleController::class, 'store']);
+        Route::delete('boleto-password-rules/{boletoPasswordRule}', [BoletoPasswordRuleController::class, 'destroy']);
 
         Route::prefix('contexts/{context}')->middleware('can:view,context')->scopeBindings()->group(function () {
             Route::get('dashboard', [DashboardController::class, 'show']);

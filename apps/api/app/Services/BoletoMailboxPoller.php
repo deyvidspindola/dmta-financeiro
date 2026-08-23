@@ -10,6 +10,7 @@ use App\UseCases\Bill\CaptureBillFromEmail;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Webklex\PHPIMAP\Address;
 use Webklex\PHPIMAP\Attachment;
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Message;
@@ -27,11 +28,15 @@ use Webklex\PHPIMAP\Message;
  * apropriada ao próprio contexto (Job ignora em silêncio; UseCase do
  * botão lança exceção pro usuário ver).
  *
+ * Antes de entregar o PDF ao `$reader`, verifica se ele está protegido
+ * por senha e tenta abrir com {@see BoletoPdfUnlocker} (DT-07) — só cai
+ * pra `password_required` se nenhuma candidata abrir.
+ *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   23/08/2026
  *
@@ -42,6 +47,7 @@ final class BoletoMailboxPoller
     public function __construct(
         private readonly EmailBoletoReaderInterface $reader,
         private readonly CaptureBillFromEmail $useCase,
+        private readonly BoletoPdfUnlocker $unlocker,
     ) {}
 
     /**
@@ -92,6 +98,7 @@ final class BoletoMailboxPoller
     private function processMessage(Message $message): int
     {
         $sourceReference = 'email-uid-'.$message->getUid();
+        $senderEmail = $this->senderEmail($message);
         $tempDir = storage_path('app/private/boleto-mailbox');
 
         try {
@@ -115,7 +122,7 @@ final class BoletoMailboxPoller
                 continue;
             }
 
-            $captured += $this->processAttachment($attachment, $sourceReference, (int) $index, $tempDir, $message->getUid());
+            $captured += $this->processAttachment($attachment, $sourceReference, (int) $index, $tempDir, $message->getUid(), $senderEmail);
         }
 
         try {
@@ -130,16 +137,26 @@ final class BoletoMailboxPoller
         return $captured;
     }
 
-    /** @return int 1 se virou pendência nova, 0 se este anexo falhou (logado, não trava os outros). */
-    private function processAttachment(Attachment $attachment, string $sourceReference, int $index, string $tempDir, mixed $uid): int
+    /** @return int 1 se virou pendência nova (lida ou `password_required`), 0 se este anexo falhou (logado, não trava os outros). */
+    private function processAttachment(Attachment $attachment, string $sourceReference, int $index, string $tempDir, mixed $uid, ?string $senderEmail): int
     {
         $filename = $sourceReference.'-'.$index.'.pdf';
         $pdfPath = $tempDir.'/'.$filename;
+        $captureReference = $sourceReference.'-'.$index;
+        $readablePath = null;
 
         try {
             $attachment->save($tempDir.'/', $filename);
-            $draft = $this->reader->readAttachment($pdfPath);
-            $this->useCase->execute($draft, $sourceReference.'-'.$index);
+            $readablePath = $this->resolveReadablePath($pdfPath, $captureReference, $senderEmail);
+
+            if ($readablePath === null) {
+                // Nenhuma senha candidata abriu — vira password_required
+                // dentro de resolveReadablePath(), ainda é uma pendência nova.
+                return 1;
+            }
+
+            $draft = $this->reader->readAttachment($readablePath);
+            $this->useCase->execute($draft, $captureReference, $senderEmail);
 
             return 1;
         } catch (Throwable $e) {
@@ -152,6 +169,45 @@ final class BoletoMailboxPoller
             return 0;
         } finally {
             @unlink($pdfPath);
+
+            if ($readablePath !== null && $readablePath !== $pdfPath) {
+                @unlink($readablePath);
+            }
         }
+    }
+
+    /**
+     * Decifra `$pdfPath` se necessário via {@see BoletoPdfUnlocker} e
+     * devolve um caminho que {@see EmailBoletoReaderInterface} consegue
+     * ler.
+     *
+     * @return ?string `null` quando o PDF está protegido e nenhuma senha
+     *                 candidata abriu — a pendência `password_required`
+     *                 já foi criada antes de devolver, quem chama só para por aqui.
+     */
+    private function resolveReadablePath(string $pdfPath, string $captureReference, ?string $senderEmail): ?string
+    {
+        $bytes = File::get($pdfPath);
+        $resolved = $this->unlocker->resolve($bytes, $captureReference, $senderEmail);
+
+        if ($resolved === null) {
+            return null;
+        }
+
+        if ($resolved === $bytes) {
+            return $pdfPath;
+        }
+
+        $outPath = $pdfPath.'.decrypted';
+        File::put($outPath, $resolved);
+
+        return $outPath;
+    }
+
+    private function senderEmail(Message $message): ?string
+    {
+        $from = $message->getFrom()->first();
+
+        return $from instanceof Address && $from->mail !== '' ? $from->mail : null;
     }
 }
