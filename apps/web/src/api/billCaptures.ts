@@ -10,6 +10,11 @@ import type { Bill, BillCapture, BillCaptureStatus, BillKind } from '@/types/mod
 
 export type BillCaptureListStatus = BillCaptureStatus | 'all'
 
+export type PollBillCapturesResult = {
+  processed: number
+  captured: number
+}
+
 export type ConfirmBillCaptureInput = {
   context_id: string
   description: string
@@ -56,4 +61,10 @@ export async function confirmBillCapture(
 export async function rejectBillCapture(captureId: string): Promise<void> {
   if (useMocks) return mockApi.rejectBillCapture(captureId)
   await http.post(`/bill-captures/${captureId}/reject`)
+}
+
+/** Dispara a captura na hora, sem esperar o próximo ciclo do agendador (a cada 5 minutos). */
+export async function pollBillCaptures(): Promise<PollBillCapturesResult> {
+  if (useMocks) return mockApi.pollBillCaptures()
+  return http.post<PollBillCapturesResult>('/bill-captures/poll')
 }

@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
 use App\Http\Controllers\Api\V1\PayBillController;
+use App\Http\Controllers\Api\V1\PollBillCapturesController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
@@ -75,6 +76,7 @@ Route::prefix('v1')->group(function () {
         // Fila de captura por e-mail (F1, D-06) — sem contexto até
         // confirmar, por isso fora do grupo /contexts/{context} abaixo.
         Route::get('bill-captures', [BillCaptureController::class, 'index']);
+        Route::post('bill-captures/poll', [PollBillCapturesController::class, 'store']);
         Route::post('bill-captures/{capture}/confirm', [BillCaptureController::class, 'confirm']);
         Route::post('bill-captures/{capture}/reject', [BillCaptureController::class, 'reject']);
 

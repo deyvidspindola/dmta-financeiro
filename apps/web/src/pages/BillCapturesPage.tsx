@@ -150,6 +150,15 @@ export function BillCapturesPage() {
     rejectMutation.mutate(captureId)
   }
 
+  const pollMutation = useMutation({
+    mutationFn: () => billCapturesApi.pollBillCaptures(),
+    onSuccess: async ({ processed, captured }) => {
+      await queryClient.invalidateQueries({ queryKey: ['bill-captures'] })
+      toastSuccess(strings.billCaptures.pollSuccess(processed, captured))
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
   const rows = listQuery.data ?? []
   const categories = categoriesQuery.data ?? []
 
@@ -158,6 +167,17 @@ export function BillCapturesPage() {
       <PageHeader
         title={strings.billCaptures.title}
         description={strings.billCaptures.hint}
+        actions={
+          <Button
+            variant="ghost"
+            onClick={() => pollMutation.mutate()}
+            disabled={pollMutation.isPending}
+          >
+            {pollMutation.isPending
+              ? strings.billCaptures.polling
+              : strings.billCaptures.poll}
+          </Button>
+        }
       />
 
       <div className="filter-bar">

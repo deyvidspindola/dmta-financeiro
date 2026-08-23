@@ -888,4 +888,10 @@ export const mockApi = {
       i === index ? { ...row, status: 'rejected' as const } : row,
     )
   },
+
+  async pollBillCaptures(): Promise<{ processed: number; captured: number }> {
+    await delay()
+    // Mock não simula IMAP de verdade — só confirma o fluxo do botão.
+    return { processed: 0, captured: 0 }
+  },
 }

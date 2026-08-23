@@ -241,6 +241,12 @@ export const strings = {
     confirmed: 'Boleto confirmado e cadastrado.',
     rejected: 'Captura rejeitada.',
     confirmReject: 'Rejeitar esta captura sem criar boleto?',
+    poll: 'Capturar boletos agora',
+    polling: 'Verificando caixa de e-mail…',
+    pollSuccess: (processed: number, captured: number) =>
+      captured > 0
+        ? `${captured} boleto(s) novo(s) capturado(s) (${processed} e-mail(s) verificado(s)).`
+        : `Nenhum boleto novo — ${processed} e-mail(s) verificado(s).`,
     statusFilter: 'Situação',
     statuses: {
       pending: 'Pendentes',
