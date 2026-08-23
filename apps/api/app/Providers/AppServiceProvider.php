@@ -7,6 +7,8 @@ namespace App\Providers;
 use App\Domain\Capture\EmailBoletoReaderInterface;
 use App\Domain\Capture\PdfBoletoReader;
 use Illuminate\Support\ServiceProvider;
+use Smalot\PdfParser\Config as PdfParserConfig;
+use Smalot\PdfParser\Parser as PdfParser;
 
 /**
  * Provider padrão do Laravel para bindings e bootstrap da aplicação.
@@ -35,6 +37,20 @@ class AppServiceProvider extends ServiceProvider
         // Único canal de captura por e-mail hoje — trocar por outra
         // implementação (ex.: OCR real) é mudar só esta linha.
         $this->app->bind(EmailBoletoReaderInterface::class, PdfBoletoReader::class);
+
+        // Maioria dos boletos reais vem com o PDF marcado como "encrypted"
+        // (restrição de impressão/cópia do gerador do banco), mas sem senha
+        // de usuário de verdade — sem isso o parser recusa o arquivo inteiro
+        // com "Secured pdf file are currently not supported.", bug real visto
+        // em produção. `ignoreEncryption` é sinalizado como workaround
+        // temporário pela própria lib (smalot/pdfparser#653), mas é
+        // exatamente o caso de boleto: não tem conteúdo protegido de fato.
+        $this->app->singleton(PdfParser::class, function (): PdfParser {
+            $config = new PdfParserConfig;
+            $config->setIgnoreEncryption(true);
+
+            return new PdfParser([], $config);
+        });
     }
 
     /**
