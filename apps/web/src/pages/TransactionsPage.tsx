@@ -49,6 +49,7 @@ const transferSchema = z
   .object({
     from_account_id: z.string().min(1, strings.common.required),
     to_account_id: z.string().min(1, strings.common.required),
+    to_context_id: z.string().min(1, strings.common.required),
     amount: z.coerce.number().positive(),
     description: z.string().min(1, strings.common.required),
     occurred_at: z.string().min(1, strings.common.required),
@@ -131,6 +132,7 @@ export function TransactionsPage() {
     defaultValues: {
       from_account_id: '',
       to_account_id: '',
+      to_context_id: '',
       amount: 0,
       description: '',
       occurred_at: new Date().toISOString().slice(0, 10),
@@ -148,6 +150,7 @@ export function TransactionsPage() {
 
   const watchedType = form.watch('type')
   const targetContextId = moveForm.watch('target_context_id')
+  const transferToContextId = transferForm.watch('to_context_id')
 
   useEffect(() => {
     if (!isEdit) form.setValue('category_id', null)
@@ -157,6 +160,10 @@ export function TransactionsPage() {
     moveForm.setValue('target_account_id', '')
     moveForm.setValue('target_category_id', null)
   }, [targetContextId, moveForm])
+
+  useEffect(() => {
+    transferForm.setValue('to_account_id', '')
+  }, [transferToContextId, transferForm])
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', contextId],
@@ -176,6 +183,16 @@ export function TransactionsPage() {
     queryKey: ['accounts', targetContextId],
     queryFn: () => accountsApi.listAccounts(targetContextId),
     enabled: Boolean(targetContextId) && Boolean(moving),
+  })
+
+  // Contas do contexto de destino da transferência — quando igual ao de
+  // origem, reaproveita o cache de `accountsQuery` (mesma queryKey).
+  // Permite transferir entre contextos diferentes (PF ⇄ empresa), não só
+  // entre contas do mesmo contexto.
+  const transferToAccountsQuery = useQuery({
+    queryKey: ['accounts', transferToContextId],
+    queryFn: () => accountsApi.listAccounts(transferToContextId),
+    enabled: Boolean(transferToContextId) && transferOpen,
   })
 
   const moveCategoriesQuery = useQuery({
@@ -218,6 +235,18 @@ export function TransactionsPage() {
     setEntryOpen(false)
     setEditing(null)
     form.reset(emptyEntry)
+  }
+
+  function openTransfer() {
+    transferForm.reset({
+      from_account_id: '',
+      to_account_id: '',
+      to_context_id: contextId ?? '',
+      amount: 0,
+      description: '',
+      occurred_at: new Date().toISOString().slice(0, 10),
+    })
+    setTransferOpen(true)
   }
 
   function openMove(tx: StatementEntry) {
@@ -272,6 +301,7 @@ export function TransactionsPage() {
       transferForm.reset({
         from_account_id: '',
         to_account_id: '',
+        to_context_id: contextId ?? '',
         amount: 0,
         description: '',
         occurred_at: new Date().toISOString().slice(0, 10),
@@ -312,6 +342,7 @@ export function TransactionsPage() {
   const categories = categoriesQuery.data ?? []
   const moveAccounts = moveAccountsQuery.data ?? []
   const moveCategories = moveCategoriesQuery.data ?? []
+  const transferToAccounts = transferToAccountsQuery.data ?? []
   const otherContexts = contexts.filter(
     (c) => !moving || c.id !== moving.context_id,
   )
@@ -333,7 +364,7 @@ export function TransactionsPage() {
           <>
             <Button
               variant="ghost"
-              onClick={() => setTransferOpen(true)}
+              onClick={openTransfer}
               disabled={!contextId || isConsolidated}
             >
               {strings.transfers.create}
@@ -556,12 +587,24 @@ export function TransactionsPage() {
               </TextSelect>
             </Field>
             <Field
+              label={strings.transfers.toContext}
+              error={transferForm.formState.errors.to_context_id?.message}
+            >
+              <TextSelect {...transferForm.register('to_context_id')}>
+                {contexts.map((ctx) => (
+                  <option key={ctx.id} value={ctx.id}>
+                    {ctx.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field
               label={strings.transfers.to}
               error={transferForm.formState.errors.to_account_id?.message}
             >
               <TextSelect {...transferForm.register('to_account_id')}>
                 <option value="">{strings.common.select}</option>
-                {accounts.map((account) => (
+                {transferToAccounts.map((account) => (
                   <option key={account.id} value={account.id}>
                     {account.name}
                   </option>

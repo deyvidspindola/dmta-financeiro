@@ -397,15 +397,20 @@ export function toUpdateTransactionBody(payload: {
   return toCreateTransactionBody(payload)
 }
 
-export function toCreateTransferBody(payload: {
-  from_account_id: string
-  to_account_id: string
-  amount: number
-  description: string
-  occurred_at: string
-}): {
+export function toCreateTransferBody(
+  payload: {
+    from_account_id: string
+    to_account_id: string
+    to_context_id: string
+    amount: number
+    description: string
+    occurred_at: string
+  },
+  originContextId: string,
+): {
   from_account_id: number
   to_account_id: number
+  to_context_id?: number
   amount: number
   description: string
   occurred_at: string
@@ -413,6 +418,12 @@ export function toCreateTransferBody(payload: {
   return {
     from_account_id: asApiId(payload.from_account_id),
     to_account_id: asApiId(payload.to_account_id),
+    // Omitido quando o destino é o mesmo contexto de origem — API trata
+    // isso como "dentro do mesmo contexto de sempre" (comportamento
+    // padrão), ver docblock de StoreTransferRequest.
+    ...(payload.to_context_id !== originContextId
+      ? { to_context_id: asApiId(payload.to_context_id) }
+      : {}),
     amount: payload.amount,
     description: payload.description,
     occurred_at: payload.occurred_at,

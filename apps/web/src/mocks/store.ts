@@ -587,6 +587,7 @@ export const mockApi = {
     payload: {
       from_account_id: string
       to_account_id: string
+      to_context_id?: string
       amount: number
       description: string
       occurred_at: string
@@ -611,6 +612,7 @@ export const mockApi = {
     const to: StatementEntry = {
       ...from,
       id: id('tx'),
+      context_id: payload.to_context_id ?? contextId,
       account_id: payload.to_account_id,
     }
     transactions = [...transactions, from, to]
