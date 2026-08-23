@@ -28,6 +28,7 @@ import {
   IconButton,
   LoadingBlock,
   Modal,
+  MoneyValue,
   PageHeader,
   TextInput,
   TextSelect,
@@ -71,6 +72,20 @@ type MoveFormValues = z.infer<typeof moveSchema>
 
 function canMutateEntry(tx: StatementEntry): boolean {
   return !tx.transfer_pair_id && !tx.bill_id && tx.type !== 'transfer'
+}
+
+/**
+ * Crédito (entrada) ou débito (saída) pra colorir o valor na listagem.
+ * Transferência não tem um `type` próprio pra cada perna — o mesmo
+ * critério do backend decide: a perna de menor id é a origem (débito),
+ * ver `StatementEntry::isTransferOrigin()` na API.
+ */
+function transactionDirection(tx: StatementEntry): 'credit' | 'debit' {
+  if (tx.type === 'income') return 'credit'
+  if (tx.type === 'expense') return 'debit'
+  return tx.transfer_pair_id && Number(tx.id) < Number(tx.transfer_pair_id)
+    ? 'debit'
+    : 'credit'
 }
 
 const emptyEntry: EntryFormValues = {
@@ -435,7 +450,12 @@ export function TransactionsPage() {
                   ? strings.transactions.types.transfer
                   : strings.transactions.types[tx.type]}
               </td>
-              <td className="mono">{formatMoney(tx.amount)}</td>
+              <td>
+                <MoneyValue
+                  amount={tx.amount}
+                  direction={transactionDirection(tx)}
+                />
+              </td>
               <td className="actions-cell">
                 {!isConsolidated && canMutateEntry(tx) ? (
                   <>
