@@ -62,12 +62,45 @@
     isso; auditoria de performance de carregamento; catálogo de
     paridade com o Mobills.
 
-Atualizado em 22/08/2026.
+- **23/08/2026 — DT-07, boleto com PDF protegido por senha.** Motor de
+  e-mail (PR #20) já tolerava boleto "marcado como encrypted" sem senha
+  real (`ignoreEncryption`); faltava o caso de senha de verdade — antes
+  disso, o boleto virava pendência com todos os campos vazios, em
+  silêncio, sem indicar que precisava de senha. `smalot/pdfparser` não
+  tem suporte nenhum a decifrar PDF, e `qpdf`/`shell_exec` não é confiável
+  em HostGator compartilhado — implementado o Standard Security Handler
+  do PDF (RC4 + AES-128, R2/R3/R4) à mão em PHP puro
+  (`App\Domain\Capture\PdfDecryption`), sem `composer require` novo. Fluxo:
+  `BoletoMailboxPoller`/`BoletoPdfUnlocker` tentam senhas candidatas
+  (`BoletoPasswordRule`, por domínio do remetente, `POST
+  boleto-password-rules`) antes de entregar ao `PdfBoletoReader`; se
+  nenhuma abrir, `PendingBillCapture` vira `status: password_required`
+  (guarda o PDF cifrado original) em vez de ser descartada; `POST
+  bill-captures/{capture}/unlock` resolve manualmente informando a senha.
+  `make check` (Pint + Larastan nível 5 + Pest, 16 testes) 100% verde —
+  inclui teste de ida-e-volta do motor de criptografia contra o próprio
+  `smalot/pdfparser`, construindo um PDF cifrado de teste com uma
+  implementação independente dos Algoritmos 3/4/5 (não reaproveita
+  nenhum método privado de produção). **Sem PDF real protegido por senha
+  pra calibrar** (mesma ressalva do PR #20) — decisão completa e escopo
+  aceito (RC4/AES-128 só, R5/R6 AES-256 fica de fora) em DT-07
+  (`00_DECISOES_TECNICAS.md`). Falta: tela em `apps/web` (estado visual
+  `password_required` + "informar senha manualmente" + oferta de salvar
+  regra) — ver backlog abaixo.
+
+Atualizado em 23/08/2026.
 
 ## Backlog — 22/08/2026 (não coberto nesta rodada)
 
 Registrado aqui pra não se perder entre sessões — nenhum destes tem PR
 ainda.
+
+- **`apps/web` — boleto com senha (DT-07, 23/08/2026):** estado visual
+  `password_required` na tela de pendências de confirmação, ação
+  "informar senha manualmente" chamando `POST
+  bill-captures/{capture}/unlock`, e oferta de salvar como regra nova
+  pro remetente (`POST boleto-password-rules`) depois de destravar com
+  sucesso.
 
 - **Fatura de cartão: importar PDF, extrair parcelas, abrir próximas
   faturas automaticamente.** Maior item em aberto. `CardInvoice` hoje

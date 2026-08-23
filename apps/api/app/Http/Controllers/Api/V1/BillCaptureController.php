@@ -9,12 +9,14 @@ use App\Enums\BillDirection;
 use App\Enums\CaptureOrigin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\ConfirmBillCaptureRequest;
+use App\Http\Requests\Api\UnlockBillCaptureRequest;
 use App\Http\Resources\BillResource;
 use App\Http\Resources\PendingBillCaptureResource;
 use App\Models\Context;
 use App\Models\PendingBillCapture;
 use App\UseCases\Bill\ConfirmBillCapture;
 use App\UseCases\Bill\RejectBillCapture;
+use App\UseCases\Bill\UnlockBillCapture;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -24,17 +26,19 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  * D-06) — não é aninhada em `/contexts/{context}` porque a captura
  * ainda não tem contexto (ver docblock de
  * `create_pending_bill_captures_table`). `confirm` é onde o contexto
- * finalmente é escolhido e a checagem de posse acontece.
+ * finalmente é escolhido e a checagem de posse acontece. `unlock`
+ * resolve uma pendência `password_required` com a senha informada na
+ * tela (DT-07).
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/08/2026
  */
 final class BillCaptureController extends Controller
 {
@@ -76,5 +80,13 @@ final class BillCaptureController extends Controller
         $useCase->execute($capture);
 
         return response()->json(status: 204);
+    }
+
+    /** Tenta a senha informada contra o PDF original de uma pendência `password_required` — se abrir, volta a `pending` com os campos preenchidos, pronta pra `confirm` normal. */
+    public function unlock(UnlockBillCaptureRequest $request, PendingBillCapture $capture, UnlockBillCapture $useCase): PendingBillCaptureResource
+    {
+        $unlocked = $useCase->execute($capture, $request->string('password')->toString());
+
+        return new PendingBillCaptureResource($unlocked);
     }
 }

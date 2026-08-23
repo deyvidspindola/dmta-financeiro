@@ -6,6 +6,8 @@ namespace App\Providers;
 
 use App\Domain\Capture\EmailBoletoReaderInterface;
 use App\Domain\Capture\PdfBoletoReader;
+use App\Domain\Capture\PdfPasswordResolverInterface;
+use App\Domain\Capture\RuleBasedPasswordResolver;
 use Illuminate\Support\ServiceProvider;
 use Smalot\PdfParser\Config as PdfParserConfig;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -37,6 +39,10 @@ class AppServiceProvider extends ServiceProvider
         // Único canal de captura por e-mail hoje — trocar por outra
         // implementação (ex.: OCR real) é mudar só esta linha.
         $this->app->bind(EmailBoletoReaderInterface::class, PdfBoletoReader::class);
+
+        // Senha de boleto protegido (DT-07) — hoje só por regra cadastrada
+        // (App\Models\BoletoPasswordRule), sem integração externa nenhuma.
+        $this->app->bind(PdfPasswordResolverInterface::class, RuleBasedPasswordResolver::class);
 
         // Maioria dos boletos reais vem com o PDF marcado como "encrypted"
         // (restrição de impressão/cópia do gerador do banco), mas sem senha

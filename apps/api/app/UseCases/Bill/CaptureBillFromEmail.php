@@ -20,21 +20,22 @@ use App\Models\PendingBillCapture;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/08/2026
  */
 final class CaptureBillFromEmail
 {
     /** @return PendingBillCapture A pendência criada, ou a já existente se `sourceReference` repetir. */
-    public function execute(BoletoDraftData $draft, string $sourceReference): PendingBillCapture
+    public function execute(BoletoDraftData $draft, string $sourceReference, ?string $senderEmail = null): PendingBillCapture
     {
         return PendingBillCapture::query()->firstOrCreate(
             ['source_reference' => $sourceReference],
             [
                 'origin' => CaptureOrigin::Email->value,
+                'sender_email' => $senderEmail,
                 'linha_digitavel' => $draft->linhaDigitavel,
                 'amount' => $draft->amount,
                 'due_date' => $draft->dueDate,
