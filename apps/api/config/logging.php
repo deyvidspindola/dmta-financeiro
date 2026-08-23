@@ -65,6 +65,16 @@ return [
             'replace_placeholders' => true,
         ],
 
+        // Log::warning()/error() explícito (ex.: PollBoletoMailbox) também
+        // vira evento no Sentry, não só exceção não tratada — nível
+        // separado do LOG_LEVEL do arquivo local pra debug/info daqui não
+        // virar ruído lá. Sem SENTRY_LARAVEL_DSN configurado é um no-op,
+        // igual ao resto da integração (ver bootstrap/app.php).
+        'sentry' => [
+            'driver' => 'sentry',
+            'level' => env('SENTRY_LOG_LEVEL', 'warning'),
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),

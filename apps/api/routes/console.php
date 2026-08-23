@@ -15,25 +15,36 @@ Artisan::command('inspire', function () {
 // skill padroes-laravel-dmta, seção 2. stop-when-empty + max-time abaixo
 // do intervalo do cron (1min) + withoutOverlapping: os três juntos, ou o
 // padrão falha de um jeito difícil de diagnosticar depois de semanas.
+//
+// sentryMonitor() em todo agendamento abaixo (pedido em produção: "como
+// vou saber se o cron está rodando?"): sem SENTRY_LARAVEL_DSN configurado
+// isso é literalmente um no-op, igual ao resto da integração — configurar
+// o DSN liga o monitor "Crons" do Sentry pra cada um, que alerta sozinho
+// se um check-in não chegar na janela esperada (cron parou) ou chegar
+// como falha, sem precisar ficar olhando log manualmente.
 Schedule::command('queue:work --stop-when-empty --max-time=50')
     ->everyMinute()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->sentryMonitor('fila');
 
 // Captura de boleto por e-mail (F1, D-06) — sem efeito nenhum enquanto
 // services.boleto_mailbox.enabled não for true (ver PollBoletoMailbox).
 Schedule::job(new PollBoletoMailbox)
     ->everyFiveMinutes()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->sentryMonitor('captura-boletos-email');
 
 // Materializa ocorrências de lançamento recorrente/despesa fixa vencidas.
 // Diário basta — recorrência nunca tem granularidade menor que "dia".
 Schedule::job(new GenerateRecurringTransactionEntries)
     ->daily()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->sentryMonitor('lancamentos-recorrentes');
 
 // Materializa boletos de obrigação recorrente vencidos (DARF/DAS e
 // afins, capítulo 07) — mesmo espírito do job acima, mas gera Bill em
 // vez de StatementEntry.
 Schedule::job(new GenerateRecurringBillEntries)
     ->daily()
-    ->withoutOverlapping();
+    ->withoutOverlapping()
+    ->sentryMonitor('boletos-recorrentes');
