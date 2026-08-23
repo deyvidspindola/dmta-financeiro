@@ -10,6 +10,7 @@ use App\UseCases\Bill\CaptureBillFromEmail;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Throwable;
+use Webklex\PHPIMAP\Attachment;
 use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Message;
 
@@ -78,45 +79,79 @@ final class BoletoMailboxPoller
         return ['processed' => $processed, 'captured' => $captured];
     }
 
-    /** @return int Quantidade de pendências novas criadas a partir desta mensagem. */
+    /**
+     * @return int Quantidade de pendências novas criadas a partir desta mensagem.
+     *
+     * Cada anexo tem seu próprio try/catch — um PDF problemático (criptografado
+     * de um jeito que nem o `ignoreEncryption` resolve, corrompido, etc.) fica
+     * só logado, não impede os outros anexos nem a marcação de lida no fim.
+     * Bug real visto em produção antes desta versão: uma falha em qualquer
+     * ponto do processamento pulava `setFlag('Seen')` inteiro, e o mesmo
+     * e-mail voltava a ser reprocessado (e falhar) a cada ciclo pra sempre.
+     */
     private function processMessage(Message $message): int
     {
-        $captured = 0;
+        $sourceReference = 'email-uid-'.$message->getUid();
+        $tempDir = storage_path('app/private/boleto-mailbox');
 
         try {
-            $sourceReference = 'email-uid-'.$message->getUid();
-            $tempDir = storage_path('app/private/boleto-mailbox');
             // Nada cria esta pasta antes do primeiro anexo chegar — não é
-            // coberta por storage:link nem por nenhuma migration. Bug real
-            // visto em produção: sem isso, todo anexo falha com "Failed to
-            // open stream" e a mensagem nunca é marcada como lida, gerando
-            // reprocessamento infinito do mesmo e-mail a cada ciclo.
+            // coberta por storage:link nem por nenhuma migration.
             File::ensureDirectoryExists($tempDir);
+            $attachments = $message->getAttachments();
+        } catch (Throwable $e) {
+            Log::warning('BoletoMailboxPoller: falha lendo mensagem', [
+                'uid' => $message->getUid(),
+                'error' => $e->getMessage(),
+            ]);
 
-            foreach ($message->getAttachments() as $index => $attachment) {
-                if ($attachment->getMimeType() !== 'application/pdf') {
-                    continue;
-                }
+            return 0;
+        }
 
-                $filename = $sourceReference.'-'.$index.'.pdf';
-                $attachment->save($tempDir.'/', $filename);
-                $pdfPath = $tempDir.'/'.$filename;
+        $captured = 0;
 
-                $draft = $this->reader->readAttachment($pdfPath);
-                $this->useCase->execute($draft, $sourceReference.'-'.$index);
-                $captured++;
-
-                @unlink($pdfPath);
+        foreach ($attachments as $index => $attachment) {
+            if ($attachment->getMimeType() !== 'application/pdf') {
+                continue;
             }
 
+            $captured += $this->processAttachment($attachment, $sourceReference, (int) $index, $tempDir, $message->getUid());
+        }
+
+        try {
             $message->setFlag('Seen');
         } catch (Throwable $e) {
-            Log::warning('BoletoMailboxPoller: falha processando mensagem', [
+            Log::warning('BoletoMailboxPoller: falha marcando mensagem como lida', [
                 'uid' => $message->getUid(),
                 'error' => $e->getMessage(),
             ]);
         }
 
         return $captured;
+    }
+
+    /** @return int 1 se virou pendência nova, 0 se este anexo falhou (logado, não trava os outros). */
+    private function processAttachment(Attachment $attachment, string $sourceReference, int $index, string $tempDir, mixed $uid): int
+    {
+        $filename = $sourceReference.'-'.$index.'.pdf';
+        $pdfPath = $tempDir.'/'.$filename;
+
+        try {
+            $attachment->save($tempDir.'/', $filename);
+            $draft = $this->reader->readAttachment($pdfPath);
+            $this->useCase->execute($draft, $sourceReference.'-'.$index);
+
+            return 1;
+        } catch (Throwable $e) {
+            Log::warning('BoletoMailboxPoller: falha processando anexo', [
+                'uid' => $uid,
+                'attachment' => $index,
+                'error' => $e->getMessage(),
+            ]);
+
+            return 0;
+        } finally {
+            @unlink($pdfPath);
+        }
     }
 }
