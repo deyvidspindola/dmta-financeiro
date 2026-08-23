@@ -15,12 +15,13 @@ import {
   IconButton,
   LoadingBlock,
   Modal,
+  MoneyValue,
   PageHeader,
   TextInput,
   TextSelect,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
@@ -186,7 +187,12 @@ export function RecurringTransactionsPage() {
           {data.map((row) => (
             <tr key={row.id}>
               <td>{row.description}</td>
-              <td className="mono">{formatMoney(row.amount)}</td>
+              <td>
+                <MoneyValue
+                  amount={row.amount}
+                  direction={row.type === 'income' ? 'credit' : 'debit'}
+                />
+              </td>
               <td>{strings.transactions.types[row.type]}</td>
               <td>{strings.recurring.intervals[row.interval]}</td>
               <td>{formatDate(row.next_occurrence_date)}</td>

@@ -6,6 +6,10 @@ import type {
 } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { strings } from '@/i18n/pt-BR'
+import { formatMoney } from '@/lib/format'
+
+/** Não confundir com `MoneyDirection` (income/expense) de `@/types/models' — este é só o rótulo visual C/D. */
+export type CreditDebit = 'credit' | 'debit'
 
 export function PageHeader({
   title,
@@ -108,6 +112,27 @@ export function LoadingBlock({ label }: { label: string }) {
 
 export function ErrorBanner({ message }: { message: string }) {
   return <div className="error-banner" role="alert">{message}</div>
+}
+
+/**
+ * Valor monetário com direção visual — verde + "C" (crédito/entrada) ou
+ * vermelho + "D" (débito/saída), convenção de extrato bancário. Quem
+ * chama decide a direção (receita/boleto a receber = credit; despesa/
+ * boleto a pagar = debit; perna de transferência conforme o lado).
+ */
+export function MoneyValue({
+  amount,
+  direction,
+}: {
+  amount: number
+  direction: CreditDebit
+}) {
+  return (
+    <span className={`money money--${direction}`}>
+      {formatMoney(amount)}
+      <span className="money__suffix">{direction === 'credit' ? 'C' : 'D'}</span>
+    </span>
+  )
 }
 
 export function DataTable({

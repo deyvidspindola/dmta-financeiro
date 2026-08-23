@@ -429,6 +429,30 @@ select {
   color: var(--negative);
 }
 
+/* Valor monetário com direção (crédito/débito) — convenção de extrato:
+   verde + "C" pra entrada, vermelho + "D" pra saída. Reusa as mesmas
+   cores de .metric__value--positive/--negative. */
+.money {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.money--credit {
+  color: var(--positive);
+}
+
+.money--debit {
+  color: var(--negative);
+}
+
+.money__suffix {
+  font-size: 0.85em;
+  opacity: 0.8;
+  margin-left: 0.15em;
+}
+
 .table-wrap {
   overflow: auto;
   border: 1px solid var(--line);

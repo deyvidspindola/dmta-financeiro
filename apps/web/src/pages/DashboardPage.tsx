@@ -71,11 +71,16 @@ function Metric({
   value: string
   tone?: 'positive' | 'negative'
 }) {
+  // Mesma convenção de extrato do resto do app: C pra entrada (positive),
+  // D pra saída (negative) — ver MoneyValue em components/ui.tsx.
+  const suffix = tone === 'positive' ? 'C' : tone === 'negative' ? 'D' : null
+
   return (
     <Panel>
       <p className="metric__label">{label}</p>
       <p className={`metric__value metric__value--${tone ?? 'neutral'}`}>
         {value}
+        {suffix ? <span className="money__suffix">{suffix}</span> : null}
       </p>
     </Panel>
   )

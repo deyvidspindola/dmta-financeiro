@@ -6,7 +6,7 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { billsApi, categoriesApi, consolidatedApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
@@ -23,6 +23,7 @@ import {
   IconButton,
   LoadingBlock,
   Modal,
+  MoneyValue,
   PageHeader,
   TextInput,
   TextSelect,
@@ -47,6 +48,11 @@ function categoryTypeForBillKind(
   kind: FormValues['kind'],
 ): MoneyDirection {
   return kind === 'receivable' ? 'income' : 'expense'
+}
+
+/** A receber entra (crédito); a pagar sai (débito) — mesma convenção do extrato. */
+function billDirection(kind: Bill['kind']): 'credit' | 'debit' {
+  return kind === 'receivable' ? 'credit' : 'debit'
 }
 
 const emptyValues: FormValues = {
@@ -251,7 +257,12 @@ export function BillsPage() {
                 <td>{bill.context?.name ?? '—'}</td>
               ) : null}
               <td>{bill.description}</td>
-              <td className="mono">{formatMoney(bill.amount)}</td>
+              <td>
+                <MoneyValue
+                  amount={bill.amount}
+                  direction={billDirection(bill.kind)}
+                />
+              </td>
               <td>{formatDate(bill.due_date)}</td>
               <td>{strings.bills.kinds[bill.kind]}</td>
               <td>{strings.bills.statuses[bill.status]}</td>
