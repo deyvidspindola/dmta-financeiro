@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Domain\Capture\EmailBoletoReaderInterface;
 use App\Exceptions\Domain\BoletoMailboxConnectionException;
 use App\UseCases\Bill\CaptureBillFromEmail;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 use Webklex\PHPIMAP\ClientManager;
@@ -85,6 +86,12 @@ final class BoletoMailboxPoller
         try {
             $sourceReference = 'email-uid-'.$message->getUid();
             $tempDir = storage_path('app/private/boleto-mailbox');
+            // Nada cria esta pasta antes do primeiro anexo chegar — não é
+            // coberta por storage:link nem por nenhuma migration. Bug real
+            // visto em produção: sem isso, todo anexo falha com "Failed to
+            // open stream" e a mensagem nunca é marcada como lida, gerando
+            // reprocessamento infinito do mesmo e-mail a cada ciclo.
+            File::ensureDirectoryExists($tempDir);
 
             foreach ($message->getAttachments() as $index => $attachment) {
                 if ($attachment->getMimeType() !== 'application/pdf') {
