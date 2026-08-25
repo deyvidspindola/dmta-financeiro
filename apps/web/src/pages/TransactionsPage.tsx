@@ -8,6 +8,8 @@ import {
   accountsApi,
   categoriesApi,
   consolidatedApi,
+  goalsApi,
+  recurringTransactionsApi,
   transactionsApi,
   transfersApi,
 } from '@/api'
@@ -19,6 +21,7 @@ import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
+import { OriginBadge } from '@/components/OriginBadge'
 import {
   Button,
   DataTable,
@@ -44,6 +47,11 @@ const entrySchema = z.object({
   type: z.enum(['income', 'expense']),
   account_id: z.string().min(1, strings.common.required),
   category_id: z.string().nullable(),
+  goal_id: z.string().nullable(),
+  is_recurring: z.boolean(),
+  interval: z.enum(['weekly', 'monthly', 'yearly']),
+  start_date: z.string(),
+  end_date: z.string(),
 })
 
 const transferSchema = z
@@ -95,6 +103,11 @@ const emptyEntry: EntryFormValues = {
   type: 'expense',
   account_id: '',
   category_id: null,
+  goal_id: null,
+  is_recurring: false,
+  interval: 'monthly',
+  start_date: new Date().toISOString().slice(0, 10),
+  end_date: '',
 }
 
 export function TransactionsPage() {
@@ -164,6 +177,7 @@ export function TransactionsPage() {
   })
 
   const watchedType = form.watch('type')
+  const isRecurring = form.watch('is_recurring')
   const targetContextId = moveForm.watch('target_context_id')
   const transferToContextId = transferForm.watch('to_context_id')
 
@@ -192,6 +206,12 @@ export function TransactionsPage() {
     queryFn: () =>
       categoriesApi.listCategories(contextId!, { type: watchedType }),
     enabled: Boolean(contextId) && entryOpen && !isConsolidated,
+  })
+
+  const goalsQuery = useQuery({
+    queryKey: ['goals', contextId],
+    queryFn: () => goalsApi.listGoals(contextId!),
+    enabled: Boolean(contextId) && entryOpen && !isConsolidated && !isEdit,
   })
 
   const moveAccountsQuery = useQuery({
@@ -242,6 +262,11 @@ export function TransactionsPage() {
       type: tx.type === 'transfer' ? 'expense' : tx.type,
       account_id: tx.account_id,
       category_id: tx.category_id,
+      goal_id: tx.goal_id,
+      is_recurring: false,
+      interval: 'monthly',
+      start_date: tx.date,
+      end_date: '',
     })
     setEntryOpen(true)
   }
@@ -281,26 +306,56 @@ export function TransactionsPage() {
   }
 
   const saveMutation = useMutation({
-    mutationFn: (values: EntryFormValues) => {
+    mutationFn: async (values: EntryFormValues): Promise<void> => {
       const payload = {
-        ...values,
+        account_id: values.account_id,
         category_id: values.category_id || null,
+        description: values.description,
+        amount: values.amount,
+        type: values.type,
+        date: values.date,
+        goal_id: values.goal_id || null,
       }
       if (isEdit && editing) {
-        return transactionsApi.updateTransaction(
+        await transactionsApi.updateTransaction(
           editing.context_id,
           editing.id,
-          payload,
+          {
+            account_id: payload.account_id,
+            category_id: payload.category_id,
+            description: payload.description,
+            amount: payload.amount,
+            type: payload.type,
+            date: payload.date,
+          },
         )
+        return
       }
-      return transactionsApi.createTransaction(contextId!, payload)
+      if (values.is_recurring) {
+        await recurringTransactionsApi.createRecurringTransaction(contextId!, {
+          account_id: values.account_id,
+          category_id: values.category_id || null,
+          description: values.description,
+          amount: values.amount,
+          type: values.type,
+          interval: values.interval,
+          start_date: values.start_date || values.date,
+          end_date: values.end_date || null,
+        })
+        return
+      }
+      await transactionsApi.createTransaction(contextId!, payload)
     },
-    onSuccess: async () => {
+    onSuccess: async (_data, values) => {
       await invalidateMoney()
+      await queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['goals'] })
       toastSuccess(
         isEdit
           ? strings.transactions.updated
-          : strings.transactions.created,
+          : values.is_recurring
+            ? strings.transactions.recurringCreated
+            : strings.transactions.created,
       )
       closeEntry()
     },
@@ -355,6 +410,9 @@ export function TransactionsPage() {
 
   const accounts = accountsQuery.data ?? []
   const categories = categoriesQuery.data ?? []
+  const activeGoals = (goalsQuery.data ?? []).filter(
+    (goal) => goal.status === 'active',
+  )
   const moveAccounts = moveAccountsQuery.data ?? []
   const moveCategories = moveCategoriesQuery.data ?? []
   const transferToAccounts = transferToAccountsQuery.data ?? []
@@ -367,6 +425,7 @@ export function TransactionsPage() {
     strings.transactions.date,
     strings.transactions.description,
     strings.transactions.type,
+    strings.billCaptures.origin,
     strings.transactions.amount,
     strings.common.actions,
   ]
@@ -449,6 +508,9 @@ export function TransactionsPage() {
                 {tx.type === 'transfer'
                   ? strings.transactions.types.transfer
                   : strings.transactions.types[tx.type]}
+              </td>
+              <td>
+                <OriginBadge origin={tx.origin} />
               </td>
               <td>
                 <MoneyValue
@@ -567,6 +629,56 @@ export function TransactionsPage() {
                 </Button>
               </div>
             </Field>
+            {!isEdit ? (
+              <>
+                <Field label={strings.transactions.goal}>
+                  <TextSelect
+                    {...form.register('goal_id', {
+                      setValueAs: (v: string) => (v === '' ? null : v),
+                    })}
+                  >
+                    <option value="">{strings.transactions.goalNone}</option>
+                    {activeGoals.map((goal) => (
+                      <option key={goal.id} value={goal.id}>
+                        {goal.name}
+                      </option>
+                    ))}
+                  </TextSelect>
+                </Field>
+                <Field label={strings.transactions.recurring}>
+                  <input
+                    type="checkbox"
+                    {...form.register('is_recurring')}
+                  />
+                </Field>
+                {isRecurring ? (
+                  <>
+                    <Field label={strings.transactions.recurringInterval}>
+                      <TextSelect {...form.register('interval')}>
+                        <option value="weekly">
+                          {strings.recurring.intervals.weekly}
+                        </option>
+                        <option value="monthly">
+                          {strings.recurring.intervals.monthly}
+                        </option>
+                        <option value="yearly">
+                          {strings.recurring.intervals.yearly}
+                        </option>
+                      </TextSelect>
+                    </Field>
+                    <Field label={strings.transactions.recurringStart}>
+                      <TextInput
+                        type="date"
+                        {...form.register('start_date')}
+                      />
+                    </Field>
+                    <Field label={strings.transactions.recurringEnd}>
+                      <TextInput type="date" {...form.register('end_date')} />
+                    </Field>
+                  </>
+                ) : null}
+              </>
+            ) : null}
             {saveMutation.isError ? (
               <ErrorBanner message={getErrorMessage(saveMutation.error)} />
             ) : null}

@@ -16,12 +16,20 @@ import type {
   ContextRef,
   CreditCard,
   DashboardSummary,
+  Debt,
+  DebtDirection,
+  DebtStatus,
   EntryType,
+  EvolutionPoint,
+  Goal,
+  GoalStatus,
+  InstallmentPurchaseSimulation,
   Investment,
   InvoiceStatus,
   MoneyDirection,
   RecurrenceInterval,
   RecurringTransaction,
+  SimulationStatus,
   StatementEntry,
   User,
 } from '@/types/models'
@@ -318,6 +326,7 @@ export function mapTransaction(
     date?: string
     origin?: CaptureOrigin
     bill_id?: string | number | null
+    goal_id?: string | number | null
     transfer_pair_id?: string | number | null
     recurring_transaction_id?: string | number | null
     context?: Parameters<typeof mapContextRef>[0] | null
@@ -341,6 +350,10 @@ export function mapTransaction(
       raw.bill_id === null || raw.bill_id === undefined
         ? null
         : asId(raw.bill_id),
+    goal_id:
+      raw.goal_id === null || raw.goal_id === undefined
+        ? null
+        : asId(raw.goal_id),
     transfer_pair_id:
       raw.transfer_pair_id === null || raw.transfer_pair_id === undefined
         ? null
@@ -361,6 +374,7 @@ export function toCreateTransactionBody(payload: {
   amount: number
   type: MoneyDirection
   date: string
+  goal_id?: string | null
 }): {
   account_id: number
   category_id: number | null
@@ -368,6 +382,7 @@ export function toCreateTransactionBody(payload: {
   amount: number
   type: MoneyDirection
   occurred_at: string
+  goal_id?: number
 } {
   return {
     account_id: asApiId(payload.account_id),
@@ -376,6 +391,7 @@ export function toCreateTransactionBody(payload: {
     amount: payload.amount,
     type: payload.type,
     occurred_at: payload.date,
+    ...(payload.goal_id ? { goal_id: asApiId(payload.goal_id) } : {}),
   }
 }
 
@@ -689,11 +705,17 @@ export function toUpdateInvestmentBody(payload: {
 type ApiDashboardSlice = {
   context_id?: string | number
   accounts_balance: number
+  pending_bills_count?: number
   pending_bills_amount: number
   overdue_bills_count: number
+  overdue_bills_amount?: number
   month_income: number
   month_expense: number
   investments_total: number
+  pending_debts_count?: number
+  pending_debts_i_owe_amount?: number
+  pending_debts_owed_to_me_amount?: number
+  active_goals_count?: number
 }
 
 export function mapOrigin(raw: unknown): CaptureOrigin {
@@ -781,10 +803,173 @@ export function mapDashboard(
     balance_total: Number(raw.accounts_balance),
     income_month: Number(raw.month_income),
     expense_month: Number(raw.month_expense),
-    bills_pending_amount: Number(raw.pending_bills_amount),
-    bills_pending_count: Number(raw.overdue_bills_count),
-    credit_used: 0,
+    pending_bills_amount: Number(raw.pending_bills_amount),
+    pending_bills_count: Number(raw.pending_bills_count ?? 0),
+    overdue_bills_count: Number(raw.overdue_bills_count),
+    overdue_bills_amount: Number(raw.overdue_bills_amount ?? 0),
+    pending_debts_count: Number(raw.pending_debts_count ?? 0),
+    pending_debts_i_owe_amount: Number(raw.pending_debts_i_owe_amount ?? 0),
+    pending_debts_owed_to_me_amount: Number(
+      raw.pending_debts_owed_to_me_amount ?? 0,
+    ),
+    active_goals_count: Number(raw.active_goals_count ?? 0),
     investments_total: Number(raw.investments_total),
+  }
+}
+
+export function mapGoal(raw: {
+  id: string | number
+  name: string
+  target_amount: number
+  current_amount: number
+  percent_complete: number
+  target_date: string | null
+  status: GoalStatus
+  notes: string | null
+}): Goal {
+  return {
+    id: asId(raw.id),
+    name: raw.name,
+    target_amount: Number(raw.target_amount),
+    current_amount: Number(raw.current_amount),
+    percent_complete: Number(raw.percent_complete),
+    target_date: raw.target_date,
+    status: raw.status,
+    notes: raw.notes,
+  }
+}
+
+export function toCreateGoalBody(payload: {
+  name: string
+  target_amount: number
+  target_date: string | null
+  notes: string | null
+}): {
+  name: string
+  target_amount: number
+  target_date: string | null
+  notes: string | null
+} {
+  return payload
+}
+
+export function mapDebt(raw: {
+  id: string | number
+  description: string
+  counterparty: string | null
+  amount: number
+  direction: DebtDirection
+  status: DebtStatus
+  due_date: string | null
+  notes: string | null
+  settled_at: string | null
+}): Debt {
+  return {
+    id: asId(raw.id),
+    description: raw.description,
+    counterparty: raw.counterparty,
+    amount: Number(raw.amount),
+    direction: raw.direction,
+    status: raw.status,
+    due_date: raw.due_date,
+    notes: raw.notes,
+    settled_at: raw.settled_at,
+  }
+}
+
+export function toCreateDebtBody(payload: {
+  description: string
+  amount: number
+  direction: DebtDirection
+  counterparty: string | null
+  due_date: string | null
+  notes: string | null
+}): {
+  description: string
+  amount: number
+  direction: DebtDirection
+  counterparty: string | null
+  due_date: string | null
+  notes: string | null
+} {
+  return payload
+}
+
+export function toUpdateDebtBody(payload: {
+  description: string
+  amount: number
+  counterparty: string | null
+  due_date: string | null
+  notes: string | null
+}): {
+  description: string
+  amount: number
+  counterparty: string | null
+  due_date: string | null
+  notes: string | null
+} {
+  return payload
+}
+
+export function toPayBillBody(payload: {
+  account_id: string
+  occurred_at: string | null
+}): { account_id: number; occurred_at?: string } {
+  return {
+    account_id: asApiId(payload.account_id),
+    ...(payload.occurred_at ? { occurred_at: payload.occurred_at } : {}),
+  }
+}
+
+export function mapEvolutionSeries(raw: {
+  series: Array<{
+    month: string
+    income: number
+    expense: number
+    balance: number
+  }>
+}): EvolutionPoint[] {
+  return raw.series.map((point) => ({
+    month: point.month,
+    income: Number(point.income),
+    expense: Number(point.expense),
+    balance: Number(point.balance),
+  }))
+}
+
+export function mapSimulation(raw: {
+  installment_amount: number
+  free_budget: number
+  commitment_percent: number | null
+  status: SimulationStatus
+  fits_now: boolean
+  fits_from_month: string | null
+  tightest_month: {
+    month: string
+    free_budget: number
+    commitment_percent: number | null
+  }
+  total_cost: number | null
+  annual_cet: number | null
+}): InstallmentPurchaseSimulation {
+  return {
+    installment_amount: Number(raw.installment_amount),
+    free_budget: Number(raw.free_budget),
+    commitment_percent:
+      raw.commitment_percent === null ? null : Number(raw.commitment_percent),
+    status: raw.status,
+    fits_now: raw.fits_now,
+    fits_from_month: raw.fits_from_month,
+    tightest_month: {
+      month: raw.tightest_month.month,
+      free_budget: Number(raw.tightest_month.free_budget),
+      commitment_percent:
+        raw.tightest_month.commitment_percent === null
+          ? null
+          : Number(raw.tightest_month.commitment_percent),
+    },
+    total_cost: raw.total_cost === null ? null : Number(raw.total_cost),
+    annual_cet: raw.annual_cet === null ? null : Number(raw.annual_cet),
   }
 }
 

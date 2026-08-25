@@ -16,6 +16,11 @@ const links = [
   { to: '/categories', label: strings.nav.categories },
   { to: '/companies', label: strings.nav.companies },
   { to: '/investments', label: strings.nav.investments },
+  { to: '/goals', label: strings.nav.goals },
+  { to: '/simulator', label: strings.nav.simulator },
+  { to: '/debts', label: strings.nav.debts },
+  { to: '/import-bills', label: strings.nav.importBills },
+  { to: '/import-statement', label: strings.nav.importStatement },
   { to: '/security', label: strings.nav.security },
 ]
 
