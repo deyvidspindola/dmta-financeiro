@@ -198,7 +198,19 @@ let billCaptures: BillCapture[] = [
     due_date: '2026-09-01',
     beneficiary: 'Empresa Teste LTDA',
     status: 'pending',
+    sender_email: 'boletos@empresa-teste.com.br',
     created_at: '2026-08-21T12:00:00+00:00',
+  },
+  {
+    id: 'cap_pwd',
+    origin: 'email',
+    linha_digitavel: null,
+    amount: null,
+    due_date: null,
+    beneficiary: null,
+    status: 'password_required',
+    sender_email: 'cobranca@fornecedor.com.br',
+    created_at: '2026-08-24T09:00:00+00:00',
   },
 ]
 
@@ -893,5 +905,48 @@ export const mockApi = {
     await delay()
     // Mock não simula IMAP de verdade — só confirma o fluxo do botão.
     return { processed: 0, captured: 0 }
+  },
+
+  async unlockBillCapture(
+    captureId: string,
+    password: string,
+  ): Promise<BillCapture> {
+    await delay()
+    const index = billCaptures.findIndex((row) => row.id === captureId)
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const capture = billCaptures[index]!
+    if (capture.status !== 'password_required') {
+      throw Object.assign(
+        new Error('Esta pendência não está aguardando senha.'),
+        { status: 422 },
+      )
+    }
+    if (password !== '123456') {
+      throw Object.assign(
+        new Error(
+          'Senha incorreta — não foi possível abrir o PDF do boleto com ela.',
+        ),
+        { status: 422 },
+      )
+    }
+    const unlocked: BillCapture = {
+      ...capture,
+      status: 'pending',
+      linha_digitavel: '23793381286000000015368000063305988820000018000',
+      amount: 180,
+      due_date: '2026-09-10',
+      beneficiary: 'Fornecedor LTDA',
+    }
+    billCaptures = billCaptures.map((row, i) => (i === index ? unlocked : row))
+    return unlocked
+  },
+
+  async saveBoletoPasswordRule(_input: {
+    sender_domain: string
+    rule_type: 'fixed'
+    rule_params: { password: string }
+    label?: string
+  }): Promise<void> {
+    await delay()
   },
 }

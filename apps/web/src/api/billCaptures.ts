@@ -25,6 +25,13 @@ export type ConfirmBillCaptureInput = {
   beneficiary: string | null
 }
 
+export type SaveBoletoPasswordRuleInput = {
+  sender_domain: string
+  rule_type: 'fixed'
+  rule_params: { password: string }
+  label?: string
+}
+
 export async function listBillCaptures(
   status: BillCaptureListStatus = 'pending',
 ): Promise<BillCapture[]> {
@@ -67,4 +74,23 @@ export async function rejectBillCapture(captureId: string): Promise<void> {
 export async function pollBillCaptures(): Promise<PollBillCapturesResult> {
   if (useMocks) return mockApi.pollBillCaptures()
   return http.post<PollBillCapturesResult>('/bill-captures/poll')
+}
+
+export async function unlockBillCapture(
+  captureId: string,
+  password: string,
+): Promise<BillCapture> {
+  if (useMocks) return mockApi.unlockBillCapture(captureId, password)
+  const payload = await http.post<
+    | Parameters<typeof mapBillCapture>[0]
+    | { data: Parameters<typeof mapBillCapture>[0] }
+  >(`/bill-captures/${captureId}/unlock`, { password })
+  return mapBillCapture(unwrapData(payload))
+}
+
+export async function saveBoletoPasswordRule(
+  input: SaveBoletoPasswordRuleInput,
+): Promise<void> {
+  if (useMocks) return mockApi.saveBoletoPasswordRule(input)
+  await http.post('/boleto-password-rules', input)
 }
