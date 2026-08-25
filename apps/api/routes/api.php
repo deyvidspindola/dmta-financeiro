@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
 use App\Http\Controllers\Api\V1\SimulationController;
 use App\Http\Controllers\Api\V1\StatementImportController;
+use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\UnlockBillCaptureController;
@@ -49,6 +50,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function () {
     Route::post('auth/login', [AuthController::class, 'login']);
+
+    // Público de propósito — o Telegram não carrega token Sanctum nosso.
+    // Protegido pelo secret_token do webhook (ver TelegramWebhookController).
+    Route::post('webhooks/telegram', [TelegramWebhookController::class, 'store']);
 
     // Token "pendente" do login com MFA (ability mfa-pending) só entra
     // aqui — não abre nenhuma outra rota da API. Ver IssueApiToken.
