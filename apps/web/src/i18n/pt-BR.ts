@@ -250,10 +250,28 @@ export const strings = {
     statusFilter: 'Situação',
     statuses: {
       pending: 'Pendentes',
+      password_required: 'Aguardando senha',
       confirmed: 'Confirmadas',
       rejected: 'Rejeitadas',
       all: 'Todas',
     },
+    waitingPassword: 'Aguardando senha',
+    password: 'Senha',
+    unlock: 'Informar senha',
+    unlockTitle: 'Senha do PDF do boleto',
+    unlockHint: (email: string | null) =>
+      email
+        ? `O PDF chegou de ${email} e precisa de senha para extrair o boleto.`
+        : 'O PDF precisa de senha para extrair o boleto.',
+    unlockSubmit: 'Abrir PDF',
+    unlocked: 'PDF aberto. Revise os dados e confirme o boleto.',
+    saveRuleTitle: 'Salvar senha como regra?',
+    saveRuleHint: (domain: string) =>
+      `Usar a mesma senha automaticamente em boletos futuros de @${domain}?`,
+    saveRuleLabel: 'Rótulo (opcional)',
+    saveRuleConfirm: 'Salvar regra',
+    saveRuleSkip: 'Agora não',
+    ruleSaved: 'Regra de senha salva para este remetente.',
   },
 
   origin: {
