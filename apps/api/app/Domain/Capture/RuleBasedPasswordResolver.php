@@ -6,6 +6,7 @@ namespace App\Domain\Capture;
 
 use App\Enums\BoletoPasswordRuleType;
 use App\Models\BoletoPasswordRule;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 use Throwable;
@@ -27,25 +28,45 @@ use Throwable;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class RuleBasedPasswordResolver implements PdfPasswordResolverInterface
 {
-    public function resolveCandidates(string $senderEmail): array
+    public function resolveCandidates(?string $senderEmail): array
     {
-        $domain = strtolower(Str::after($senderEmail, '@'));
-
-        if ($domain === '' || $domain === $senderEmail) {
-            return [];
-        }
-
+        $domain = $this->senderDomain($senderEmail);
         $candidates = [];
 
-        foreach (BoletoPasswordRule::query()->where('sender_domain', $domain)->get() as $rule) {
+        foreach ($this->matchingRules($domain) as $rule) {
             array_push($candidates, ...$this->expand($rule));
         }
 
         return array_values(array_unique(array_filter($candidates, fn (string $c): bool => $c !== '')));
+    }
+
+    /** @return Collection<int, BoletoPasswordRule> */
+    private function matchingRules(?string $domain): Collection
+    {
+        return BoletoPasswordRule::query()
+            ->where(function ($query) use ($domain): void {
+                $query->where('sender_domain', '*');
+
+                if ($domain !== null) {
+                    $query->orWhere('sender_domain', $domain);
+                }
+            })
+            ->get();
+    }
+
+    private function senderDomain(?string $senderEmail): ?string
+    {
+        if ($senderEmail === null || $senderEmail === '') {
+            return null;
+        }
+
+        $domain = strtolower(Str::after($senderEmail, '@'));
+
+        return ($domain === '' || $domain === strtolower($senderEmail)) ? null : $domain;
     }
 
     /**

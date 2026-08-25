@@ -5,6 +5,7 @@ import type {
   BillCapture,
   BillCaptureStatus,
   BillKind,
+  BoletoPasswordRule,
   CardInvoice,
   Category,
   Context,
@@ -193,12 +194,12 @@ let billCaptures: BillCapture[] = [
   {
     id: 'cap_1',
     origin: 'email',
+    sender_email: 'boletos@empresa-teste.com.br',
     linha_digitavel: '23793381286000000015368000063305988820000025090',
     amount: 250.9,
     due_date: '2026-09-01',
     beneficiary: 'Empresa Teste LTDA',
     status: 'pending',
-    sender_email: 'boletos@empresa-teste.com.br',
     created_at: '2026-08-21T12:00:00+00:00',
   },
   {
@@ -213,6 +214,8 @@ let billCaptures: BillCapture[] = [
     created_at: '2026-08-24T09:00:00+00:00',
   },
 ]
+
+let boletoPasswordRules: BoletoPasswordRule[] = []
 
 const pendingMfa = new Map<string, string>()
 
@@ -848,6 +851,11 @@ export const mockApi = {
   ): Promise<BillCapture[]> {
     await delay()
     if (status === 'all') return [...billCaptures]
+    if (status === 'pending') {
+      return billCaptures.filter(
+        (row) => row.status === 'pending' || row.status === 'password_required',
+      )
+    }
     return billCaptures.filter((row) => row.status === status)
   },
 
@@ -903,7 +911,6 @@ export const mockApi = {
 
   async pollBillCaptures(): Promise<{ processed: number; captured: number }> {
     await delay()
-    // Mock não simula IMAP de verdade — só confirma o fluxo do botão.
     return { processed: 0, captured: 0 }
   },
 
@@ -948,5 +955,35 @@ export const mockApi = {
     label?: string
   }): Promise<void> {
     await delay()
+  },
+
+  async listBoletoPasswordRules(): Promise<BoletoPasswordRule[]> {
+    await delay()
+    return [...boletoPasswordRules]
+  },
+
+  async createBoletoPasswordRule(input: {
+    sender_domain: string
+    rule_type: BoletoPasswordRule['rule_type']
+    rule_params: Record<string, string>
+    label: string | null
+  }): Promise<BoletoPasswordRule> {
+    await delay()
+    const row: BoletoPasswordRule = {
+      id: id('pwd'),
+      sender_domain: input.sender_domain || '*',
+      rule_type: input.rule_type,
+      rule_params: input.rule_params,
+      label: input.label,
+      last_used_at: null,
+      created_at: new Date().toISOString(),
+    }
+    boletoPasswordRules = [...boletoPasswordRules, row]
+    return row
+  },
+
+  async deleteBoletoPasswordRule(ruleId: string): Promise<void> {
+    await delay()
+    boletoPasswordRules = boletoPasswordRules.filter((row) => row.id !== ruleId)
   },
 }

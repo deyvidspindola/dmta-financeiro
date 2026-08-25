@@ -8,6 +8,7 @@ use App\Enums\CaptureOrigin;
 use App\Enums\CaptureStatus;
 use Database\Factories\PendingBillCaptureFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -43,6 +44,26 @@ class PendingBillCapture extends Model
     public function bill(): BelongsTo
     {
         return $this->belongsTo(Bill::class);
+    }
+
+    /**
+     * Filtro da tela de captura. `pending` inclui boletos que ainda
+     * precisam de senha — senão a fila de revisão some com eles.
+     *
+     * @param  Builder<PendingBillCapture>  $query
+     * @return Builder<PendingBillCapture>
+     */
+    public function scopeForList(Builder $query, string $status): Builder
+    {
+        if ($status === 'pending') {
+            return $query->whereIn('status', ['pending', 'password_required']);
+        }
+
+        if ($status !== 'all') {
+            return $query->where('status', $status);
+        }
+
+        return $query;
     }
 
     /**

@@ -40,7 +40,7 @@ use Webklex\PHPIMAP\Message;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class BoletoMailboxPoller
 {
@@ -147,15 +147,22 @@ final class BoletoMailboxPoller
 
         try {
             $attachment->save($tempDir.'/', $filename);
-            $readablePath = $this->resolveReadablePath($pdfPath, $captureReference, $senderEmail);
+            $readablePath = $this->unlocker->resolveToPath($pdfPath, $captureReference, $senderEmail);
 
             if ($readablePath === null) {
-                // Nenhuma senha candidata abriu — vira password_required
-                // dentro de resolveReadablePath(), ainda é uma pendência nova.
                 return 1;
             }
 
             $draft = $this->reader->readAttachment($readablePath);
+
+            if ($draft->linhaDigitavel === null && $this->unlocker->lockUnreadableEncrypted(
+                File::get($pdfPath),
+                $captureReference,
+                $senderEmail,
+            )) {
+                return 1;
+            }
+
             $this->useCase->execute($draft, $captureReference, $senderEmail);
 
             return 1;
@@ -174,34 +181,6 @@ final class BoletoMailboxPoller
                 @unlink($readablePath);
             }
         }
-    }
-
-    /**
-     * Decifra `$pdfPath` se necessário via {@see BoletoPdfUnlocker} e
-     * devolve um caminho que {@see EmailBoletoReaderInterface} consegue
-     * ler.
-     *
-     * @return ?string `null` quando o PDF está protegido e nenhuma senha
-     *                 candidata abriu — a pendência `password_required`
-     *                 já foi criada antes de devolver, quem chama só para por aqui.
-     */
-    private function resolveReadablePath(string $pdfPath, string $captureReference, ?string $senderEmail): ?string
-    {
-        $bytes = File::get($pdfPath);
-        $resolved = $this->unlocker->resolve($bytes, $captureReference, $senderEmail);
-
-        if ($resolved === null) {
-            return null;
-        }
-
-        if ($resolved === $bytes) {
-            return $pdfPath;
-        }
-
-        $outPath = $pdfPath.'.decrypted';
-        File::put($outPath, $resolved);
-
-        return $outPath;
     }
 
     private function senderEmail(Message $message): ?string

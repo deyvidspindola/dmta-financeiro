@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->away('/app/');
 })->name('home');
 
 Route::middleware('guest')->group(function (): void {

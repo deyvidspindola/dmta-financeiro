@@ -14,12 +14,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Cadastro de regras de senha de boleto por remetente (DT-07) — cadastro
- * simples e editável (index/store/destroy), sem tela dedicada exigida:
- * a oferta de "salvar como regra" nasce do fluxo de desbloqueio manual
- * (`POST bill-captures/{capture}/unlock`), mas a regra em si é um recurso
- * à parte, sem contexto (PF/PJ), porque uma regra de senha de banco não é
- * dado financeiro.
+ * Cadastro de regras de senha de boleto (DT-07): por domínio de remetente
+ * ou globais (`sender_domain = *`). Recurso à parte, sem contexto PF/PJ.
  *
  * @package App\Http\Controllers\Api\V1
  *
@@ -29,7 +25,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class BoletoPasswordRuleController extends Controller
 {

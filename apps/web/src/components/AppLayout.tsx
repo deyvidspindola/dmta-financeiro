@@ -10,6 +10,7 @@ const links = [
   { to: '/credit-cards', label: strings.nav.creditCards },
   { to: '/bills', label: strings.nav.bills },
   { to: '/bill-captures', label: strings.nav.billCaptures },
+  { to: '/boleto-passwords', label: strings.nav.boletoPasswords },
   { to: '/transactions', label: strings.nav.transactions },
   { to: '/recurring', label: strings.nav.recurring },
   { to: '/categories', label: strings.nav.categories },

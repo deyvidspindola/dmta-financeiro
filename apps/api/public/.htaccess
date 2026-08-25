@@ -5,6 +5,9 @@
 
     RewriteEngine On
 
+    # SPA publicada em /app/ (mesmo document root da API).
+    RewriteRule ^$ /app/ [R=302,L]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

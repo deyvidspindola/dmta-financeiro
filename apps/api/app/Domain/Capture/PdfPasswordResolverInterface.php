@@ -18,13 +18,13 @@ namespace App\Domain\Capture;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 interface PdfPasswordResolverInterface
 {
     /**
-     * @param  string  $senderEmail  Endereço de e-mail que enviou o boleto.
+     * @param  ?string  $senderEmail  Remetente do boleto, se conhecido. `null` só usa regras globais (`sender_domain = *`).
      * @return list<string> Senhas candidatas, na ordem de prioridade (pode ser vazia).
      */
-    public function resolveCandidates(string $senderEmail): array;
+    public function resolveCandidates(?string $senderEmail): array;
 }

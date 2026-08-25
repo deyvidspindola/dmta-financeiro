@@ -6,6 +6,7 @@ namespace App\UseCases\Bill;
 
 use App\Enums\BoletoPasswordRuleType;
 use App\Models\BoletoPasswordRule;
+use Illuminate\Support\Str;
 
 /**
  * Cadastra uma regra de senha de boleto por domínio de remetente
@@ -20,7 +21,7 @@ use App\Models\BoletoPasswordRule;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class RegisterBoletoPasswordRule
 {
@@ -28,10 +29,22 @@ final class RegisterBoletoPasswordRule
     public function execute(string $senderDomain, BoletoPasswordRuleType $ruleType, array $ruleParams, ?string $label): BoletoPasswordRule
     {
         return BoletoPasswordRule::query()->create([
-            'sender_domain' => strtolower(trim($senderDomain)),
+            'sender_domain' => $this->normalizeDomain($senderDomain),
             'rule_type' => $ruleType->value,
             'rule_params' => $ruleParams,
             'label' => $label,
         ]);
+    }
+
+    /** `*` vale pra qualquer remetente. Se colarem um e-mail inteiro, fica só o domínio. */
+    private function normalizeDomain(string $senderDomain): string
+    {
+        $normalized = strtolower(trim($senderDomain));
+
+        if (str_contains($normalized, '@')) {
+            $normalized = Str::after($normalized, '@');
+        }
+
+        return $normalized === '' ? '*' : $normalized;
     }
 }

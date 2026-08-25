@@ -18,12 +18,12 @@ export type BillCaptureStatus =
 export interface BillCapture {
   id: string
   origin: CaptureOrigin
+  sender_email: string | null
   linha_digitavel: string | null
   amount: number | null
   due_date: string | null
   beneficiary: string | null
   status: BillCaptureStatus
-  sender_email: string | null
   created_at: string | null
 }
 
@@ -195,6 +195,22 @@ export interface AuthSession {
 }
 
 export type LoginResult = AuthSession | MfaChallenge
+
+export type BoletoPasswordRuleType =
+  | 'cpf_digits'
+  | 'cnpj_digits'
+  | 'birth_date'
+  | 'fixed'
+
+export interface BoletoPasswordRule {
+  id: string
+  sender_domain: string
+  rule_type: BoletoPasswordRuleType
+  rule_params: Record<string, string>
+  label: string | null
+  last_used_at: string | null
+  created_at: string | null
+}
 
 export function isMfaChallenge(result: LoginResult): result is MfaChallenge {
   return 'mfa_required' in result && result.mfa_required === true

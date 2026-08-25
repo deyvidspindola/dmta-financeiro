@@ -64,3 +64,16 @@ test('domínio sem regra cadastrada devolve lista vazia', function () {
 test('endereço sem @ não quebra, só devolve vazio', function () {
     expect((new RuleBasedPasswordResolver)->resolveCandidates('nao-e-email'))->toBe([]);
 });
+
+test('regra global * vale para qualquer remetente e sem e-mail', function () {
+    BoletoPasswordRule::factory()->create([
+        'sender_domain' => '*',
+        'rule_type' => BoletoPasswordRuleType::Fixed->value,
+        'rule_params' => ['password' => 'minhasenha'],
+    ]);
+
+    $resolver = new RuleBasedPasswordResolver;
+
+    expect($resolver->resolveCandidates('x@outro.banco.br'))->toBe(['minhasenha'])
+        ->and($resolver->resolveCandidates(null))->toBe(['minhasenha']);
+});

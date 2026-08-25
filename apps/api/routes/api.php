@@ -25,6 +25,7 @@ use App\Http\Controllers\Api\V1\ShowTransactionController;
 use App\Http\Controllers\Api\V1\StatementImportController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
+use App\Http\Controllers\Api\V1\UnlockBillCaptureController;
 use App\Http\Controllers\Api\V1\UpdateTransactionController;
 use Illuminate\Support\Facades\Route;
 
@@ -83,7 +84,7 @@ Route::prefix('v1')->group(function () {
         // Boleto com PDF protegido por senha (DT-07) — resolve manualmente
         // uma pendência password_required, e o cadastro das regras que
         // tentam abrir sozinho da próxima vez.
-        Route::post('bill-captures/{capture}/unlock', [BillCaptureController::class, 'unlock']);
+        Route::post('bill-captures/{capture}/unlock', [UnlockBillCaptureController::class, 'store']);
         Route::get('boleto-password-rules', [BoletoPasswordRuleController::class, 'index']);
         Route::post('boleto-password-rules', [BoletoPasswordRuleController::class, 'store']);
         Route::delete('boleto-password-rules/{boletoPasswordRule}', [BoletoPasswordRuleController::class, 'destroy']);

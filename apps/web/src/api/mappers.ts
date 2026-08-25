@@ -720,23 +720,23 @@ export function mapOrigin(raw: unknown): CaptureOrigin {
 export function mapBillCapture(raw: {
   id: string | number
   origin: unknown
+  sender_email?: string | null
   linha_digitavel: string | null
   amount: number | null
   due_date: string | null
   beneficiary: string | null
   status: BillCaptureStatus
-  sender_email?: string | null
   created_at?: string | null
 }): BillCapture {
   return {
     id: asId(raw.id),
     origin: mapOrigin(raw.origin),
+    sender_email: raw.sender_email ?? null,
     linha_digitavel: raw.linha_digitavel,
     amount: raw.amount === null ? null : Number(raw.amount),
     due_date: raw.due_date,
     beneficiary: raw.beneficiary,
     status: raw.status,
-    sender_email: raw.sender_email ?? null,
     created_at: raw.created_at ?? null,
   }
 }

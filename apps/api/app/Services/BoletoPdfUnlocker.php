@@ -9,6 +9,7 @@ use App\Domain\Capture\PdfDecryption\EncryptedPdfDecryptor;
 use App\Domain\Capture\PdfPasswordResolverInterface;
 use App\Exceptions\Domain\UnsupportedEncryptedPdfException;
 use App\UseCases\Bill\CaptureLockedBillFromEmail;
+use Illuminate\Support\Facades\File;
 
 /**
  * Decide se um PDF de boleto de e-mail precisa de senha e, se precisar,
@@ -18,15 +19,19 @@ use App\UseCases\Bill\CaptureLockedBillFromEmail;
  * funciona, registra a pendência `password_required` sozinho — quem
  * chama só decide o que fazer com o `null` de volta.
  *
+ * Sempre tenta senha vazia primeiro (boleto só marcado como encrypted,
+ * sem senha de usuário real). Regras com `sender_domain = *` valem sem
+ * remetente conhecido.
+ *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class BoletoPdfUnlocker
 {
@@ -56,16 +61,51 @@ final class BoletoPdfUnlocker
         return null;
     }
 
-    private function tryCandidates(string $encryptedBytes, ?string $senderEmail): ?string
+    /**
+     * Igual a {@see resolve()}, mas devolve um caminho em disco pronto
+     * pro parser. `null` = pendência `password_required` já criada.
+     */
+    public function resolveToPath(string $pdfPath, string $captureReference, ?string $senderEmail): ?string
     {
-        if ($senderEmail === null) {
+        $bytes = File::get($pdfPath);
+        $resolved = $this->resolve($bytes, $captureReference, $senderEmail);
+
+        if ($resolved === null) {
             return null;
         }
 
+        if ($resolved === $bytes) {
+            return $pdfPath;
+        }
+
+        $outPath = $pdfPath.'.decrypted';
+        File::put($outPath, $resolved);
+
+        return $outPath;
+    }
+
+    /**
+     * PDF cifrado cujo texto saiu vazio depois do parser: não vira pendência
+     * "sem linha digitável" — guarda o original e pede senha.
+     *
+     * @return bool `true` se a pendência `password_required` foi registrada (ou já existia).
+     */
+    public function lockUnreadableEncrypted(string $originalBytes, string $captureReference, ?string $senderEmail): bool
+    {
+        if (! $this->decryptor->isEncrypted($originalBytes)) {
+            return false;
+        }
+
+        $this->lockedUseCase->execute($captureReference, $senderEmail, $originalBytes);
+
+        return true;
+    }
+
+    private function tryCandidates(string $encryptedBytes, ?string $senderEmail): ?string
+    {
         try {
             $document = $this->decryptor->inspect($encryptedBytes);
         } catch (UnsupportedEncryptedPdfException) {
-            // Estrutura que o motor não sabe ler — nenhuma senha resolveria mesmo.
             return null;
         }
 
@@ -73,7 +113,7 @@ final class BoletoPdfUnlocker
             return null;
         }
 
-        foreach ($this->passwordResolver->resolveCandidates($senderEmail) as $candidate) {
+        foreach ($this->candidates($senderEmail) as $candidate) {
             $decrypted = $this->decryptor->tryPassword($document, $candidate);
 
             if ($decrypted !== null) {
@@ -82,5 +122,14 @@ final class BoletoPdfUnlocker
         }
 
         return null;
+    }
+
+    /** @return list<string> */
+    private function candidates(?string $senderEmail): array
+    {
+        return array_values(array_unique([
+            '',
+            ...$this->passwordResolver->resolveCandidates($senderEmail),
+        ]));
     }
 }

@@ -10,6 +10,7 @@ export const strings = {
     creditCards: 'Cartões',
     bills: 'Boletos',
     billCaptures: 'Capturas',
+    boletoPasswords: 'Senhas de boleto',
     transactions: 'Lançamentos',
     recurring: 'Recorrentes',
     categories: 'Categorias',
@@ -272,6 +273,29 @@ export const strings = {
     saveRuleConfirm: 'Salvar regra',
     saveRuleSkip: 'Agora não',
     ruleSaved: 'Regra de senha salva para este remetente.',
+  },
+
+  boletoPasswords: {
+    title: 'Senhas de boleto',
+    hint: 'A captura tenta estas senhas (e variações de CPF/CNPJ/data) antes de deixar o boleto sem linha digitável. Use * no domínio para valer para qualquer remetente.',
+    empty: 'Nenhuma senha cadastrada. A captura não consegue abrir PDF protegido sozinha.',
+    create: 'Nova senha',
+    senderDomain: 'Domínio do remetente',
+    senderDomainHint: '* = todas as caixas, ou ex.: itau.com.br',
+    ruleType: 'Como gerar a senha',
+    label: 'Apelido (opcional)',
+    document: 'CPF ou CNPJ',
+    date: 'Data de nascimento',
+    password: 'Senha fixa',
+    created: 'Senha cadastrada. A próxima captura vai tentá-la.',
+    deleted: 'Senha removida.',
+    confirmDelete: 'Excluir esta senha?',
+    types: {
+      cpf_digits: 'Dígitos do CPF',
+      cnpj_digits: 'Dígitos do CNPJ',
+      birth_date: 'Data de nascimento',
+      fixed: 'Senha fixa',
+    },
   },
 
   origin: {

@@ -36,7 +36,7 @@ final class StoreBoletoPasswordRuleRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'sender_domain' => ['required', 'string', 'max:255'],
+            'sender_domain' => ['nullable', 'string', 'max:255'],
             'rule_type' => ['required', Rule::in(['cpf_digits', 'cnpj_digits', 'birth_date', 'fixed'])],
             'rule_params' => ['required', 'array'],
             'label' => ['nullable', 'string', 'max:150'],

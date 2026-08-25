@@ -1,6 +1,7 @@
 # --- Laravel ---
 /.phpunit.cache
 /node_modules
+/public/app
 /public/build
 /public/hot
 /public/storage
