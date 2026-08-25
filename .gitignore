@@ -8,6 +8,7 @@
 /.nova
 /.vscode
 /.zed
+/.claude/settings.local.json
 
 # --- Nunca versionar ---
 deploy_key
