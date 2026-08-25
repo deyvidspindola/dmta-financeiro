@@ -16,6 +16,7 @@ export type CreateTransactionInput = {
   amount: number
   type: MoneyDirection
   date: string
+  goal_id?: string | null
 }
 
 export type UpdateTransactionInput = CreateTransactionInput

@@ -1,8 +1,12 @@
 import { useMocks } from '@/api/config'
 import { http } from '@/api/http'
-import { mapConsolidatedDashboard, mapDashboard } from '@/api/mappers'
+import {
+  mapConsolidatedDashboard,
+  mapDashboard,
+  mapEvolutionSeries,
+} from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
-import type { DashboardSummary } from '@/types/models'
+import type { DashboardSummary, EvolutionPoint } from '@/types/models'
 
 type ApiDashboardSlice = {
   context_id?: string | number
@@ -30,4 +34,23 @@ export async function getDashboard(
     `/contexts/${contextId}/dashboard`,
   )
   return mapDashboard(contextId, contextId, raw)
+}
+
+export async function getDashboardEvolution(
+  contextId: string | 'consolidated',
+  months = 6,
+): Promise<EvolutionPoint[]> {
+  if (useMocks) return mockApi.getDashboardEvolution(contextId, months)
+
+  if (contextId === 'consolidated') {
+    const raw = await http.get<{ series: EvolutionPoint[] }>(
+      `/dashboard/consolidated/evolution?months=${months}`,
+    )
+    return mapEvolutionSeries(raw)
+  }
+
+  const raw = await http.get<{ series: EvolutionPoint[] }>(
+    `/contexts/${contextId}/dashboard/evolution?months=${months}`,
+  )
+  return mapEvolutionSeries(raw)
 }

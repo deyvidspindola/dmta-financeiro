@@ -115,6 +115,7 @@ export interface StatementEntry {
   date: string
   origin: CaptureOrigin
   bill_id: string | null
+  goal_id: string | null
   transfer_pair_id: string | null
   recurring_transaction_id: string | null
   context?: ContextRef | null
@@ -172,10 +173,97 @@ export interface DashboardSummary {
   balance_total: number
   income_month: number
   expense_month: number
-  bills_pending_amount: number
-  bills_pending_count: number
-  credit_used: number
+  pending_bills_count: number
+  pending_bills_amount: number
+  overdue_bills_count: number
+  overdue_bills_amount: number
+  pending_debts_count: number
+  pending_debts_i_owe_amount: number
+  pending_debts_owed_to_me_amount: number
+  active_goals_count: number
   investments_total: number
+}
+
+export type GoalStatus = 'active' | 'completed'
+
+export interface Goal {
+  id: string
+  name: string
+  target_amount: number
+  current_amount: number
+  percent_complete: number
+  target_date: string | null
+  status: GoalStatus
+  notes: string | null
+}
+
+export type SimulationStatus = 'green' | 'yellow' | 'red'
+
+export interface SimulationTightestMonth {
+  month: string
+  free_budget: number
+  commitment_percent: number | null
+}
+
+export interface InstallmentPurchaseSimulation {
+  installment_amount: number
+  free_budget: number
+  commitment_percent: number | null
+  status: SimulationStatus
+  fits_now: boolean
+  fits_from_month: string | null
+  tightest_month: SimulationTightestMonth
+  total_cost: number | null
+  annual_cet: number | null
+}
+
+export interface CashFlowHorizon {
+  days: 7 | 30 | 90
+  income: number
+  expense: number
+  projected_balance: number
+}
+
+export interface CashFlowProjection {
+  horizons: CashFlowHorizon[]
+}
+
+export interface EvolutionPoint {
+  month: string
+  income: number
+  expense: number
+  balance: number
+}
+
+export type DebtDirection = 'i_owe' | 'owed_to_me'
+export type DebtStatus = 'pending' | 'settled'
+
+export interface Debt {
+  id: string
+  description: string
+  counterparty: string | null
+  amount: number
+  direction: DebtDirection
+  status: DebtStatus
+  due_date: string | null
+  notes: string | null
+  settled_at: string | null
+}
+
+export interface ImportFailure {
+  row: number
+  reason: string
+}
+
+export interface BillImportSummary {
+  imported: number
+  failed: ImportFailure[]
+}
+
+export interface StatementImportSummary {
+  imported: number
+  duplicates: number
+  failed: ImportFailure[]
 }
 
 export interface LoginCredentials {

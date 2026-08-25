@@ -11,6 +11,10 @@ import type {
   Context,
   CreditCard,
   DashboardSummary,
+  Debt,
+  EvolutionPoint,
+  Goal,
+  InstallmentPurchaseSimulation,
   Investment,
   LoginCredentials,
   LoginResult,
@@ -135,6 +139,7 @@ let transactions: StatementEntry[] = [
     date: '2026-08-05',
     origin: 'manual',
     bill_id: null,
+    goal_id: null,
     transfer_pair_id: null,
     recurring_transaction_id: null,
   },
@@ -149,6 +154,7 @@ let transactions: StatementEntry[] = [
     date: '2026-08-10',
     origin: 'manual',
     bill_id: null,
+    goal_id: null,
     transfer_pair_id: null,
     recurring_transaction_id: null,
   },
@@ -217,6 +223,35 @@ let billCaptures: BillCapture[] = [
 
 let boletoPasswordRules: BoletoPasswordRule[] = []
 
+let goals: Array<Goal & { context_id: string }> = [
+  {
+    id: 'goal_1',
+    context_id: 'ctx_pf',
+    name: 'Reserva de emergência',
+    target_amount: 20000,
+    current_amount: 4500,
+    percent_complete: 22.5,
+    target_date: '2026-12-31',
+    status: 'active',
+    notes: null,
+  },
+]
+
+let debts: Array<Debt & { context_id: string }> = [
+  {
+    id: 'debt_1',
+    context_id: 'ctx_pf',
+    description: 'Empréstimo familiar',
+    counterparty: 'João',
+    amount: 1500,
+    direction: 'i_owe',
+    status: 'pending',
+    due_date: '2026-10-01',
+    notes: null,
+    settled_at: null,
+  },
+]
+
 const pendingMfa = new Map<string, string>()
 
 function byContext<T extends { context_id: string }>(
@@ -232,9 +267,16 @@ function buildDashboard(scope: string, label: string, contextIds: string[]): Das
   const scopedBills = bills.filter(
     (b) => contextIds.includes(b.context_id) && b.status === 'pending',
   )
-  const scopedInvoices = invoices.filter((i) => contextIds.includes(i.context_id))
+  const today = new Date().toISOString().slice(0, 10)
+  const overdueBills = scopedBills.filter((b) => b.due_date < today)
   const scopedInvestments = investments.filter((i) =>
     contextIds.includes(i.context_id),
+  )
+  const scopedDebts = debts.filter(
+    (d) => contextIds.includes(d.context_id) && d.status === 'pending',
+  )
+  const scopedGoals = goals.filter(
+    (g) => contextIds.includes(g.context_id) && g.status === 'active',
   )
 
   return {
@@ -247,9 +289,18 @@ function buildDashboard(scope: string, label: string, contextIds: string[]): Das
     expense_month: scopedTx
       .filter((t) => t.type === 'expense')
       .reduce((s, t) => s + t.amount, 0),
-    bills_pending_amount: scopedBills.reduce((s, b) => s + b.amount, 0),
-    bills_pending_count: scopedBills.length,
-    credit_used: scopedInvoices.reduce((s, i) => s + i.amount, 0),
+    pending_bills_amount: scopedBills.reduce((s, b) => s + b.amount, 0),
+    pending_bills_count: scopedBills.length,
+    overdue_bills_count: overdueBills.length,
+    overdue_bills_amount: overdueBills.reduce((s, b) => s + b.amount, 0),
+    pending_debts_count: scopedDebts.length,
+    pending_debts_i_owe_amount: scopedDebts
+      .filter((d) => d.direction === 'i_owe')
+      .reduce((s, d) => s + d.amount, 0),
+    pending_debts_owed_to_me_amount: scopedDebts
+      .filter((d) => d.direction === 'owed_to_me')
+      .reduce((s, d) => s + d.amount, 0),
+    active_goals_count: scopedGoals.length,
     investments_total: scopedInvestments.reduce(
       (s, i) => s + i.current_position,
       0,
@@ -518,6 +569,7 @@ export const mockApi = {
       amount: number
       type: 'income' | 'expense'
       date: string
+      goal_id?: string | null
     },
   ): Promise<StatementEntry> {
     await delay()
@@ -526,11 +578,33 @@ export const mockApi = {
       context_id: contextId,
       origin: 'manual',
       bill_id: null,
+      goal_id: payload.goal_id ?? null,
       transfer_pair_id: null,
       recurring_transaction_id: null,
-      ...payload,
+      account_id: payload.account_id,
+      category_id: payload.category_id,
+      description: payload.description,
+      amount: payload.amount,
+      type: payload.type,
+      date: payload.date,
     }
     transactions = [...transactions, row]
+    if (payload.goal_id) {
+      goals = goals.map((goal) => {
+        if (goal.id !== payload.goal_id) return goal
+        const current = goal.current_amount + payload.amount
+        const percent = Math.min(
+          100,
+          Math.round((current / goal.target_amount) * 1000) / 10,
+        )
+        return {
+          ...goal,
+          current_amount: current,
+          percent_complete: percent,
+          status: current >= goal.target_amount ? 'completed' : goal.status,
+        }
+      })
+    }
     return row
   },
 
@@ -621,6 +695,7 @@ export const mockApi = {
       date: payload.occurred_at,
       origin: 'manual',
       bill_id: null,
+      goal_id: null,
       transfer_pair_id: pair,
       recurring_transaction_id: null,
     }
@@ -985,5 +1060,261 @@ export const mockApi = {
   async deleteBoletoPasswordRule(ruleId: string): Promise<void> {
     await delay()
     boletoPasswordRules = boletoPasswordRules.filter((row) => row.id !== ruleId)
+  },
+
+  async listGoals(contextId: string): Promise<Goal[]> {
+    await delay()
+    return byContext(goals, contextId).map(({ context_id: _c, ...row }) => row)
+  },
+
+  async createGoal(
+    contextId: string,
+    payload: {
+      name: string
+      target_amount: number
+      target_date: string | null
+      notes: string | null
+    },
+  ): Promise<Goal> {
+    await delay()
+    const row: Goal & { context_id: string } = {
+      id: id('goal'),
+      context_id: contextId,
+      current_amount: 0,
+      percent_complete: 0,
+      status: 'active',
+      ...payload,
+    }
+    goals = [...goals, row]
+    const { context_id: _c, ...rest } = row
+    return rest
+  },
+
+  async updateGoal(
+    contextId: string,
+    goalId: string,
+    payload: {
+      name: string
+      target_amount: number
+      target_date: string | null
+      notes: string | null
+    },
+  ): Promise<Goal> {
+    await delay()
+    const index = goals.findIndex(
+      (row) => row.context_id === contextId && row.id === goalId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const current = goals[index]!
+    const percent = Math.min(
+      100,
+      Math.round((current.current_amount / payload.target_amount) * 1000) / 10,
+    )
+    const row = { ...current, ...payload, percent_complete: percent }
+    goals = goals.map((item, i) => (i === index ? row : item))
+    const { context_id: _c, ...rest } = row
+    return rest
+  },
+
+  async deleteGoal(contextId: string, goalId: string): Promise<void> {
+    await delay()
+    goals = goals.filter(
+      (row) => !(row.context_id === contextId && row.id === goalId),
+    )
+  },
+
+  async simulateInstallmentPurchase(
+    _contextId: string,
+    payload: {
+      amount: number
+      installments: number
+      cash_price: number | null
+    },
+  ): Promise<InstallmentPurchaseSimulation> {
+    await delay()
+    const installment = Math.round((payload.amount / payload.installments) * 100) / 100
+    const free = 4000
+    const percent = Math.round((installment / free) * 1000) / 10
+    const status = percent > 40 ? 'red' : percent > 30 ? 'yellow' : 'green'
+    return {
+      installment_amount: installment,
+      free_budget: free,
+      commitment_percent: percent,
+      status,
+      fits_now: percent <= 30,
+      fits_from_month: percent <= 30 ? '2026-08' : '2026-10',
+      tightest_month: {
+        month: '2026-09',
+        free_budget: 2800,
+        commitment_percent: Math.round((installment / 2800) * 1000) / 10,
+      },
+      total_cost:
+        payload.cash_price === null
+          ? null
+          : Math.round((payload.amount - payload.cash_price) * 100) / 100,
+      annual_cet: payload.cash_price === null ? null : 18.5,
+    }
+  },
+
+  async getCashFlow(_contextId: string) {
+    await delay()
+    return {
+      horizons: [
+        { days: 7 as const, income: 0, expense: 650, projected_balance: 3600.4 },
+        { days: 30 as const, income: 8500, expense: 2100, projected_balance: 10650.4 },
+        { days: 90 as const, income: 25500, expense: 6400, projected_balance: 23350.4 },
+      ],
+    }
+  },
+
+  async getDashboardEvolution(
+    contextId: string | 'consolidated',
+    months: number,
+  ): Promise<EvolutionPoint[]> {
+    await delay()
+    const ids =
+      contextId === 'consolidated' ? contexts.map((c) => c.id) : [contextId]
+    const now = new Date(2026, 7, 1)
+    const series: EvolutionPoint[] = []
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
+      const scoped = transactions.filter(
+        (t) => ids.includes(t.context_id) && t.date.startsWith(key),
+      )
+      const income = scoped
+        .filter((t) => t.type === 'income')
+        .reduce((s, t) => s + t.amount, 0)
+      const expense = scoped
+        .filter((t) => t.type === 'expense')
+        .reduce((s, t) => s + t.amount, 0)
+      series.push({ month: key, income, expense, balance: income - expense })
+    }
+    return series
+  },
+
+  async listDebts(contextId: string): Promise<Debt[]> {
+    await delay()
+    return byContext(debts, contextId).map(({ context_id: _c, ...row }) => row)
+  },
+
+  async createDebt(
+    contextId: string,
+    payload: {
+      description: string
+      amount: number
+      direction: Debt['direction']
+      counterparty: string | null
+      due_date: string | null
+      notes: string | null
+    },
+  ): Promise<Debt> {
+    await delay()
+    const row: Debt & { context_id: string } = {
+      id: id('debt'),
+      context_id: contextId,
+      status: 'pending',
+      settled_at: null,
+      ...payload,
+    }
+    debts = [...debts, row]
+    const { context_id: _c, ...rest } = row
+    return rest
+  },
+
+  async updateDebt(
+    contextId: string,
+    debtId: string,
+    payload: {
+      description: string
+      amount: number
+      counterparty: string | null
+      due_date: string | null
+      notes: string | null
+    },
+  ): Promise<Debt> {
+    await delay()
+    const index = debts.findIndex(
+      (row) => row.context_id === contextId && row.id === debtId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row = { ...debts[index]!, ...payload }
+    debts = debts.map((item, i) => (i === index ? row : item))
+    const { context_id: _c, ...rest } = row
+    return rest
+  },
+
+  async settleDebt(contextId: string, debtId: string): Promise<Debt> {
+    await delay()
+    const index = debts.findIndex(
+      (row) => row.context_id === contextId && row.id === debtId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const row = {
+      ...debts[index]!,
+      status: 'settled' as const,
+      settled_at: new Date().toISOString(),
+    }
+    debts = debts.map((item, i) => (i === index ? row : item))
+    const { context_id: _c, ...rest } = row
+    return rest
+  },
+
+  async deleteDebt(contextId: string, debtId: string): Promise<void> {
+    await delay()
+    debts = debts.filter(
+      (row) => !(row.context_id === contextId && row.id === debtId),
+    )
+  },
+
+  async payBill(
+    contextId: string,
+    billId: string,
+    payload: { account_id: string; occurred_at: string | null },
+  ): Promise<void> {
+    await delay()
+    const bill = bills.find(
+      (row) => row.context_id === contextId && row.id === billId,
+    )
+    if (!bill) throw Object.assign(new Error('Not found'), { status: 404 })
+    bills = bills.map((row) =>
+      row.id === billId ? { ...row, status: 'paid' as const } : row,
+    )
+    transactions = [
+      ...transactions,
+      {
+        id: id('tx'),
+        context_id: contextId,
+        account_id: payload.account_id,
+        category_id: bill.category_id,
+        description: bill.description,
+        amount: bill.amount,
+        type: bill.kind === 'receivable' ? 'income' : 'expense',
+        date: payload.occurred_at ?? new Date().toISOString().slice(0, 10),
+        origin: 'manual',
+        bill_id: billId,
+        goal_id: null,
+        transfer_pair_id: null,
+        recurring_transaction_id: null,
+      },
+    ]
+  },
+
+  async downloadBillsImportTemplate(): Promise<void> {
+    await delay()
+  },
+
+  async importBillsCsv(_file: File) {
+    await delay()
+    return { imported: 2, failed: [] }
+  },
+
+  async downloadStatementImportTemplate(): Promise<void> {
+    await delay()
+  },
+
+  async importStatementCsv(_file: File) {
+    await delay()
+    return { imported: 1, duplicates: 1, failed: [] }
   },
 }

@@ -30,7 +30,8 @@ async function request<T>(
   if (!headers.has('Accept')) {
     headers.set('Accept', 'application/json')
   }
-  if (init.body && !headers.has('Content-Type')) {
+  const isFormData = typeof FormData !== 'undefined' && init.body instanceof FormData
+  if (init.body && !isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json')
   }
 
@@ -73,6 +74,33 @@ export const http = {
       method: 'POST',
       body: body === undefined ? undefined : JSON.stringify(body),
     }),
+  postForm: <T>(path: string, body: FormData) =>
+    request<T>(path, { method: 'POST', body }),
+  download: async (path: string, fallbackName: string): Promise<void> => {
+    const headers = new Headers({ Accept: '*/*' })
+    const token = getToken()
+    if (token) headers.set('Authorization', `Bearer ${token}`)
+    const response = await fetch(`${API_BASE}${path}`, { headers })
+    if (!response.ok) {
+      const text = await response.text()
+      const body = text ? (JSON.parse(text) as unknown) : null
+      const message =
+        typeof body === 'object' &&
+        body !== null &&
+        'message' in body &&
+        typeof (body as { message: unknown }).message === 'string'
+          ? (body as { message: string }).message
+          : `HTTP ${response.status}`
+      throw new ApiError(response.status, message, body)
+    }
+    const blob = await response.blob()
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = fallbackName
+    link.click()
+    URL.revokeObjectURL(url)
+  },
   put: <T>(path: string, body?: unknown, init?: RequestInit) =>
     request<T>(path, {
       ...init,

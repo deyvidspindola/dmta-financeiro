@@ -1,6 +1,11 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
-import { mapBill, toCreateBillBody, toUpdateBillBody } from '@/api/mappers'
+import {
+  mapBill,
+  toCreateBillBody,
+  toPayBillBody,
+  toUpdateBillBody,
+} from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { Bill } from '@/types/models'
 
@@ -58,4 +63,21 @@ export async function deleteBill(
 ): Promise<void> {
   if (useMocks) return mockApi.deleteBill(contextId, billId)
   await http.delete(`/contexts/${contextId}/bills/${billId}`)
+}
+
+export type PayBillInput = {
+  account_id: string
+  occurred_at: string | null
+}
+
+export async function payBill(
+  contextId: string,
+  billId: string,
+  payload: PayBillInput,
+): Promise<void> {
+  if (useMocks) return mockApi.payBill(contextId, billId, payload)
+  await http.post(
+    `/contexts/${contextId}/bills/${billId}/pay`,
+    toPayBillBody(payload),
+  )
 }
