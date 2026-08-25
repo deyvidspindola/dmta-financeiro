@@ -54,4 +54,23 @@ return [
         'password' => env('BOLETO_MAILBOX_PASSWORD'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Bot do Telegram — lançamento rápido (F1, D-06, capítulo 6.4)
+    |--------------------------------------------------------------------------
+    |
+    | Desligado por padrão (mesmo padrão do agregador Pluggy, DT-05, e da
+    | caixa de boletos acima) — sem TELEGRAM_BOT_TOKEN no .env, o webhook
+    | aceita a chamada (responde 200, Telegram não reencaminha em loop) mas
+    | não processa nada. Uso pessoal (D-11): só o chat_id configurado é
+    | atendido — qualquer outro é ignorado em silêncio, sem criar conta ou
+    | vínculo novo.
+    */
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'webhook_secret' => env('TELEGRAM_WEBHOOK_SECRET'),
+        'allowed_chat_id' => env('TELEGRAM_ALLOWED_CHAT_ID'),
+        'user_email' => env('TELEGRAM_USER_EMAIL'),
+    ],
+
 ];

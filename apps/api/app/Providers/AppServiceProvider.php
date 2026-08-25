@@ -7,7 +7,9 @@ namespace App\Providers;
 use App\Domain\Capture\EmailBoletoReaderInterface;
 use App\Domain\Capture\PdfBoletoReader;
 use App\Domain\Capture\PdfPasswordResolverInterface;
+use App\Domain\Capture\QuickEntryChannelInterface;
 use App\Domain\Capture\RuleBasedPasswordResolver;
+use App\Domain\Capture\TelegramQuickEntryChannel;
 use Illuminate\Support\ServiceProvider;
 use Smalot\PdfParser\Config as PdfParserConfig;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -43,6 +45,10 @@ class AppServiceProvider extends ServiceProvider
         // Senha de boleto protegido (DT-07) — hoje só por regra cadastrada
         // (App\Models\BoletoPasswordRule), sem integração externa nenhuma.
         $this->app->bind(PdfPasswordResolverInterface::class, RuleBasedPasswordResolver::class);
+
+        // Lançamento rápido via bot do Telegram (capítulo 6.4) — conversa
+        // guiada sem NLP; trocar por algo mais esperto é mudar só esta linha.
+        $this->app->bind(QuickEntryChannelInterface::class, TelegramQuickEntryChannel::class);
 
         // Maioria dos boletos reais vem com o PDF marcado como "encrypted"
         // (restrição de impressão/cópia do gerador do banco), mas sem senha
