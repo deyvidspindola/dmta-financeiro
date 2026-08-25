@@ -15,6 +15,11 @@ import { CategoriesPage } from '@/pages/CategoriesPage'
 import { CompaniesPage } from '@/pages/CompaniesPage'
 import { InvestmentsPage } from '@/pages/InvestmentsPage'
 import { SecurityPage } from '@/pages/SecurityPage'
+import { GoalsPage } from '@/pages/GoalsPage'
+import { SimulatorPage } from '@/pages/SimulatorPage'
+import { DebtsPage } from '@/pages/DebtsPage'
+import { ImportBillsPage } from '@/pages/ImportBillsPage'
+import { ImportStatementPage } from '@/pages/ImportStatementPage'
 import { ToastHost } from '@/components/ToastHost'
 import { bindAuthToken } from '@/api'
 import { useAuthStore } from '@/store/authStore'
@@ -56,6 +61,11 @@ export default function App() {
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="companies" element={<CompaniesPage />} />
             <Route path="investments" element={<InvestmentsPage />} />
+            <Route path="goals" element={<GoalsPage />} />
+            <Route path="simulator" element={<SimulatorPage />} />
+            <Route path="debts" element={<DebtsPage />} />
+            <Route path="import-bills" element={<ImportBillsPage />} />
+            <Route path="import-statement" element={<ImportStatementPage />} />
             <Route path="security" element={<SecurityPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
