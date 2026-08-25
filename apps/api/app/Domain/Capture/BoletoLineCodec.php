@@ -27,35 +27,45 @@ use Carbon\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 25/08/2026
  */
 final class BoletoLineCodec
 {
     /**
-     * Data-base do fator de vencimento Febraban. O fator começa em 1000
-     * *nesta* data (não em zero dias depois dela) — por isso o decode
-     * soma `fator - 1000` dias, não `fator` dias direto.
+     * Data-base da sistemática clássica do fator de vencimento Febraban.
+     * O fator é a contagem de dias direto a partir daqui, sem deslocamento
+     * — o exemplo canônico usado em toda documentação de boleto é
+     * fator `1000` = `03/07/2000` (1000 dias depois de 07/10/1997).
      */
     private const BASE_DATE = '1997-10-07';
+
+    /**
+     * O campo de 4 dígitos da sistemática clássica esgota o intervalo
+     * (`9999`) em 21/02/2025 — {@see BASE_DATE} `+ 9999` dias. A partir do
+     * dia seguinte, a Febraban reiniciou a contagem em `1000` (não em
+     * zero) usando esta nova data-base; por isso, ao contrário da
+     * clássica, a sistemática atual subtrai {@see BASE_FACTOR}.
+     */
+    private const BASE_DATE_SINCE_2025 = '2025-02-22';
 
     private const BASE_FACTOR = 1000;
 
     /**
-     * O fator de vencimento clássico (4 dígitos) estourou por volta de
-     * fev/2025 — depois disso a Febraban mudou a sistemática de cálculo
-     * e eu não tenho confiança suficiente em como decodificar a versão
-     * nova pra arriscar devolver uma data errada silenciosamente. Por
-     * segurança, qualquer data decodificada fora desta janela plausível
-     * é tratada como não confiável e descartada (`dueDate: null`) — a
-     * pendência ainda é criada, só sem vencimento pré-preenchido.
+     * A linha digitável sozinha não diz qual das duas sistemáticas
+     * (clássica ou pós-22/02/2025) o fator usa — o mesmo número de 4
+     * dígitos decodifica pra datas completamente diferentes em cada uma.
+     * {@see resolveDueDate()} calcula as duas e fica com a mais perto de
+     * hoje: um boleto chega pra captura perto de ser emitido (ou vencido
+     * há pouco), nunca anos de distância. Fora desta janela (± 5 anos),
+     * nenhuma das duas é confiável — devolve `null` em vez de arriscar
+     * uma data errada; a pendência ainda é criada, só sem vencimento
+     * pré-preenchido.
      */
-    private const PLAUSIBLE_FROM = '2015-01-01';
-
-    private const PLAUSIBLE_UNTIL = '2025-06-01';
+    private const PLAUSIBLE_WINDOW_DAYS = 365 * 5;
 
     /**
      * @return array{amount: float|null, dueDate: string|null} `null` nos
@@ -74,18 +84,26 @@ final class BoletoLineCodec
         $fatorVencimento = (int) substr($barcode, 5, 4);
         $valorCentavos = (int) substr($barcode, 9, 10);
 
-        $dueDate = $fatorVencimento > 0
-            ? Carbon::parse(self::BASE_DATE)->addDays($fatorVencimento - self::BASE_FACTOR)
-            : null;
-
-        if ($dueDate !== null && ! $dueDate->between(self::PLAUSIBLE_FROM, self::PLAUSIBLE_UNTIL)) {
-            $dueDate = null;
-        }
-
         return [
             'amount' => $valorCentavos > 0 ? $valorCentavos / 100 : null,
-            'dueDate' => $dueDate?->toDateString(),
+            'dueDate' => $this->resolveDueDate($fatorVencimento)?->toDateString(),
         ];
+    }
+
+    /** @see PLAUSIBLE_WINDOW_DAYS */
+    private function resolveDueDate(int $fatorVencimento): ?Carbon
+    {
+        if ($fatorVencimento <= 0) {
+            return null;
+        }
+
+        $classic = Carbon::parse(self::BASE_DATE)->addDays($fatorVencimento);
+        $current = Carbon::parse(self::BASE_DATE_SINCE_2025)->addDays($fatorVencimento - self::BASE_FACTOR);
+
+        $now = Carbon::now();
+        $best = abs($now->diffInDays($classic)) <= abs($now->diffInDays($current)) ? $classic : $current;
+
+        return abs($now->diffInDays($best)) <= self::PLAUSIBLE_WINDOW_DAYS ? $best : null;
     }
 
     /** Remonta o código de barras (44 dígitos) a partir da linha digitável (47 dígitos), descartando os DVs de campo. */
