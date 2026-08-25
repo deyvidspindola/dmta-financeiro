@@ -34,6 +34,10 @@ final class PdfRewriter
         $maxObjectNumber = $pdf->objects === [] ? 0 : max(array_keys($pdf->objects));
 
         foreach ($pdf->objects as $number => $object) {
+            if (str_contains($object->dictBytes, '/Type /XRef')) {
+                continue;
+            }
+
             $offsets[$number] = strlen($buffer);
             $buffer .= $this->renderObject($object, $decryptedStreams[$number] ?? null);
         }

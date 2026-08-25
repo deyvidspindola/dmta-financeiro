@@ -22,7 +22,7 @@ use App\Exceptions\Domain\UnsupportedEncryptedPdfException;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class EncryptedPdfDecryptor
 {
@@ -77,7 +77,9 @@ final class EncryptedPdfDecryptor
         $decryptedStreams = [];
 
         foreach ($document->pdf->objects as $number => $object) {
-            if (! $object->isStream() || $number === $document->pdf->encryptObjectNumber) {
+            if (! $object->isStream()
+                || $number === $document->pdf->encryptObjectNumber
+                || str_contains($object->dictBytes, '/Type /XRef')) {
                 continue;
             }
 

@@ -29,25 +29,19 @@ use App\Exceptions\Domain\UnsupportedEncryptedPdfException;
  *
  * @since   23/08/2026
  *
- * @updated 23/08/2026
+ * @updated 25/08/2026
  */
 final class PdfObjectScanner
 {
-    /** @throws UnsupportedEncryptedPdfException Se não achar um trailer clássico (provável xref stream, PDF 1.5+ comprimido — fora de escopo). */
+    /** @throws UnsupportedEncryptedPdfException Se não achar trailer clássico nem dicionário /XRef. */
     public function scan(string $bytes): ScannedPdf
     {
         $headers = $this->findObjectHeaders($bytes);
         $trailerStart = $this->findTrailerKeyword($bytes);
-
-        if ($trailerStart === null) {
-            throw new UnsupportedEncryptedPdfException(
-                'nenhum `trailer` clássico encontrado (provável cross-reference stream de PDF 1.5+)',
-            );
-        }
-
-        $bodies = $this->splitBodies($bytes, $headers, $trailerStart);
+        $bodyEnd = $trailerStart ?? strlen($bytes);
+        $bodies = $this->splitBodies($bytes, $headers, $bodyEnd);
         $objects = $this->buildObjects($bodies);
-        $trailerBytes = $this->extractDict($bytes, $trailerStart);
+        $trailerBytes = $this->resolveTrailerBytes($bytes, $trailerStart, $objects);
 
         return new ScannedPdf(
             objects: $objects,
@@ -73,6 +67,28 @@ final class PdfObjectScanner
         }
 
         return $headers;
+    }
+
+    /**
+     * @param  array<int, ScannedPdfObject>  $objects
+     *
+     * @throws UnsupportedEncryptedPdfException Se não achar trailer clássico nem dicionário de xref stream.
+     */
+    private function resolveTrailerBytes(string $bytes, ?int $trailerStart, array $objects): string
+    {
+        if ($trailerStart !== null) {
+            return $this->extractDict($bytes, $trailerStart);
+        }
+
+        foreach (array_reverse($objects, true) as $object) {
+            if (str_contains($object->dictBytes, '/Type /XRef') || str_contains($object->dictBytes, '/Encrypt')) {
+                return $object->dictBytes;
+            }
+        }
+
+        throw new UnsupportedEncryptedPdfException(
+            'nenhum `trailer` clássico nem dicionário /XRef com /Encrypt (PDF 1.5+ comprimido demais pra este motor)',
+        );
     }
 
     private function findTrailerKeyword(string $bytes): ?int

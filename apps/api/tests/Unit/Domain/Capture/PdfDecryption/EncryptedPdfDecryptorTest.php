@@ -57,7 +57,7 @@ test('isEncrypted é falso para PDF sem /Encrypt', function () {
     expect(decryptor()->isEncrypted("%PDF-1.4\n1 0 obj\n<< >>\nendobj\n"))->toBeFalse();
 });
 
-test('estrutura sem trailer clássico (xref stream) lança UnsupportedEncryptedPdfException', function () {
+test('estrutura sem trailer clássico usa o dicionário /XRef como trailer', function () {
     $bytes = "%PDF-1.5\n1 0 obj\n<< /Type /XRef /Encrypt 2 0 R >>\nendobj\n";
 
     decryptor()->inspect($bytes);

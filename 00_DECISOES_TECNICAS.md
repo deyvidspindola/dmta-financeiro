@@ -89,17 +89,21 @@ pela skill) pra AES/MD5 — só o RC4 é implementado na mão (PHP não expõe
 RC4 de forma confiável via OpenSSL 3.x). Sem `composer require` novo.
 
 **Escopo aceito conscientemente (documentar se um PDF real quebrar):**
-- Só PDF clássico (tabela xref + trailer texto) — PDF 1.5+ com
-  cross-reference stream / object streams comprimidos lança
-  `UnsupportedEncryptedPdfException` (vira `password_required`, nunca
-  quebra o job).
-- Só RC4 e AES-128 (R2/R3/R4 — o handler "clássico", o mais comum em
-  gerador de boleto). **AES-256 (R5/R6, V5/AESV3) fica fora desta
-  rodada** — o "hardened hash" (Algoritmo 2.B da ISO 32000-2) é bem mais
-  intrincado e sem amostra real pra validar não compensa o risco de um
-  bug sutil de criptografia silencioso; um PDF R5/R6 cai em
-  `UnsupportedEncryptedPdfException` (`password_required`) em vez de
-  tentar e falhar sem avisar. Revisitar se aparecer um boleto real assim.
+- PDF clássico (tabela xref + trailer texto) — **e**, desde 25/08/2026,
+  cross-reference stream de PDF 1.5+ também: `PdfObjectScanner` cai pro
+  dicionário `/XRef` (que carrega `/Encrypt` do mesmo jeito que um
+  trailer clássico) quando não acha `trailer`; `EncryptedPdfDecryptor`/
+  `PdfRewriter` pulam esse objeto ao decifrar/reescrever (nunca vem
+  cifrado, e o PDF de saída usa trailer clássico, não o xref stream
+  velho). Só object streams comprimidos (`/Type /ObjStm`) continuam fora
+  — ainda lança `UnsupportedEncryptedPdfException`.
+- RC4, AES-128 **e, desde 25/08/2026, AES-256** (R2 a R6 — `V5`/`AESV3`
+  entra por `Revision6PasswordAuthenticator`, Algoritmo 2.A/2.B da ISO
+  32000-2 completo, incluindo o "hardened hash" iterativo do R6; R5 usa
+  SHA-256 direto). Tenta senha de usuário primeiro, senha de dono depois
+  (só R5/R6 — R2-R4 continua só senha de usuário, é o cenário real de
+  boleto). Teste unitário de ida-e-volta próprio, mesmo padrão do
+  restante deste domínio.
 - Só o **conteúdo dos streams** é descriptografado (é o que
   `PdfBoletoReader`/`smalot pdfparser` usa pra extrair texto). Strings
   literais dentro de dicionários (metadado tipo `/Title`, `/Author`)
