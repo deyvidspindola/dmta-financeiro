@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\BillController;
 use App\Http\Controllers\Api\V1\BillImportController;
 use App\Http\Controllers\Api\V1\BoletoPasswordRuleController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
+use App\Http\Controllers\Api\V1\CashFlowController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ConsolidatedController;
 use App\Http\Controllers\Api\V1\ContextController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\V1\PollBillCapturesController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
 use App\Http\Controllers\Api\V1\ShowTransactionController;
+use App\Http\Controllers\Api\V1\SimulationController;
 use App\Http\Controllers\Api\V1\StatementImportController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
@@ -124,6 +126,9 @@ Route::prefix('v1')->group(function () {
             Route::post('goals', [GoalController::class, 'store']);
             Route::patch('goals/{goal}', [GoalController::class, 'update']);
             Route::delete('goals/{goal}', [GoalController::class, 'destroy']);
+
+            Route::post('simulations/installment-purchase', [SimulationController::class, 'installmentPurchase']);
+            Route::get('cash-flow', [CashFlowController::class, 'show']);
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
