@@ -9,7 +9,11 @@ export type CaptureOrigin =
   | 'scanner'
   | 'aggregator'
 
-export type BillCaptureStatus = 'pending' | 'confirmed' | 'rejected'
+export type BillCaptureStatus =
+  | 'pending'
+  | 'confirmed'
+  | 'rejected'
+  | 'password_required'
 
 export interface BillCapture {
   id: string
@@ -19,6 +23,7 @@ export interface BillCapture {
   due_date: string | null
   beneficiary: string | null
   status: BillCaptureStatus
+  sender_email: string | null
   created_at: string | null
 }
 
