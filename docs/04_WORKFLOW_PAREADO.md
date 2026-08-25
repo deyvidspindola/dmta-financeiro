@@ -84,10 +84,70 @@ Cada PR mergeado em `main` deve ser puxado pelo outro lado
 
 - `claude/redirect-login-home` — redirecionar a home pra tela de login.
 - `cursor/work` — placeholder, renomeie (`git branch -m cursor/nome-real`)
-  quando souber em cima do que vai trabalhar.
-- Lado Claude Code: nenhum branch aberto no momento — os 5 PRs da
-  rodada de 22/08/2026 (#9-13) já foram mergeados em `main` e os
-  branches remotos apagados (ver seção abaixo).
+  pra `cursor/boleto-senha-pdf` pra pegar a tarefa abaixo.
+- Lado Claude Code: `claude/boleto-senha-pdf` (#20 back-end) já mergeado
+  em `main` em 25/08/2026 — a parte que falta é só `apps/web`, repassada
+  pro Cursor abaixo.
+
+## Tarefa pro Cursor — tela de boleto com senha (DT-07, 25/08/2026)
+
+Back-end já mergeado em `main` (`claude/boleto-senha-pdf`, commit
+`0218162`). Contrato completo abaixo pra não precisar ler o PHP —
+`00_DECISOES_TECNICAS.md` (DT-07) tem o raciocínio, se precisar.
+
+**O que muda:** um boleto de e-mail cujo PDF pede senha de verdade
+(não só "encrypted" sem senha real, isso já é tolerado) chega em
+`GET bill-captures?status=password_required` em vez de `pending`, com
+todos os campos de valor/vencimento/linha digitável `null` — só
+`sender_email` vem preenchido, pra sugerir cadastrar uma regra.
+
+1. **Tipo:** `BillCaptureStatus` (`apps/web/src/types/models.ts`) ganha
+   `'password_required'`; `BillCapture` ganha `sender_email: string | null`.
+2. **Estado visual na tela de pendências**
+   (`apps/web/src/pages/BillCapturesPage.tsx`): capturas
+   `password_required` aparecem com um badge tipo "aguardando senha" em
+   vez dos botões normais de confirmar/rejeitar.
+3. **Ação "informar senha manualmente"** — modal com um campo de senha,
+   chama:
+   ```
+   POST /api/v1/bill-captures/{capture}/unlock
+   body: { "password": "..." }
+   ```
+   - Sucesso → devolve o `PendingBillCaptureResource` com
+     `status: "pending"` e os campos preenchidos — mesmo shape de
+     `mapBillCapture`, some da lista de `password_required` e entra na
+     de `pending` normalmente.
+   - Erro 422 `{"message": "Senha incorreta — não foi possível abrir o
+     PDF do boleto com ela."}` → mostrar a mensagem, deixar tentar de
+     novo.
+   - Erro 422 `{"message": "Esta pendência não está aguardando
+     senha."}` → caso raro (outra aba já resolveu); só recarregar a
+     lista.
+4. **Oferta de "salvar como regra"** — só depois de um unlock com
+   sucesso, perguntar se quer salvar a senha usada como regra pro
+   remetente (`sender_email` da captura). Se sim:
+   ```
+   POST /api/v1/boleto-password-rules
+   body: {
+     "sender_domain": "<domínio depois do @ de sender_email>",
+     "rule_type": "fixed",
+     "rule_params": { "password": "<a senha que funcionou>" },
+     "label": "<opcional>"
+   }
+   ```
+   Não precisa oferecer os outros `rule_type` (`cpf_digits`,
+   `cnpj_digits`, `birth_date`) na tela agora — `fixed` cobre o caso de
+   "salvar a senha que acabei de digitar"; os outros existem pro
+   back-end, cadastro manual avançado fica pra outra rodada se
+   pedirem.
+5. **`apps/web/src/api/billCaptures.ts`** — seguir o padrão dos
+   endpoints existentes no arquivo (`http.post`, `useMocks` +
+   `mockApi`, mapeamento em `mappers.ts`): adicionar
+   `unlockBillCapture(captureId, password)` e
+   `saveBoletoPasswordRule(input)`.
+
+Branch: `cursor/boleto-senha-pdf`. PR pra `main` quando terminar, como
+sempre.
 
 ## Rodada de melhorias pedidas em produção (22/08/2026)
 
