@@ -64,9 +64,12 @@ Pra não pisar no mesmo arquivo, a F1 foi dividida por camada:
 
 - **Claude Code (API/backend, `dmta-financeiro-claude`):**
   1. ✅ Motor de obrigações recorrentes (DARF/DAS) — `claude/motor-obrigacoes-recorrentes`.
-  2. Simulador de compromisso (`SimulateInstallmentPurchase`, CET, cenários, fluxo de caixa, "mês mais apertado").
-  3. Metas financeiras (`CreateGoal`/`UpdateGoalProgress`).
-  4. Webhook do bot do Telegram (`POST /api/v1/webhooks/telegram`).
+  2. ✅ Simulador de compromisso (`SimulateInstallmentPurchase`, CET, fluxo de caixa, "mês mais apertado") — PR #26, 25/08/2026.
+  3. ✅ Metas financeiras (`CreateGoal`/`UpdateGoalProgress`) — PR #24, 25/08/2026.
+  4. ✅ Webhook do bot do Telegram — PR #27, 25/08/2026.
+
+  **Backend da F1 100% pronto.** Tarefa pro Cursor abaixo (25/08/2026)
+  cobre o que falta em `apps/web` pra consumir tudo isso.
 - **Cursor (`apps/web`, `dmta-financeiro-cursor`):**
   1. Responsividade mobile — prioridade, é o único acesso mobile
      enquanto a F3 (Expo) não existe. Breakpoint único em 860px
@@ -191,3 +194,97 @@ Excel/PDF de extrato, auditoria de performance, paridade com Mobills)
 está detalhado em `PROGRESSO.md`, seção "Backlog — 22/08/2026" — nenhum
 tem PR ainda, todos exigem mais decisão/calibração antes de implementar
 às cegas.
+
+## Tarefa pro Cursor — fechar a F1 no `apps/web` (25/08/2026)
+
+Backend da F1 100% pronto (motor de recorrência, simulador, metas,
+Telegram — ver seção acima). Nada aqui precisa de endpoint novo, é
+consumir o que já está de pé. Sugestão de ordem: 1 e 2 primeiro (telas
+novas, maior valor visível), 3–7 depois (menores, encaixam nas telas
+que já existem).
+
+### 1. Tela de metas financeiras — `/goals`
+
+- `GET/POST/PATCH/DELETE contexts/{context}/goals` — shape:
+  `{id, name, target_amount, current_amount, percent_complete,
+  target_date, status: "active"|"completed", notes}`.
+- Lista com barra de progresso (`percent_complete`, 0–100) e badge de
+  `status`. Modal de criar/editar com `name`, `target_amount`,
+  `target_date` (opcional), `notes` (opcional) — `current_amount` e
+  `status` nunca são editáveis à mão, só aparecem.
+- **Aportar numa meta**: não tem endpoint próprio — é o modal de
+  lançamento normal (`POST contexts/{context}/transactions`) ganhando
+  um campo opcional "destinar a uma meta?" (`goal_id`), igual já existe
+  pra boleto (`bill_id`). Um `<select>` com as metas `active` do
+  contexto resolve.
+
+### 2. Tela do simulador — `/simulator`
+
+- `POST contexts/{context}/simulations/installment-purchase` — body
+  `{amount, installments, cash_price?}` (`amount` é a soma de todas as
+  parcelas, não o valor à vista). Resposta:
+  `{installment_amount, free_budget, commitment_percent, status:
+  "green"|"yellow"|"red", fits_now, fits_from_month, tightest_month:
+  {month, free_budget, commitment_percent}, total_cost, annual_cet}`.
+  `total_cost`/`annual_cet` vêm `null` sem `cash_price`.
+- Formulário simples (valor, parcelas, valor à vista opcional) →
+  resultado com o semáforo (verde/amarelo/vermelho —
+  `status`), "cabe agora" ou "cabe a partir de `fits_from_month`", mês
+  mais apertado, custo total e CET quando existirem. **Comparação de
+  cenários** (capítulo 9.5) é rodar o formulário duas vezes lado a lado
+  na mesma tela — sem endpoint dedicado, é UI pura.
+- `GET contexts/{context}/cash-flow` → `{horizons: [{days: 7|30|90,
+  income, expense, projected_balance}]}` — tabela ou cards simples tipo
+  a Figura do capítulo 9.3 (Hoje / +7 / +30 / +90).
+
+### 3. Cards no dashboard
+
+`GET contexts/{context}/dashboard` (e `.../dashboard/consolidated`) já
+devolvem `active_goals_count` (novo) além do que já existia
+(`pending_bills_count`, `overdue_bills_count`,
+`pending_bills_amount`/`overdue_bills_amount`, `pending_debts_count`,
+`pending_debts_i_owe_amount`, `pending_debts_owed_to_me_amount`) — só
+faltam os cards em `apps/web`, os números já estão todos disponíveis.
+
+### 4. Gráfico de evolução mensal
+
+`GET contexts/{context}/dashboard/evolution` e
+`.../dashboard/consolidated/evolution` (`?months=`, 1–24, padrão 6) →
+`{series: [{month: "2026-08", income, expense, balance}]}`. Biblioteca
+100% client-side (mesmo critério do simulador).
+
+### 5. Tela de dívidas — `/debts`
+
+`GET/POST/PATCH/DELETE contexts/{context}/debts` +
+`POST .../debts/{debt}/settle`. Shape: `{id, description, counterparty,
+amount, direction: "i_owe"|"owed_to_me", status: "pending"|"settled",
+due_date, notes, settled_at}`. Lista simples + modal de cadastro, botão
+"quitar" chama `settle`. Nunca aparece como lançamento — é só registro
+de ciência (ver DT-15 se quiser o raciocínio completo).
+
+### 6. Botão "pagar" no boleto + campo "é recorrente?" no lançamento
+
+- `POST contexts/{context}/bills/{bill}/pay` — modal simples (conta +
+  data opcional).
+- No modal de lançamento: campo "é recorrente?" — quando marcado, `POST
+  contexts/{context}/recurring-transactions` em vez de `.../transactions`
+  (mesmos campos + `interval`/`start_date`/`end_date`). Não precisa de
+  tela dedicada.
+
+### 7. Importação de boletos/extrato via CSV
+
+- `GET .../bills/import/template` (baixa modelo) + `POST
+  .../bills/import` (upload) — resumo `{imported, failed}` por linha.
+- `GET accounts/{account}/statement-imports/template` + `POST
+  accounts/{account}/statement-imports` — mesmo padrão, com
+  deduplicação (reenviar o mesmo arquivo é seguro).
+
+### 8. Menores, encaixam no que já existe
+
+- `OriginBadge` também em `TransactionsPage` (só está em Bills/BillCaptures hoje).
+- Responsividade mobile — ainda pendente da rodada anterior, breakpoint
+  único em `apps/web/src/styles/global.css:667` (860px) não é
+  suficiente pra 360–430px reais.
+
+Cada PR mergeado deve ser puxado do outro lado (`git fetch && git
+rebase origin/main`) antes de continuar, como sempre.

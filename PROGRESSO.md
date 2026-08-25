@@ -1,5 +1,34 @@
 # Progresso do monorepo
 
+- **25/08/2026 — backend da F1 completo.** Os 3 itens que faltavam do
+  lado Claude Code (`docs/04_WORKFLOW_PAREADO.md`) saíram em 3 PRs
+  independentes, cada um com `make check` verde e validação por curl
+  documentada no próprio PR:
+  - **#24** — metas financeiras (capítulo 9.7, D-13): `Goal`
+    (`current_amount` soma automaticamente lançamentos marcados com
+    `goal_id`), `POST/PATCH/DELETE contexts/{context}/goals`,
+    `active_goals_count` no dashboard.
+  - **#26** — simulador de compromisso (capítulo 09, D-04): orçamento
+    livre, semáforo, "a partir de quando cabe", "mês mais apertado",
+    custo total + CET. `POST
+    contexts/{context}/simulations/installment-purchase` e `GET
+    contexts/{context}/cash-flow` (fluxo de caixa 7/30/90 dias).
+  - **#27** — bot do Telegram (capítulo 6.4, D-06): `POST
+    /api/v1/webhooks/telegram`, conversa guiada (valor → contexto →
+    categoria — ordem invertida frente ao documento de concepção,
+    justificada no PR), lançamento vai direto pro `RegisterTransaction`
+    (a própria conversa é a confirmação, diferente do e-mail que fica
+    pendente). **Precisa de ação manual sua pra funcionar de verdade:**
+    criar o bot via @BotFather e configurar `TELEGRAM_BOT_TOKEN`,
+    `TELEGRAM_WEBHOOK_SECRET`, `TELEGRAM_ALLOWED_CHAT_ID` e
+    `TELEGRAM_USER_EMAIL` (ver `.env.example`) — sem isso o webhook
+    fica de pé mas não processa nada. Sem bot real pra calibrar (mesma
+    ressalva do motor de e-mail).
+
+  Com isso, a F1 inteira do lado API está pronta — falta só o lado
+  `apps/web` consumir. Divisão detalhada em
+  `docs/04_WORKFLOW_PAREADO.md`.
+
 - **F0 / web + início F1:** SPA na `feature/f0-web-scaffold` (PR #1) —
   revisão de captura de boleto validada (incl. campos nulos) — ver
   `apps/web/PROGRESSO.md`.
