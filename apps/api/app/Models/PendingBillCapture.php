@@ -12,11 +12,14 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-#[Fillable(['origin', 'source_reference', 'linha_digitavel', 'amount', 'due_date', 'beneficiary', 'status', 'bill_id'])]
+#[Fillable(['origin', 'source_reference', 'sender_email', 'linha_digitavel', 'amount', 'due_date', 'beneficiary', 'encrypted_pdf_path', 'status', 'bill_id'])]
 /**
  * Boleto capturado por canal automático, aguardando revisão humana —
  * ver docblock da migration `create_pending_bill_captures_table` pra
- * entender por que não tem `context_id`.
+ * entender por que não tem `context_id`. Pode ficar temporariamente em
+ * `status: password_required` quando o PDF veio protegido por senha e
+ * nenhuma candidata abriu (DT-07) — `sender_email` e
+ * `encrypted_pdf_path` só importam nesse caso.
  *
  * @property-read CaptureOrigin $origin
  * @property-read CaptureStatus $status
@@ -25,11 +28,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/08/2026
  */
 class PendingBillCapture extends Model
 {
