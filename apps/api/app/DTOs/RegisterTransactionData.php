@@ -36,5 +36,6 @@ final readonly class RegisterTransactionData
         public ?int $billId = null,
         public CaptureOrigin $origin = CaptureOrigin::Manual,
         public ?int $recurringTransactionId = null,
+        public ?int $goalId = null,
     ) {}
 }

@@ -9,7 +9,9 @@ use App\Enums\BillStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\Goal;
 use App\Models\StatementEntry;
+use App\UseCases\Goal\UpdateGoalProgress;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -19,20 +21,25 @@ use Illuminate\Support\Facades\DB;
  *
  * Se `billId` vier preenchido, também marca o boleto correspondente como
  * pago — é assim que um boleto confirmado vira saldo movido, sem duplicar
- * a decisão de "isso já foi pago" em dois lugares.
+ * a decisão de "isso já foi pago" em dois lugares. Se `goalId` vier
+ * preenchido, soma o valor como aporte na meta ({@see UpdateGoalProgress})
+ * — o lançamento continua movendo saldo normalmente, marcar a meta é só
+ * rótulo (capítulo 9.7).
  *
  * @package App\UseCases\Transaction
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 25/08/2026
  */
 final class RegisterTransaction
 {
+    public function __construct(private readonly UpdateGoalProgress $updateGoalProgress) {}
+
     public function execute(RegisterTransactionData $data): StatementEntry
     {
         return DB::transaction(function () use ($data): StatementEntry {
@@ -42,6 +49,7 @@ final class RegisterTransaction
                 'category_id' => $data->categoryId,
                 'bill_id' => $data->billId,
                 'recurring_transaction_id' => $data->recurringTransactionId,
+                'goal_id' => $data->goalId,
                 'description' => $data->description,
                 'amount' => $data->amount,
                 'type' => $data->type->value,
@@ -60,6 +68,12 @@ final class RegisterTransaction
                     'status' => BillStatus::Paid->value,
                     'paid_at' => now(),
                 ]);
+            }
+
+            if ($data->goalId !== null) {
+                /** @var Goal $goal */
+                $goal = Goal::query()->whereKey($data->goalId)->lockForUpdate()->firstOrFail();
+                $this->updateGoalProgress->execute($goal, $data->amount);
             }
 
             return $entry;

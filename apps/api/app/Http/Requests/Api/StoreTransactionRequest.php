@@ -46,6 +46,7 @@ final class StoreTransactionRequest extends FormRequest
             'occurred_at' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
             'bill_id' => ['nullable', 'integer', 'exists:bills,id'],
+            'goal_id' => ['nullable', 'integer', 'exists:goals,id'],
         ];
     }
 }

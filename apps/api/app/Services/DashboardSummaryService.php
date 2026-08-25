@@ -7,6 +7,7 @@ namespace App\Services;
 use App\Enums\BillStatus;
 use App\Enums\DebtDirection;
 use App\Enums\DebtStatus;
+use App\Enums\GoalStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Context;
 use App\Models\Debt;
@@ -87,6 +88,7 @@ final class DashboardSummaryService
                 ->where('status', DebtStatus::Pending->value)
                 ->where('direction', DebtDirection::OwedToMe->value)
                 ->sum('amount'),
+            'active_goals_count' => $context->goals()->where('status', GoalStatus::Active->value)->count(),
         ];
     }
 
@@ -112,6 +114,7 @@ final class DashboardSummaryService
             'pending_debts_count' => (int) $perContext->sum('pending_debts_count'),
             'pending_debts_i_owe_amount' => (float) $perContext->sum('pending_debts_i_owe_amount'),
             'pending_debts_owed_to_me_amount' => (float) $perContext->sum('pending_debts_owed_to_me_amount'),
+            'active_goals_count' => (int) $perContext->sum('active_goals_count'),
         ];
 
         return ['contexts' => $perContext->values()->all(), 'totals' => $totals];

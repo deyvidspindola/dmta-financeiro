@@ -8,7 +8,9 @@ use App\Enums\BillStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\Goal;
 use App\Models\StatementEntry;
+use App\UseCases\Goal\UpdateGoalProgress;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -16,25 +18,29 @@ use Illuminate\Support\Facades\DB;
  * (sinal contrário ao de {@see RegisterTransaction}) e, se o lançamento
  * tinha um boleto vinculado, devolve o boleto pra `pending` — apagar o
  * pagamento é "desfazer que foi pago", não deixar o boleto órfão como
- * pago sem lançamento nenhum.
+ * pago sem lançamento nenhum. Se tinha meta vinculada, tira o valor do
+ * progresso ({@see UpdateGoalProgress}).
  *
  * Se o lançamento for uma perna de transferência ({@see TransferBetweenAccounts}),
  * apaga as duas pernas junto e reverte o saldo das duas contas — nunca
  * deixa uma transferência pela metade, mesmo quando as contas são de
- * contextos diferentes (PF ⇄ empresa).
+ * contextos diferentes (PF ⇄ empresa). Transferência não tem meta
+ * vinculada (`goal_id` só é aceito em lançamento simples).
  *
  * @package App\UseCases\Transaction
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 25/08/2026
  */
 final class DeleteTransaction
 {
+    public function __construct(private readonly UpdateGoalProgress $updateGoalProgress) {}
+
     public function execute(StatementEntry $entry): void
     {
         DB::transaction(function () use ($entry): void {
@@ -51,6 +57,12 @@ final class DeleteTransaction
                     'status' => BillStatus::Pending->value,
                     'paid_at' => null,
                 ]);
+            }
+
+            if ($entry->goal_id !== null) {
+                /** @var Goal $goal */
+                $goal = Goal::query()->whereKey($entry->goal_id)->lockForUpdate()->firstOrFail();
+                $this->updateGoalProgress->execute($goal, -(float) $entry->amount);
             }
 
             $entry->delete();

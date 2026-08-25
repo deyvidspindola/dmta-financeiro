@@ -33,6 +33,7 @@ final class StatementEntryResource extends JsonResource
             'account_id' => $this->account_id,
             'category_id' => $this->category_id,
             'bill_id' => $this->bill_id,
+            'goal_id' => $this->goal_id,
             'transfer_pair_id' => $this->transfer_pair_id,
             'recurring_transaction_id' => $this->recurring_transaction_id,
             'description' => $this->description,
