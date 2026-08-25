@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
-    'transfer_pair_id', 'recurring_transaction_id',
+    'transfer_pair_id', 'recurring_transaction_id', 'goal_id',
     'description', 'amount', 'type', 'occurred_at', 'origin',
 ])]
 /**
@@ -63,6 +63,12 @@ class StatementEntry extends Model
     public function bill(): BelongsTo
     {
         return $this->belongsTo(Bill::class);
+    }
+
+    /** Meta pra qual este lançamento conta como aporte, quando marcado (capítulo 9.7). */
+    public function goal(): BelongsTo
+    {
+        return $this->belongsTo(Goal::class);
     }
 
     /** A outra perna desta transferência (débito ⇄ crédito) — ver {@see TransferBetweenAccounts}. */

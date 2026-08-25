@@ -60,6 +60,7 @@ final class TransactionController extends Controller
             occurredAt: $request->string('occurred_at')->toString(),
             categoryId: $request->integer('category_id') ?: null,
             billId: $request->integer('bill_id') ?: null,
+            goalId: $request->integer('goal_id') ?: null,
         ));
 
         return new StatementEntryResource($entry);

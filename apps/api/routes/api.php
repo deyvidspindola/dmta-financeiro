@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\V1\ContextController;
 use App\Http\Controllers\Api\V1\CreditCardController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DebtController;
+use App\Http\Controllers\Api\V1\GoalController;
 use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
@@ -118,6 +119,11 @@ Route::prefix('v1')->group(function () {
             Route::patch('debts/{debt}', [DebtController::class, 'update']);
             Route::post('debts/{debt}/settle', [DebtController::class, 'settle']);
             Route::delete('debts/{debt}', [DebtController::class, 'destroy']);
+
+            Route::get('goals', [GoalController::class, 'index']);
+            Route::post('goals', [GoalController::class, 'store']);
+            Route::patch('goals/{goal}', [GoalController::class, 'update']);
+            Route::delete('goals/{goal}', [GoalController::class, 'destroy']);
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
