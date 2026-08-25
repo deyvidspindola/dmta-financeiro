@@ -342,6 +342,12 @@ select {
   opacity: 0.85;
 }
 
+.status-badge--password {
+  border-color: color-mix(in srgb, var(--warn, #b45309) 45%, var(--line));
+  background: color-mix(in srgb, #fef3c7 70%, transparent);
+  color: #92400e;
+}
+
 .bill-capture-preview {
   display: grid;
   gap: 0.5rem;

@@ -725,6 +725,7 @@ export function mapBillCapture(raw: {
   due_date: string | null
   beneficiary: string | null
   status: BillCaptureStatus
+  sender_email?: string | null
   created_at?: string | null
 }): BillCapture {
   return {
@@ -735,6 +736,7 @@ export function mapBillCapture(raw: {
     due_date: raw.due_date,
     beneficiary: raw.beneficiary,
     status: raw.status,
+    sender_email: raw.sender_email ?? null,
     created_at: raw.created_at ?? null,
   }
 }

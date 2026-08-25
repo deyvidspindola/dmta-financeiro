@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Check, X } from 'lucide-react'
+import { Check, KeyRound, X } from 'lucide-react'
 import { z } from 'zod'
+import { ApiError } from '@/api/http'
 import { billCapturesApi, categoriesApi } from '@/api'
 import { OriginBadge } from '@/components/OriginBadge'
 import { CategoryModal } from '@/components/CategoryModal'
@@ -40,8 +41,24 @@ const schema = z.object({
 
 type FormValues = z.infer<typeof schema>
 
+const unlockSchema = z.object({
+  password: z.string().min(1, strings.common.required),
+})
+
+type UnlockFormValues = z.infer<typeof unlockSchema>
+
+const NOT_WAITING_PASSWORD = 'Esta pendência não está aguardando senha.'
+
 function categoryTypeForDirection(direction: BillKind): MoneyDirection {
   return direction === 'receivable' ? 'income' : 'expense'
+}
+
+function senderDomain(email: string | null): string | null {
+  if (!email) return null
+  const at = email.lastIndexOf('@')
+  if (at < 0) return null
+  const domain = email.slice(at + 1).trim().toLowerCase()
+  return domain || null
 }
 
 export function BillCapturesPage() {
@@ -51,6 +68,12 @@ export function BillCapturesPage() {
   const [statusFilter, setStatusFilter] =
     useState<BillCaptureListStatus>('pending')
   const [confirming, setConfirming] = useState<BillCapture | null>(null)
+  const [unlocking, setUnlocking] = useState<BillCapture | null>(null)
+  const [saveRule, setSaveRule] = useState<{
+    capture: BillCapture
+    password: string
+  } | null>(null)
+  const [ruleLabel, setRuleLabel] = useState('')
   const [categoryOpen, setCategoryOpen] = useState(false)
 
   const orderedContexts = [...contexts].sort((a, b) => {
@@ -80,6 +103,11 @@ export function BillCapturesPage() {
       category_id: null,
       beneficiary: '',
     },
+  })
+
+  const unlockForm = useForm<UnlockFormValues>({
+    resolver: zodResolver(unlockSchema),
+    defaultValues: { password: '' },
   })
 
   const watchedDirection = form.watch('direction')
@@ -150,6 +178,56 @@ export function BillCapturesPage() {
     rejectMutation.mutate(captureId)
   }
 
+  function closeUnlock() {
+    setUnlocking(null)
+    unlockForm.reset({ password: '' })
+  }
+
+  const unlockMutation = useMutation({
+    mutationFn: (password: string) =>
+      billCapturesApi.unlockBillCapture(unlocking!.id, password),
+    onSuccess: async (_unlocked, password) => {
+      await queryClient.invalidateQueries({ queryKey: ['bill-captures'] })
+      toastSuccess(strings.billCaptures.unlocked)
+      const capture = unlocking
+      closeUnlock()
+      if (capture && senderDomain(capture.sender_email)) {
+        setSaveRule({ capture, password })
+        setRuleLabel('')
+      }
+    },
+    onError: async (err) => {
+      const message = getErrorMessage(err)
+      const notWaiting =
+        (err instanceof ApiError && err.status === 422 && message === NOT_WAITING_PASSWORD) ||
+        message === NOT_WAITING_PASSWORD
+      if (notWaiting) {
+        await queryClient.invalidateQueries({ queryKey: ['bill-captures'] })
+        closeUnlock()
+      }
+    },
+  })
+
+  const saveRuleMutation = useMutation({
+    mutationFn: () => {
+      const domain = senderDomain(saveRule!.capture.sender_email)
+      if (!domain) {
+        throw new Error(strings.common.error)
+      }
+      return billCapturesApi.saveBoletoPasswordRule({
+        sender_domain: domain,
+        rule_type: 'fixed',
+        rule_params: { password: saveRule!.password },
+        label: ruleLabel.trim() || undefined,
+      })
+    },
+    onSuccess: () => {
+      toastSuccess(strings.billCaptures.ruleSaved)
+      setSaveRule(null)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
   const pollMutation = useMutation({
     mutationFn: () => billCapturesApi.pollBillCaptures(),
     onSuccess: async ({ processed, captured }) => {
@@ -189,6 +267,9 @@ export function BillCapturesPage() {
             }
           >
             <option value="pending">{strings.billCaptures.statuses.pending}</option>
+            <option value="password_required">
+              {strings.billCaptures.statuses.password_required}
+            </option>
             <option value="confirmed">
               {strings.billCaptures.statuses.confirmed}
             </option>
@@ -257,6 +338,21 @@ export function BillCapturesPage() {
                       variant="danger"
                       onClick={() => handleReject(capture.id)}
                       disabled={rejectMutation.isPending}
+                    />
+                  </>
+                ) : capture.status === 'password_required' ? (
+                  <>
+                    <span className="origin-badge status-badge--password">
+                      {strings.billCaptures.waitingPassword}
+                    </span>
+                    <IconButton
+                      label={strings.billCaptures.unlock}
+                      icon={KeyRound}
+                      onClick={() => {
+                        unlockMutation.reset()
+                        setUnlocking(capture)
+                        unlockForm.reset({ password: '' })
+                      }}
                     />
                   </>
                 ) : (
@@ -365,6 +461,82 @@ export function BillCapturesPage() {
               </Button>
               <Button type="submit" disabled={confirmMutation.isPending}>
                 {strings.billCaptures.confirm}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {unlocking ? (
+        <Modal title={strings.billCaptures.unlockTitle} onClose={closeUnlock}>
+          <p className="muted small">{strings.billCaptures.unlockHint(unlocking.sender_email)}</p>
+          <form
+            className="form-grid"
+            onSubmit={unlockForm.handleSubmit((values) =>
+              unlockMutation.mutateAsync(values.password),
+            )}
+          >
+            <Field
+              label={strings.billCaptures.password}
+              error={unlockForm.formState.errors.password?.message}
+            >
+              <TextInput
+                type="password"
+                autoComplete="off"
+                {...unlockForm.register('password')}
+              />
+            </Field>
+            {unlockMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(unlockMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button type="button" variant="ghost" onClick={closeUnlock}>
+                {strings.common.cancel}
+              </Button>
+              <Button type="submit" disabled={unlockMutation.isPending}>
+                {strings.billCaptures.unlockSubmit}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {saveRule ? (
+        <Modal
+          title={strings.billCaptures.saveRuleTitle}
+          onClose={() => setSaveRule(null)}
+        >
+          <p className="muted small">
+            {strings.billCaptures.saveRuleHint(
+              senderDomain(saveRule.capture.sender_email) ?? '',
+            )}
+          </p>
+          <form
+            className="form-grid"
+            onSubmit={(event) => {
+              event.preventDefault()
+              saveRuleMutation.mutate()
+            }}
+          >
+            <Field label={strings.billCaptures.saveRuleLabel}>
+              <TextInput
+                value={ruleLabel}
+                onChange={(event) => setRuleLabel(event.target.value)}
+              />
+            </Field>
+            {saveRuleMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(saveRuleMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setSaveRule(null)}
+              >
+                {strings.billCaptures.saveRuleSkip}
+              </Button>
+              <Button type="submit" disabled={saveRuleMutation.isPending}>
+                {strings.billCaptures.saveRuleConfirm}
               </Button>
             </div>
           </form>
