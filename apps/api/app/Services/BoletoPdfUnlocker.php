@@ -10,6 +10,7 @@ use App\Domain\Capture\PdfPasswordResolverInterface;
 use App\Exceptions\Domain\UnsupportedEncryptedPdfException;
 use App\UseCases\Bill\CaptureLockedBillFromEmail;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Decide se um PDF de boleto de e-mail precisa de senha e, se precisar,
@@ -50,7 +51,7 @@ final class BoletoPdfUnlocker
             return $encryptedBytes;
         }
 
-        $decrypted = $this->tryCandidates($encryptedBytes, $senderEmail);
+        $decrypted = $this->tryCandidates($encryptedBytes, $captureReference, $senderEmail);
 
         if ($decrypted !== null) {
             return $decrypted;
@@ -101,11 +102,16 @@ final class BoletoPdfUnlocker
         return true;
     }
 
-    private function tryCandidates(string $encryptedBytes, ?string $senderEmail): ?string
+    private function tryCandidates(string $encryptedBytes, string $captureReference, ?string $senderEmail): ?string
     {
         try {
             $document = $this->decryptor->inspect($encryptedBytes);
-        } catch (UnsupportedEncryptedPdfException) {
+        } catch (UnsupportedEncryptedPdfException $e) {
+            Log::warning('BoletoPdfUnlocker: PDF cifrado com estrutura que o motor ainda não lê', [
+                'reference' => $captureReference,
+                'error' => $e->getMessage(),
+            ]);
+
             return null;
         }
 

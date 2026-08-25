@@ -65,7 +65,9 @@ final class PdfStringDecoder
             $hex .= '0';
         }
 
-        return hex2bin($hex) ?: '';
+        $decoded = hex2bin($hex);
+
+        return $decoded === false ? '' : $decoded;
     }
 
     /** Acompanha profundidade de parênteses e barras de escape pra achar o `)` de fechamento verdadeiro, depois resolve as sequências de escape padrão PDF. */
