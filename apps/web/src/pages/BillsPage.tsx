@@ -2,9 +2,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, Trash2, Banknote } from 'lucide-react'
 import { z } from 'zod'
-import { billsApi, categoriesApi, consolidatedApi } from '@/api'
+import { billsApi, accountsApi, categoriesApi, consolidatedApi } from '@/api'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate } from '@/lib/format'
 import { currentMonthKey, isInMonth } from '@/lib/dates'
@@ -73,6 +73,9 @@ export function BillsPage() {
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [period, setPeriod] = useState(currentMonthKey)
+  const [paying, setPaying] = useState<Bill | null>(null)
+  const [payAccountId, setPayAccountId] = useState('')
+  const [payDate, setPayDate] = useState('')
   const isConsolidated = activeScope === CONSOLIDATED
   const isEdit = editing !== null
 
@@ -117,6 +120,12 @@ export function BillsPage() {
     queryFn: () =>
       categoriesApi.listCategories(contextId!, { type: categoryType }),
     enabled: Boolean(contextId) && open,
+  })
+
+  const payAccountsQuery = useQuery({
+    queryKey: ['accounts', contextId],
+    queryFn: () => accountsApi.listAccounts(contextId!),
+    enabled: Boolean(contextId) && Boolean(paying),
   })
 
   function openCreate() {
@@ -189,7 +198,26 @@ export function BillsPage() {
     deleteMutation.mutate(billId)
   }
 
+  const payMutation = useMutation({
+    mutationFn: () =>
+      billsApi.payBill(contextId!, paying!.id, {
+        account_id: payAccountId,
+        occurred_at: payDate || null,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['bills'] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.bills.paid)
+      setPaying(null)
+      setPayAccountId('')
+      setPayDate('')
+    },
+  })
+
   const categories = categoriesQuery.data ?? []
+  const payAccounts = payAccountsQuery.data ?? []
 
   return (
     <div className="stack">
@@ -271,6 +299,18 @@ export function BillsPage() {
               </td>
               {!isConsolidated ? (
                 <td className="actions-cell">
+                  {bill.status === 'pending' || bill.status === 'overdue' ? (
+                    <IconButton
+                      label={strings.bills.pay}
+                      icon={Banknote}
+                      onClick={() => {
+                        setPaying(bill)
+                        setPayAccountId('')
+                        setPayDate('')
+                      }}
+                      disabled={!contextId}
+                    />
+                  ) : null}
                   <IconButton
                     label={strings.common.edit}
                     icon={Pencil}
@@ -385,6 +425,62 @@ export function BillsPage() {
               </Button>
               <Button type="submit" disabled={mutation.isPending}>
                 {strings.common.save}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {paying && contextId ? (
+        <Modal
+          title={strings.bills.payTitle}
+          onClose={() => setPaying(null)}
+        >
+          <form
+            className="form-grid"
+            onSubmit={(event) => {
+              event.preventDefault()
+              if (!payAccountId) return
+              payMutation.mutate()
+            }}
+          >
+            <p className="muted small">
+              {paying.description} · {formatDate(paying.due_date)}
+            </p>
+            <Field label={strings.bills.payAccount}>
+              <TextSelect
+                value={payAccountId}
+                onChange={(event) => setPayAccountId(event.target.value)}
+                required
+              >
+                <option value="">{strings.common.select}</option>
+                {payAccounts.map((account) => (
+                  <option key={account.id} value={account.id}>
+                    {account.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label={strings.bills.payDate}>
+              <TextInput
+                type="date"
+                value={payDate}
+                onChange={(event) => setPayDate(event.target.value)}
+              />
+            </Field>
+            {payMutation.isError ? (
+              <ErrorBanner message={getErrorMessage(payMutation.error)} />
+            ) : null}
+            <div className="form-actions">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setPaying(null)}
+              >
+                {strings.common.cancel}
+              </Button>
+              <Button type="submit" disabled={payMutation.isPending || !payAccountId}>
+                {strings.bills.pay}
               </Button>
             </div>
           </form>
