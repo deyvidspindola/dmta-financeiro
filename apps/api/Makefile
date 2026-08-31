@@ -20,7 +20,7 @@ APP     := $(DC) exec -T app
 NODE    := $(DC) exec -T node
 
 .DEFAULT_GOAL := help
-.PHONY: help setup up down restart logs shell db migrate fresh seed test lint stan standards check \
+.PHONY: help setup up down restart logs shell db migrate fresh seed test test-mysql lint lint-check stan standards check \
         queue schedule build assets ide clear deploy-staging
 
 # --- Ambiente ----------------------------------------------------------------
@@ -74,8 +74,14 @@ seed: ## Roda apenas os seeders
 # --- Qualidade -----------------------------------------------------------
 # Portão de qualidade antes de qualquer commit (ver CONVENTIONS.md).
 
-test: ## Roda a suíte de testes
+test: ## Roda a suíte de testes (sqlite :memory:, rápido)
 	$(APP) php artisan test
+
+test-mysql: ## Roda a suíte contra o MySQL do container — igual ao CI (pega only_full_group_by e afins)
+	$(DC) exec -T db mysql -uroot -psecret -e "CREATE DATABASE IF NOT EXISTS testing"
+	$(DC) exec -T -e DB_CONNECTION=mysql -e DB_HOST=db -e DB_PORT=3306 \
+		-e DB_DATABASE=testing -e DB_USERNAME=root -e DB_PASSWORD=secret \
+		app php artisan test
 
 lint: ## Aplica o PSR-12 com o Pint
 	$(APP) ./vendor/bin/pint
@@ -89,7 +95,7 @@ stan: ## Análise estática
 standards: ## Verifica os padrões descritos em CONVENTIONS.md
 	$(APP) php bin/check-standards.php
 
-check: lint-check standards stan test ## ★ Portão antes do commit
+check: lint-check standards stan test-mysql ## ★ Portão antes do commit (testes no MySQL, igual ao CI)
 	@echo ""
 	@echo "  \033[32m✓ tudo certo — pode commitar\033[0m"
 	@echo ""

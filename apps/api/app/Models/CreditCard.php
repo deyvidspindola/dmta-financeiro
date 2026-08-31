@@ -43,6 +43,12 @@ class CreditCard extends Model
         return $this->hasMany(CardInvoice::class);
     }
 
+    /** @return HasMany<CardPurchase, $this> */
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(CardPurchase::class);
+    }
+
     /**
      * Converte atributos para tipos de domínio.
      *

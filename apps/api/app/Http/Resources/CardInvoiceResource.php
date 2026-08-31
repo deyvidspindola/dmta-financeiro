@@ -30,6 +30,7 @@ final class CardInvoiceResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'credit_card_id' => $this->credit_card_id,
             // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
             'reference_month' => $this->reference_month->format('Y-m'),
             'total_amount' => (float) $this->total_amount,

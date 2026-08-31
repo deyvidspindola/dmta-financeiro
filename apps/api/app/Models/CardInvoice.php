@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 #[Fillable(['credit_card_id', 'reference_month', 'total_amount', 'status', 'due_date', 'paid_at'])]
@@ -41,6 +42,12 @@ class CardInvoice extends Model
     public function creditCard(): BelongsTo
     {
         return $this->belongsTo(CreditCard::class);
+    }
+
+    /** @return HasMany<CardPurchase, $this> */
+    public function purchases(): HasMany
+    {
+        return $this->hasMany(CardPurchase::class);
     }
 
     /** Se a fatura já foi paga. */
