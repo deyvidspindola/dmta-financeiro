@@ -6,9 +6,10 @@ namespace App\Exceptions\Domain;
 
 /**
  * Lançada ao tentar mover pra outro contexto um lançamento que é perna de
- * transferência ou está vinculado a um boleto — os dois casos exigem que
- * o outro lado (a perna par, ou o boleto) mude de contexto junto, o que
- * este fluxo simples não faz. Apague e recadastre no contexto certo.
+ * transferência, está vinculado a um boleto ou é aporte de uma meta — os
+ * três casos exigem que o outro lado (perna par, boleto, ou meta) mude de
+ * contexto junto, o que este fluxo simples não faz. Apague e recadastre
+ * no contexto certo.
  *
  * @package App\Exceptions\Domain
  *
@@ -25,7 +26,7 @@ final class TransactionNotMovableException extends DomainException
     public function __construct()
     {
         parent::__construct(
-            'Lançamentos de transferência ou vinculados a um boleto não podem ser movidos de contexto.',
+            'Lançamentos de transferência, vinculados a um boleto ou a uma meta não podem ser movidos de contexto.',
         );
     }
 }

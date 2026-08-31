@@ -44,6 +44,7 @@ final class UpdateTransactionRequest extends FormRequest
             'type' => ['required', Rule::in(['income', 'expense'])],
             'occurred_at' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
+            'goal_id' => ['nullable', 'integer', $this->existsInRouteContext('goals')],
         ];
     }
 }

@@ -9,7 +9,9 @@ use App\UseCases\Transaction\UpdateTransaction;
 
 /**
  * Entrada do caso de uso {@see UpdateTransaction}. `billId` não está
- * aqui de propósito — vínculo com boleto não muda por edição.
+ * aqui de propósito — vínculo com boleto não muda por edição. `goalId`
+ * pode mudar: trocar de meta, entrar numa meta ou sair de todas (nulo);
+ * o caso de uso reconcilia o progresso.
  *
  * @package App\DTOs
  *
@@ -30,5 +32,6 @@ final readonly class UpdateTransactionData
         public StatementEntryType $type,
         public string $occurredAt,
         public ?int $categoryId = null,
+        public ?int $goalId = null,
     ) {}
 }
