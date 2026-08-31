@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\V1\BillController;
 use App\Http\Controllers\Api\V1\BillImportController;
 use App\Http\Controllers\Api\V1\BoletoPasswordRuleController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
+use App\Http\Controllers\Api\V1\CardPurchaseController;
 use App\Http\Controllers\Api\V1\CashFlowController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ConsolidatedController;
@@ -156,6 +157,9 @@ Route::prefix('v1')->group(function () {
             Route::delete('credit-cards/{creditCard}', [CreditCardController::class, 'destroy']);
             Route::get('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'index']);
             Route::post('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'store']);
+            Route::get('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'index']);
+            Route::post('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'store']);
+            Route::delete('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'destroy']);
 
             Route::get('investments', [InvestmentController::class, 'index']);
             Route::post('investments', [InvestmentController::class, 'store']);
