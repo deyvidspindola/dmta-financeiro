@@ -30,4 +30,25 @@ class StatementEntryFactory extends Factory
             'origin' => CaptureOrigin::Manual->value,
         ];
     }
+
+    /** Amarra o lançamento a uma conta existente, herdando o `context_id` dela. */
+    public function forAccount(Account $account): static
+    {
+        return $this->state(fn (): array => [
+            'context_id' => $account->context_id,
+            'account_id' => $account->id,
+        ]);
+    }
+
+    /** Lançamento de receita. */
+    public function income(): static
+    {
+        return $this->state(fn (): array => ['type' => StatementEntryType::Income->value]);
+    }
+
+    /** Lançamento de despesa. */
+    public function expense(): static
+    {
+        return $this->state(fn (): array => ['type' => StatementEntryType::Expense->value]);
+    }
 }
