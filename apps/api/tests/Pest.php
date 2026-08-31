@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 /*
@@ -44,7 +46,16 @@ expect()->extend('toBeOne', function () {
 |
 */
 
-function something()
+/**
+ * Autentica um usuário no guard da API (Sanctum) com a habilidade `api`,
+ * a mesma que as rotas de `/api/v1` exigem. Cria um usuário novo quando
+ * nenhum é passado. Devolve o usuário autenticado.
+ */
+function actingAsApi(?User $user = null): User
 {
-    // ..
+    $user ??= User::factory()->create();
+
+    Sanctum::actingAs($user, ['api']);
+
+    return $user;
 }
