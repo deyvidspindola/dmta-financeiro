@@ -4,15 +4,17 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Api\Concerns\ScopedExists;
 use App\UseCases\Transaction\TransferBetweenAccounts;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Validação de `POST /api/v1/contexts/{context}/transactions` (lançamento
- * manual — F0). `account_id`, `category_id` e `bill_id` são checados
- * quanto a pertencer ao mesmo contexto no controller, não aqui (regra de
- * negócio, não formato de campo).
+ * manual — F0). `account_id`, `category_id`, `bill_id` e `goal_id` são
+ * restritos ao `{context}` da rota ({@see ScopedExists}) — sem isso, um
+ * id de conta/boleto de outro contexto do usuário era aceito e movia o
+ * saldo dele.
  *
  * `transfer` não é um tipo aceito aqui — transferência tem endpoint
  * próprio (`POST .../transfers`, {@see TransferBetweenAccounts}),
@@ -30,6 +32,8 @@ use Illuminate\Validation\Rule;
  */
 final class StoreTransactionRequest extends FormRequest
 {
+    use ScopedExists;
+
     public function authorize(): bool
     {
         return true;
@@ -39,14 +43,14 @@ final class StoreTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'account_id' => ['required', 'integer', $this->existsInRouteContext('accounts')],
             'description' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'type' => ['required', Rule::in(['income', 'expense'])],
             'occurred_at' => ['required', 'date'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
-            'bill_id' => ['nullable', 'integer', 'exists:bills,id'],
-            'goal_id' => ['nullable', 'integer', 'exists:goals,id'],
+            'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
+            'bill_id' => ['nullable', 'integer', $this->existsInRouteContext('bills')],
+            'goal_id' => ['nullable', 'integer', $this->existsInRouteContext('goals')],
         ];
     }
 }

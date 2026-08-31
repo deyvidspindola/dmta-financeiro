@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Api\Concerns\ScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Validação de `PATCH /api/v1/contexts/{context}/transactions/{transaction}`.
- * `transfer` não é um tipo aceito aqui — transferência tem endpoint
- * próprio (`POST .../transfers`), uma única perna não representa ela.
+ * `account_id` e `category_id` são restritos ao `{context}` da rota
+ * ({@see ScopedExists}). `transfer` não é um tipo aceito aqui —
+ * transferência tem endpoint próprio (`POST .../transfers`), uma única
+ * perna não representa ela.
  *
  * @package App\Http\Requests\Api
  *
@@ -24,6 +27,8 @@ use Illuminate\Validation\Rule;
  */
 final class UpdateTransactionRequest extends FormRequest
 {
+    use ScopedExists;
+
     public function authorize(): bool
     {
         return true;
@@ -33,12 +38,12 @@ final class UpdateTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'account_id' => ['required', 'integer', 'exists:accounts,id'],
+            'account_id' => ['required', 'integer', $this->existsInRouteContext('accounts')],
             'description' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'type' => ['required', Rule::in(['income', 'expense'])],
             'occurred_at' => ['required', 'date'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
         ];
     }
 }

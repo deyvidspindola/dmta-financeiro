@@ -4,12 +4,14 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Api\Concerns\ScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
  * Validação de `POST /api/v1/contexts/{context}/recurring-bills`.
- * `end_date` nulo = recorrência indefinida.
+ * `end_date` nulo = recorrência indefinida. `category_id` restrito ao
+ * `{context}` da rota ({@see ScopedExists}).
  *
  * @package App\Http\Requests\Api
  *
@@ -23,6 +25,8 @@ use Illuminate\Validation\Rule;
  */
 final class StoreRecurringBillRequest extends FormRequest
 {
+    use ScopedExists;
+
     public function authorize(): bool
     {
         return true;
@@ -38,7 +42,7 @@ final class StoreRecurringBillRequest extends FormRequest
             'interval' => ['required', Rule::in(['weekly', 'monthly', 'yearly'])],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
             'reminder_days_before' => ['nullable', 'integer', 'min:0', 'max:60'],
         ];
     }

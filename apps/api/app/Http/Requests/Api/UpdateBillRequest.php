@@ -4,10 +4,12 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Http\Requests\Api\Concerns\ScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
  * Validação de `PATCH /api/v1/contexts/{context}/bills/{bill}`.
+ * `category_id` restrito ao `{context}` da rota ({@see ScopedExists}).
  *
  * @package App\Http\Requests\Api
  *
@@ -21,6 +23,8 @@ use Illuminate\Foundation\Http\FormRequest;
  */
 final class UpdateBillRequest extends FormRequest
 {
+    use ScopedExists;
+
     public function authorize(): bool
     {
         return true;
@@ -33,7 +37,7 @@ final class UpdateBillRequest extends FormRequest
             'description' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'due_date' => ['required', 'date'],
-            'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
             'barcode' => ['nullable', 'string', 'max:60'],
             'beneficiary' => ['nullable', 'string', 'max:150'],
         ];
