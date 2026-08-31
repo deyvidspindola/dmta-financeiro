@@ -5,34 +5,40 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterTransactionData;
+use App\DTOs\UpdateTransactionData;
 use App\Enums\StatementEntryType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreTransactionRequest;
+use App\Http\Requests\Api\UpdateTransactionRequest;
 use App\Http\Resources\StatementEntryResource;
 use App\Models\Context;
 use App\Models\StatementEntry;
 use App\UseCases\Transaction\DeleteTransaction;
 use App\UseCases\Transaction\RegisterTransaction;
+use App\UseCases\Transaction\UpdateTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Lançamentos manuais numa conta (F0) — o mesmo endpoint que F1 vai
- * reaproveitar para e-mail/Telegram, só trocando `origin`. Visualizar é
- * {@see ShowTransactionController}, editar é {@see UpdateTransactionController},
- * mover pra outro contexto é {@see MoveTransactionController},
- * transferência entre contas é {@see TransferController} — cada um tem
- * regra própria demais pra caber aqui sem estourar o limite de linhas.
+ * Lançamentos manuais numa conta (F0), o mesmo endpoint que a F1 reusa
+ * para e-mail/Telegram trocando só `origin`. Cobre o CRUD do recurso:
+ * listar, ver, criar, editar e apagar.
+ *
+ * NÃO mora aqui: transferência entre contas ({@see TransferController},
+ * recurso distinto com duas pernas), mover lançamento de contexto
+ * ({@see MoveTransactionController}, ação customizada com resolução de
+ * contexto do usuário) e toda regra de saldo/meta/boleto, que fica nos
+ * casos de uso em `app/UseCases/Transaction/`.
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 31/08/2026
  */
 final class TransactionController extends Controller
 {
@@ -44,6 +50,14 @@ final class TransactionController extends Controller
             ->get();
 
         return StatementEntryResource::collection($entries);
+    }
+
+    /** `transferPair` eager-load é pro "de onde → pra onde" — ver StatementEntryResource::transferDetails(). */
+    public function show(Context $context, StatementEntry $transaction): StatementEntryResource
+    {
+        $transaction->loadMissing('transferPair.account.context');
+
+        return new StatementEntryResource($transaction);
     }
 
     public function store(
@@ -61,6 +75,24 @@ final class TransactionController extends Controller
             categoryId: $request->integer('category_id') ?: null,
             billId: $request->integer('bill_id') ?: null,
             goalId: $request->integer('goal_id') ?: null,
+        ));
+
+        return new StatementEntryResource($entry);
+    }
+
+    public function update(
+        UpdateTransactionRequest $request,
+        Context $context,
+        StatementEntry $transaction,
+        UpdateTransaction $useCase,
+    ): StatementEntryResource {
+        $entry = $useCase->execute($transaction, new UpdateTransactionData(
+            accountId: $request->integer('account_id'),
+            description: $request->string('description')->toString(),
+            amount: (float) $request->input('amount'),
+            type: StatementEntryType::from($request->string('type')->toString()),
+            occurredAt: $request->string('occurred_at')->toString(),
+            categoryId: $request->integer('category_id') ?: null,
         ));
 
         return new StatementEntryResource($entry);

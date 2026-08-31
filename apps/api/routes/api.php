@@ -23,14 +23,12 @@ use App\Http\Controllers\Api\V1\PayBillController;
 use App\Http\Controllers\Api\V1\PollBillCapturesController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
-use App\Http\Controllers\Api\V1\ShowTransactionController;
 use App\Http\Controllers\Api\V1\SimulationController;
 use App\Http\Controllers\Api\V1\StatementImportController;
 use App\Http\Controllers\Api\V1\TelegramWebhookController;
 use App\Http\Controllers\Api\V1\TransactionController;
 use App\Http\Controllers\Api\V1\TransferController;
 use App\Http\Controllers\Api\V1\UnlockBillCaptureController;
-use App\Http\Controllers\Api\V1\UpdateTransactionController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -137,8 +135,8 @@ Route::prefix('v1')->group(function () {
 
             Route::get('transactions', [TransactionController::class, 'index']);
             Route::post('transactions', [TransactionController::class, 'store']);
-            Route::get('transactions/{transaction}', [ShowTransactionController::class, 'show']);
-            Route::patch('transactions/{transaction}', [UpdateTransactionController::class, 'update']);
+            Route::get('transactions/{transaction}', [TransactionController::class, 'show']);
+            Route::patch('transactions/{transaction}', [TransactionController::class, 'update']);
             Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy']);
             Route::post('transactions/{transaction}/move', [MoveTransactionController::class, 'store']);
 
