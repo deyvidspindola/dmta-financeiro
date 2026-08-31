@@ -54,11 +54,16 @@ return new class extends Migration
     /** Aborta a migration se `$table` já tem duplicata em `($ruleColumn, $dateColumn)`. */
     private function guardAgainstDuplicates(string $table, string $ruleColumn, string $dateColumn): void
     {
+        // select só das colunas do group by — `select *` + group by quebra
+        // no MySQL com only_full_group_by (o CI roda MySQL, não sqlite).
         $hasDuplicates = DB::table($table)
+            ->select($ruleColumn, $dateColumn)
             ->whereNotNull($ruleColumn)
             ->groupBy($ruleColumn, $dateColumn)
             ->havingRaw('COUNT(*) > 1')
-            ->exists();
+            ->limit(1)
+            ->get()
+            ->isNotEmpty();
 
         if ($hasDuplicates) {
             throw new RuntimeException(
