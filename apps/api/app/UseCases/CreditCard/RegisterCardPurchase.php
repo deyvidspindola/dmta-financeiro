@@ -4,30 +4,34 @@ declare(strict_types=1);
 
 namespace App\UseCases\CreditCard;
 
+use App\Domain\CreditCard\InstallmentPlan;
 use App\Domain\CreditCard\InvoiceAllocator;
 use App\DTOs\RegisterCardPurchaseData;
-use App\Enums\CardInvoiceStatus;
-use App\Models\CardInvoice;
 use App\Models\CardPurchase;
 use App\Models\CreditCard;
+use App\Services\CardInvoiceResolver;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Lança uma compra num cartão: resolve a fatura pelo dia de fechamento
- * ({@see InvoiceAllocator}), cria/reaproveita a {@see CardInvoice} `open`
- * daquele mês de referência e soma o valor no `total_amount` dela — o
- * mesmo padrão de coluna materializada de `accounts.balance`.
+ * ({@see InvoiceAllocator} + {@see CardInvoiceResolver}) e soma o valor
+ * no `total_amount` dela (coluna materializada, mesmo padrão de
+ * `accounts.balance`).
  *
- * O que NÃO faz: não move saldo de conta nenhuma (compra no cartão só
- * vira saldo quando a fatura é paga); não fecha nem parcela a fatura
- * (fases seguintes).
+ * `installments > 1` divide a compra em N parcelas ({@see InstallmentPlan}),
+ * uma por fatura de mês consecutivo, todas com o mesmo `installment_group`
+ * — devolve sempre a primeira parcela.
+ *
+ * O que NÃO faz: não move saldo de conta (compra no cartão só vira saldo
+ * quando a fatura é paga, {@see PayCardInvoice}); não fecha a fatura.
  *
  * @package App\UseCases\CreditCard
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
@@ -35,7 +39,11 @@ use Illuminate\Support\Facades\DB;
  */
 final class RegisterCardPurchase
 {
-    public function __construct(private readonly InvoiceAllocator $allocator) {}
+    public function __construct(
+        private readonly InvoiceAllocator $allocator,
+        private readonly InstallmentPlan $plan,
+        private readonly CardInvoiceResolver $invoices,
+    ) {}
 
     public function execute(RegisterCardPurchaseData $data): CardPurchase
     {
@@ -48,36 +56,58 @@ final class RegisterCardPurchase
                 (int) $card->closing_day,
                 (int) $card->due_day,
             );
-            $referenceMonth = $window['reference_month']->toDateString();
 
-            // whereDate: a coluna reference_month é `date`, comparar como
-            // string crua não bate com o valor materializado pelo cast.
-            $invoice = CardInvoice::query()
-                ->where('credit_card_id', $card->id)
-                ->whereDate('reference_month', $referenceMonth)
-                ->lockForUpdate()
-                ->first()
-                ?? CardInvoice::create([
-                    'credit_card_id' => $card->id,
-                    'reference_month' => $referenceMonth,
-                    'status' => CardInvoiceStatus::Open->value,
-                    'due_date' => $window['due_date']->toDateString(),
-                    'total_amount' => 0,
-                ]);
+            $count = max(1, $data->installments);
+            $amounts = $this->plan->split($data->amount, $count);
+            $group = $count > 1 ? (string) Str::uuid() : null;
 
-            $purchase = CardPurchase::create([
-                'context_id' => $data->contextId,
-                'credit_card_id' => $card->id,
-                'card_invoice_id' => $invoice->id,
-                'category_id' => $data->categoryId,
-                'description' => $data->description,
-                'amount' => $data->amount,
-                'occurred_at' => $data->occurredAt,
-            ]);
+            $first = $this->addInstallment($data, $card, $window, 1, $count, $amounts[0], $group);
 
-            $invoice->increment('total_amount', $data->amount);
+            for ($k = 1; $k < $count; $k++) {
+                $this->addInstallment($data, $card, $window, $k + 1, $count, $amounts[$k], $group);
+            }
 
-            return $purchase;
+            return $first;
         });
+    }
+
+    /**
+     * Cria a parcela `$number` na fatura `$number - 1` meses após a janela
+     * da primeira parcela e soma o valor na fatura.
+     *
+     * @param  array{reference_month: Carbon, due_date: Carbon}  $window
+     */
+    private function addInstallment(
+        RegisterCardPurchaseData $data,
+        CreditCard $card,
+        array $window,
+        int $number,
+        int $total,
+        float $amount,
+        ?string $group,
+    ): CardPurchase {
+        $offset = $number - 1;
+        $invoice = $this->invoices->forMonth(
+            $card,
+            $window['reference_month']->copy()->addMonthsNoOverflow($offset),
+            $window['due_date']->copy()->addMonthsNoOverflow($offset),
+        );
+
+        $purchase = CardPurchase::create([
+            'context_id' => $data->contextId,
+            'credit_card_id' => $card->id,
+            'card_invoice_id' => $invoice->id,
+            'category_id' => $data->categoryId,
+            'description' => $data->description,
+            'amount' => $amount,
+            'occurred_at' => $data->occurredAt,
+            'installment_number' => $total > 1 ? $number : null,
+            'installment_total' => $total > 1 ? $total : null,
+            'installment_group' => $group,
+        ]);
+
+        $invoice->increment('total_amount', $amount);
+
+        return $purchase;
     }
 }

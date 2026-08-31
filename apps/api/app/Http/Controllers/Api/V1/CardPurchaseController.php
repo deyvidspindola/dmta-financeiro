@@ -59,18 +59,21 @@ final class CardPurchaseController extends Controller
             amount: (float) $request->input('amount'),
             occurredAt: $request->string('occurred_at')->toString(),
             categoryId: $request->integer('category_id') ?: null,
+            installments: $request->integer('installments') ?: 1,
         ));
 
         return new CardPurchaseResource($purchase);
     }
 
+    /** `?scope=group` apaga a compra parcelada inteira, não só esta parcela. */
     public function destroy(
+        Request $request,
         Context $context,
         CreditCard $creditCard,
         CardPurchase $purchase,
         DeleteCardPurchase $useCase,
     ): JsonResponse {
-        $useCase->execute($purchase);
+        $useCase->execute($purchase, $request->query('scope') === 'group');
 
         return response()->json(status: 204);
     }
