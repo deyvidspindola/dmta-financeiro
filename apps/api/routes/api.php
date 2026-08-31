@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\V1\BillCaptureController;
 use App\Http\Controllers\Api\V1\BillController;
 use App\Http\Controllers\Api\V1\BillImportController;
 use App\Http\Controllers\Api\V1\BoletoPasswordRuleController;
+use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
 use App\Http\Controllers\Api\V1\CardPurchaseController;
 use App\Http\Controllers\Api\V1\CashFlowController;
@@ -131,6 +132,11 @@ Route::prefix('v1')->group(function () {
             Route::post('goals', [GoalController::class, 'store']);
             Route::patch('goals/{goal}', [GoalController::class, 'update']);
             Route::delete('goals/{goal}', [GoalController::class, 'destroy']);
+
+            Route::get('budgets', [BudgetController::class, 'index']);
+            Route::post('budgets', [BudgetController::class, 'store']);
+            Route::patch('budgets/{budget}', [BudgetController::class, 'update']);
+            Route::delete('budgets/{budget}', [BudgetController::class, 'destroy']);
 
             Route::post('simulations/installment-purchase', [SimulationController::class, 'installmentPurchase']);
             Route::get('cash-flow', [CashFlowController::class, 'show']);
