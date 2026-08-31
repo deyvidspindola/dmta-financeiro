@@ -127,6 +127,29 @@ data: `ddMMyyyy`/`ddMMyy`/`MMddyyyy`/`yyyyMMdd`) — "não garante acerto,
 só lista o que tentar", como já dizia o contrato da interface.
 **Data:** rodada 7 (23/08/2026).
 
+### DT-08 — Limite de Controller e controllers de ação única
+**Contexto:** o limite de 80 linhas de Controller (`bin/check-standards.php`)
+empurrou o projeto para 5 controllers só para o recurso "transaction"
+(`Transaction`, `ShowTransaction`, `UpdateTransaction`, `MoveTransaction`,
+`Transfer`) e 7 na órbita de "bill". O princípio real da Clean Architecture
+DMTA é "controller não tem regra de negócio" — e não tinha; os controllers
+eram só finos **e numerosos**.
+
+**Decisão:** limite de Controller sobe para **120 linhas** (comporta um
+recurso REST completo — `index/show/store/update/destroy` — delegando a
+casos de uso, sem espremer). **Um recurso REST = um controller.** Controller
+de ação única (`__invoke`) só quando não há recurso REST natural: webhooks,
+e ações que não são CRUD de uma entidade (`bills/{bill}/pay`,
+`bill-captures/{capture}/unlock`, `transactions/{transaction}/move`,
+`bill-captures/poll`).
+
+**Consequência:** `ShowTransactionController` e `UpdateTransactionController`
+voltam para dentro de `TransactionController`. `MoveTransactionController` e
+`TransferController` continuam separados (ação customizada / recurso
+distinto). URLs inalteradas — nenhum impacto no `apps/web`.
+**Data:** rodada 8 (31/08/2026), fase A0 da reestruturação (plano
+`adaptive-twirling-gizmo`).
+
 ---
 
 ## Próximos passos imediatos

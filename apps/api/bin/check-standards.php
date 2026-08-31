@@ -38,7 +38,7 @@ const SIZE_LIMITS = [
     'app/Domain' => 250,
     'app/Livewire' => 150,
     'app/Models' => 150,
-    'app/Http/Controllers' => 80,
+    'app/Http/Controllers' => 120,
 ];
 
 /** Limite de linhas para views Blade. */

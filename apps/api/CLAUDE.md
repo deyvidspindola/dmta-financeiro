@@ -30,7 +30,7 @@ português dentro de Blade ou PHP fora de `lang/`.
 ## Limites (linhas)
 
 UseCase 120 · Service 200 · Domain 250 · Livewire 150 · Model 150 ·
-Controller 80 · Blade 200 · método 30 · parâmetros 4
+Controller 120 · Blade 200 · método 30 · parâmetros 4
 
 ## Sempre
 

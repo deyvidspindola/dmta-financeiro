@@ -14,10 +14,10 @@ use App\UseCases\Bill\PayBill;
 
 /**
  * Pagamento rápido de boleto num clique — pedido em produção pra não
- * repetir descrição/valor/categoria que o boleto já tem. Separado de
- * {@see BillController} pelo mesmo motivo de
- * {@see MoveTransactionController}/{@see UpdateTransactionController}:
- * regra própria, controller principal já no limite de linhas.
+ * repetir descrição/valor/categoria que o boleto já tem. É uma ação
+ * customizada (`bills/{bill}/pay`), não CRUD de um recurso, então fica
+ * fora do {@see BillController} por decisão de desenho, não por limite
+ * de linhas (ver DT-08).
  *
  * @package App\Http\Controllers\Api\V1
  *

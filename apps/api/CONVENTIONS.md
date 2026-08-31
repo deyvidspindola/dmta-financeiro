@@ -48,7 +48,10 @@ Controller/Livewire  →  UseCase  →  Service  →  Domain  →  Model  →  H
 ```
 
 - **Controller/Livewire** — localiza, autoriza (`$this->authorize()`),
-  delega, formata resposta. **Nunca** regra de negócio.
+  delega, formata resposta. **Nunca** regra de negócio. Um recurso REST
+  mora num controller só (`index/show/store/update/destroy`); controller
+  de ação única (`__invoke`) só quando **não** há recurso REST natural
+  (webhook, `poll`, `pay`, `unlock`, `move`). Ver DT-08.
 - **UseCase** (`app/UseCases/`) — uma intenção do usuário, do início ao
   fim. `final`, um `execute()`, dependências injetadas no método ou no
   construtor. Abre `DB::transaction()` quando escreve em mais de uma
@@ -132,7 +135,7 @@ todo método público (`@param` com o **significado no negócio**,
 | Domain | 250 |
 | Livewire | 150 |
 | Model | 150 |
-| Controller | 80 |
+| Controller | 120 |
 | Blade | 200 |
 | Método | 30 |
 | Parâmetros de método | 4 (senão, DTO em `app/DTOs/`) |
