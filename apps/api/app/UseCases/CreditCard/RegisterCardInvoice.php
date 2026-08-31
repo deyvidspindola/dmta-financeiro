@@ -6,12 +6,16 @@ namespace App\UseCases\CreditCard;
 
 use App\DTOs\RegisterCardInvoiceData;
 use App\Enums\CardInvoiceStatus;
+use App\Jobs\CloseCardInvoices;
 use App\Models\CardInvoice;
 
 /**
- * Cadastra a fatura de um mês de referência para um cartão, sempre
- * `open` (F0 não fecha/paga fatura automaticamente). Detalhamento por
- * lançamento fica para uma fase seguinte — ver `docs/fases/F0_fundacao.md`.
+ * Cadastra manualmente a fatura de um mês de referência, sempre `open`.
+ *
+ * @deprecated desde a fase A2 (D-16). O fluxo normal é lançar compras
+ * ({@see RegisterCardPurchase}), que criam a fatura sozinhas, e fechar
+ * pelo job ({@see CloseCardInvoices}). Este caso de uso fica só
+ * para migração de saldo inicial / fatura pré-existente.
  *
  * @package App\UseCases\CreditCard
  *

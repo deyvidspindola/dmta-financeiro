@@ -5,10 +5,12 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\BillStatus;
+use App\Enums\CardInvoiceStatus;
 use App\Enums\DebtDirection;
 use App\Enums\DebtStatus;
 use App\Enums\GoalStatus;
 use App\Enums\StatementEntryType;
+use App\Models\CardInvoice;
 use App\Models\Context;
 use App\Models\Debt;
 use App\Models\StatementEntry;
@@ -77,6 +79,7 @@ final class DashboardSummaryService
                 ->whereMonth('occurred_at', $now->month)
                 ->sum('amount'),
             'investments_total' => (float) $context->investments()->sum('current_amount'),
+            'credit_card_open_invoices_amount' => $this->openCardInvoicesAmount($context),
             'pending_debts_count' => $context->debts()
                 ->where('status', DebtStatus::Pending->value)
                 ->count(),
@@ -90,6 +93,15 @@ final class DashboardSummaryService
                 ->sum('amount'),
             'active_goals_count' => $context->goals()->where('status', GoalStatus::Active->value)->count(),
         ];
+    }
+
+    /** Total das faturas de cartão ainda não pagas (aberta + fechadas) do contexto. */
+    private function openCardInvoicesAmount(Context $context): float
+    {
+        return (float) CardInvoice::query()
+            ->whereIn('credit_card_id', $context->creditCards()->select('id'))
+            ->where('status', '!=', CardInvoiceStatus::Paid->value)
+            ->sum('total_amount');
     }
 
     /**
@@ -111,6 +123,7 @@ final class DashboardSummaryService
             'month_income' => (float) $perContext->sum('month_income'),
             'month_expense' => (float) $perContext->sum('month_expense'),
             'investments_total' => (float) $perContext->sum('investments_total'),
+            'credit_card_open_invoices_amount' => (float) $perContext->sum('credit_card_open_invoices_amount'),
             'pending_debts_count' => (int) $perContext->sum('pending_debts_count'),
             'pending_debts_i_owe_amount' => (float) $perContext->sum('pending_debts_i_owe_amount'),
             'pending_debts_owed_to_me_amount' => (float) $perContext->sum('pending_debts_owed_to_me_amount'),

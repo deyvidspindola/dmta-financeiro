@@ -8,15 +8,17 @@ use App\DTOs\RegisterCardInvoiceData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCardInvoiceRequest;
 use App\Http\Resources\CardInvoiceResource;
-use App\Models\CardInvoice;
 use App\Models\Context;
 use App\Models\CreditCard;
 use App\UseCases\CreditCard\RegisterCardInvoice;
+use App\UseCases\CreditCard\RegisterCardPurchase;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
- * Faturas de um cartão, uma por mês de referência (F0 registra só o
- * resumo — ver docblock de {@see CardInvoice}).
+ * Faturas de um cartão, uma por mês de referência. `index` é o uso
+ * normal. `store` (cadastro manual de fatura) fica só para migração de
+ * saldo inicial — o fluxo é lançar compras via
+ * {@see RegisterCardPurchase}, que criam a fatura sozinhas (D-16).
  *
  * @package App\Http\Controllers\Api\V1
  *
