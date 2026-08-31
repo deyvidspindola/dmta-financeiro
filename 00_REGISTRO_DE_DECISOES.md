@@ -69,6 +69,31 @@ Documento complementar ao PDF de concepção (v1.3). IDs batem com o capítulo 1
 **Decisão:** Pedido novo em produção (22/08/2026, rodada de melhorias com Cursor+Claude Code em paralelo): entidade `Debt` própria para registrar ciência de compromissos (empréstimo entre pessoas, parcelamento informal) que **nunca** entram como lançamento no balanço mensal — sem `account_id`, sem `StatementEntry`, sem afetar `month_income`/`month_expense`. Só soma em indicadores próprios do dashboard (`pending_debts_count`, `pending_debts_i_owe_amount`, `pending_debts_owed_to_me_amount`). Se a quitação de fato move dinheiro de uma conta, isso é um lançamento manual à parte — as duas coisas não se fundem de propósito, pra não haver dupla contagem nem decisão automática de saldo.
 **Data:** rodada 7 (22/08/2026).
 
+### D-16 — Motor de cartão de crédito (compra → fatura → pagamento)
+**Contexto:** até a fase A2 da reestruturação (plano `adaptive-twirling-gizmo`,
+31/08/2026), cartão de crédito era casca: `CardInvoice` só era criada
+manualmente digitando o total, nunca fechava nem era paga, e não existia
+lançamento de compra no cartão. Maior lacuna frente a um app tipo Mobills.
+**Decisão:**
+- Compra no cartão é entidade própria (`CardPurchase`), **não** um
+  `StatementEntry` — compra no cartão não move `accounts.balance`.
+- A compra cai numa `CardInvoice` pelo `closing_day` do cartão
+  (`InvoiceAllocator`): antes do fechamento → fatura do mês; no/depois →
+  mês seguinte. A fatura nasce sozinha na primeira compra do ciclo
+  (`CardInvoiceResolver`).
+- Job diário `CloseCardInvoices` fecha faturas `open` cujo fechamento
+  passou. `PayCardInvoice` cria a despesa na conta escolhida (é aqui que a
+  compra vira saldo movido) e marca a fatura `paid`; apagar esse lançamento
+  reabre a fatura.
+- Parcelamento (`installments > 1`): N `CardPurchase`, uma por fatura de
+  mês consecutivo, mesmo `installment_group`; centavos somam exato
+  (`InstallmentPlan`).
+- `credit_limit − Σ faturas não pagas` = limite disponível (no
+  `CreditCardResource`).
+- Cadastro manual de fatura (`POST credit-cards/{card}/invoices`) fica
+  `@deprecated` — só para migração de saldo inicial.
+**Data:** rodada 8 (fase A2, 01/09/2026).
+
 ---
 
 ## ABERTA
