@@ -7,6 +7,7 @@ namespace App\UseCases\Transaction;
 use App\DTOs\TransferBetweenAccountsData;
 use App\Enums\CaptureOrigin;
 use App\Enums\StatementEntryType;
+use App\Enums\TransferRole;
 use App\Exceptions\Domain\AccountContextMismatchException;
 use App\Exceptions\Domain\SameAccountTransferException;
 use App\Http\Controllers\Api\V1\TransferController;
@@ -67,6 +68,7 @@ final class TransferBetweenAccounts
                 'description' => $data->description,
                 'amount' => $data->amount,
                 'type' => StatementEntryType::Transfer->value,
+                'transfer_role' => TransferRole::Origin->value,
                 'occurred_at' => $data->occurredAt,
                 'origin' => CaptureOrigin::Manual->value,
             ]);
@@ -77,6 +79,7 @@ final class TransferBetweenAccounts
                 'description' => $data->description,
                 'amount' => $data->amount,
                 'type' => StatementEntryType::Transfer->value,
+                'transfer_role' => TransferRole::Destination->value,
                 'occurred_at' => $data->occurredAt,
                 'origin' => CaptureOrigin::Manual->value,
                 'transfer_pair_id' => $fromEntry->id,
