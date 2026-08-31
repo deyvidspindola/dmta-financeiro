@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\CaptureOrigin;
 use App\Enums\StatementEntryType;
+use App\Enums\TransferRole;
 use App\Models\Account;
 use App\Models\Context;
 use App\Models\StatementEntry;
@@ -50,5 +51,14 @@ class StatementEntryFactory extends Factory
     public function expense(): static
     {
         return $this->state(fn (): array => ['type' => StatementEntryType::Expense->value]);
+    }
+
+    /** Perna de transferência (`type = transfer` + `transfer_role`). */
+    public function transferLeg(TransferRole $role): static
+    {
+        return $this->state(fn (): array => [
+            'type' => StatementEntryType::Transfer->value,
+            'transfer_role' => $role->value,
+        ]);
     }
 }

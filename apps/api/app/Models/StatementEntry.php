@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\StatementEntryType;
+use App\Enums\TransferRole;
 use App\UseCases\Transaction\TransferBetweenAccounts;
 use Database\Factories\StatementEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -15,7 +16,7 @@ use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
-    'transfer_pair_id', 'recurring_transaction_id', 'goal_id',
+    'transfer_pair_id', 'transfer_role', 'recurring_transaction_id', 'goal_id',
     'description', 'amount', 'type', 'occurred_at', 'origin',
 ])]
 /**
@@ -79,16 +80,20 @@ class StatementEntry extends Model
 
     /**
      * Se esta é a perna de origem (débito) de uma transferência, não a de
-     * destino (crédito). As duas pernas têm `type = transfer` — não dá
-     * pra saber por `type` qual é qual. {@see TransferBetweenAccounts}
-     * sempre cria a perna de origem primeiro, então ela sempre tem o
-     * `id` menor; é assim que distinguimos (usado por `DeleteTransaction`
-     * e por `StatementEntryResource` pra montar "de onde → pra onde").
+     * destino (crédito). Lê a coluna `transfer_role` (preenchida por
+     * {@see TransferBetweenAccounts} e pelo backfill da migration). O
+     * fallback pela ordem de `id` só cobre um estado meio-migrado — nunca
+     * deveria acontecer em produção.
      *
      * Só chame depois de confirmar `transfer_pair_id !== null`.
      */
     public function isTransferOrigin(): bool
     {
+        if ($this->transfer_role !== null) {
+            // @phpstan-ignore-next-line identical.alwaysFalse (cast TransferRole confirmado em runtime — larastan erra a inferência de casts())
+            return $this->transfer_role === TransferRole::Origin;
+        }
+
         return $this->id < $this->transfer_pair_id;
     }
 
@@ -116,6 +121,7 @@ class StatementEntry extends Model
             'occurred_at' => 'date',
             'amount' => 'decimal:2',
             'type' => StatementEntryType::class,
+            'transfer_role' => TransferRole::class,
         ];
     }
 }
