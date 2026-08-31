@@ -93,6 +93,7 @@ final class TransactionController extends Controller
             type: StatementEntryType::from($request->string('type')->toString()),
             occurredAt: $request->string('occurred_at')->toString(),
             categoryId: $request->integer('category_id') ?: null,
+            goalId: $request->integer('goal_id') ?: null,
         ));
 
         return new StatementEntryResource($entry);

@@ -22,8 +22,10 @@ use Illuminate\Support\Facades\DB;
  * sozinhas). O tipo do lançamento (receita/despesa) não muda, só quem é
  * dono dele.
  *
- * Bloqueado pra perna de transferência ou lançamento vinculado a boleto —
- * ver {@see TransactionNotMovableException}.
+ * Bloqueado pra perna de transferência, lançamento vinculado a boleto ou
+ * aporte de meta — nos três casos, mover o lançamento sozinho deixaria o
+ * outro lado (perna par, boleto, ou meta) apontando pra outro contexto.
+ * Ver {@see TransactionNotMovableException}.
  *
  * @package App\UseCases\Transaction
  *
@@ -44,7 +46,7 @@ final class MoveTransactionToContext
      */
     public function execute(StatementEntry $entry, MoveTransactionToContextData $data): StatementEntry
     {
-        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null) {
+        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null || $entry->goal_id !== null) {
             throw new TransactionNotMovableException;
         }
 

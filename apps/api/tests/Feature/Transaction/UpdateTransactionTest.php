@@ -15,10 +15,8 @@ use App\UseCases\Transaction\UpdateTransaction;
 use Tests\Feature\Support\FinanceScenario;
 
 /**
- * Caracteriza {@see UpdateTransaction} (fase A0). Inclui os testes que
- * marcam o BUG do `goal_id`: editar/mover um aporte não reconcilia
- * `goal.current_amount` hoje — o PR A5 conserta e inverte essas
- * asserções.
+ * {@see UpdateTransaction} — comportamento de saldo caracterizado na fase
+ * A0; a reconciliação de meta ao editar aporte entrou no PR A5.
  */
 beforeEach(function () {
     $this->scenario = FinanceScenario::create();
@@ -117,7 +115,7 @@ test('não deixa editar lançamento vinculado a boleto', function () {
     )))->toThrow(TransactionNotEditableException::class);
 });
 
-test('BUG (ver PR A5): editar o valor de um aporte NÃO reconcilia o progresso da meta', function () {
+test('editar o valor de um aporte reconcilia o progresso da meta', function () {
     $account = $this->scenario->account(balance: 1000.0);
     $goal = Goal::factory()->for($this->scenario->pf)->create([
         'target_amount' => 500.0,
@@ -134,18 +132,67 @@ test('BUG (ver PR A5): editar o valor de um aporte NÃO reconcilia o progresso d
     ));
     expect((float) $goal->refresh()->current_amount)->toBe(100.0);
 
-    // Sobe o aporte de 100 para 150. UpdateTransactionData nem carrega
-    // goalId, então UpdateGoalProgress não é chamado.
     $this->update->execute($entry, new UpdateTransactionData(
         accountId: $account->id,
         description: 'Aporte',
         amount: 150.0,
         type: StatementEntryType::Expense,
         occurredAt: '2026-08-10',
+        goalId: $goal->id,
     ));
 
-    // Comportamento atual (buggy): meta continua em 100, saldo já refletiu 150.
-    // O PR A5 inverte esta asserção — current_amount deve virar 150.0.
-    expect((float) $goal->refresh()->current_amount)->toBe(100.0)
+    expect((float) $goal->refresh()->current_amount)->toBe(150.0)
         ->and((float) $account->refresh()->balance)->toBe(850.0);
+});
+
+test('trocar de meta move o aporte do progresso de uma para a outra', function () {
+    $account = $this->scenario->account(balance: 1000.0);
+    $goalA = Goal::factory()->for($this->scenario->pf)->create(['target_amount' => 500.0, 'current_amount' => 0.0]);
+    $goalB = Goal::factory()->for($this->scenario->pf)->create(['target_amount' => 500.0, 'current_amount' => 0.0]);
+    $entry = $this->register->execute(new RegisterTransactionData(
+        contextId: $this->scenario->pf->id,
+        accountId: $account->id,
+        description: 'Aporte',
+        amount: 80.0,
+        type: StatementEntryType::Expense,
+        occurredAt: '2026-08-10',
+        goalId: $goalA->id,
+    ));
+
+    $this->update->execute($entry, new UpdateTransactionData(
+        accountId: $account->id,
+        description: 'Aporte',
+        amount: 80.0,
+        type: StatementEntryType::Expense,
+        occurredAt: '2026-08-10',
+        goalId: $goalB->id,
+    ));
+
+    expect((float) $goalA->refresh()->current_amount)->toBe(0.0)
+        ->and((float) $goalB->refresh()->current_amount)->toBe(80.0);
+});
+
+test('tirar o aporte de todas as metas zera o progresso da meta antiga', function () {
+    $account = $this->scenario->account(balance: 1000.0);
+    $goal = Goal::factory()->for($this->scenario->pf)->create(['target_amount' => 500.0, 'current_amount' => 0.0]);
+    $entry = $this->register->execute(new RegisterTransactionData(
+        contextId: $this->scenario->pf->id,
+        accountId: $account->id,
+        description: 'Aporte',
+        amount: 60.0,
+        type: StatementEntryType::Expense,
+        occurredAt: '2026-08-10',
+        goalId: $goal->id,
+    ));
+
+    $this->update->execute($entry, new UpdateTransactionData(
+        accountId: $account->id,
+        description: 'Gasto comum',
+        amount: 60.0,
+        type: StatementEntryType::Expense,
+        occurredAt: '2026-08-10',
+    ));
+
+    expect((float) $goal->refresh()->current_amount)->toBe(0.0)
+        ->and($entry->refresh()->goal_id)->toBeNull();
 });

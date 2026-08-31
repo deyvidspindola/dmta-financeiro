@@ -6,15 +6,15 @@ use App\DTOs\MoveTransactionToContextData;
 use App\DTOs\RegisterTransactionData;
 use App\Enums\StatementEntryType;
 use App\Exceptions\Domain\AccountContextMismatchException;
+use App\Exceptions\Domain\TransactionNotMovableException;
 use App\Models\Goal;
 use App\UseCases\Transaction\MoveTransactionToContext;
 use App\UseCases\Transaction\RegisterTransaction;
 use Tests\Feature\Support\FinanceScenario;
 
 /**
- * Caracteriza {@see MoveTransactionToContext} (fase A0). Inclui o teste
- * que marca o BUG do `goal_id` — mover um aporte deixa a meta órfã; o PR
- * A5 passa a bloquear.
+ * {@see MoveTransactionToContext} — comportamento caracterizado na fase
+ * A0; o bloqueio de mover aporte de meta entrou no PR A5.
  */
 beforeEach(function () {
     $this->scenario = FinanceScenario::create()->withCompany();
@@ -64,7 +64,7 @@ test('recusa quando a conta de destino não pertence ao contexto de destino', fu
     )))->toThrow(AccountContextMismatchException::class);
 });
 
-test('BUG (ver PR A5): mover um aporte deixa goal_id apontando para meta de outro contexto', function () {
+test('recusa mover um aporte de meta para outro contexto', function () {
     $pfAccount = $this->scenario->account($this->scenario->pf, balance: 1000.0);
     $pjAccount = $this->scenario->account($this->scenario->company, balance: 0.0);
     $goal = Goal::factory()->for($this->scenario->pf)->create(['target_amount' => 500.0]);
@@ -78,14 +78,11 @@ test('BUG (ver PR A5): mover um aporte deixa goal_id apontando para meta de outr
         goalId: $goal->id,
     ));
 
-    // Comportamento atual: move sem reclamar, meta continua no PF, aporte
-    // agora na empresa. O PR A5 passa a lançar TransactionNotMovableException.
-    $moved = $this->move->execute($entry, new MoveTransactionToContextData(
+    expect(fn () => $this->move->execute($entry, new MoveTransactionToContextData(
         targetContextId: $this->scenario->company->id,
         targetAccountId: $pjAccount->id,
-    ));
+    )))->toThrow(TransactionNotMovableException::class);
 
-    expect($moved->goal_id)->toBe($goal->id)
-        ->and($moved->context_id)->toBe($this->scenario->company->id)
-        ->and($goal->refresh()->context_id)->toBe($this->scenario->pf->id);
+    expect((float) $pfAccount->refresh()->balance)->toBe(900.0)
+        ->and($entry->refresh()->context_id)->toBe($this->scenario->pf->id);
 });
