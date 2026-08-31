@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CloseCardInvoices;
 use App\Jobs\GenerateRecurringBillEntries;
 use App\Jobs\GenerateRecurringTransactionEntries;
 use App\Jobs\PollBoletoMailbox;
@@ -48,3 +49,9 @@ Schedule::job(new GenerateRecurringBillEntries)
     ->daily()
     ->withoutOverlapping()
     ->sentryMonitor('boletos-recorrentes');
+
+// Fecha as faturas de cartão cuja data de fechamento já passou (fase A2).
+Schedule::job(new CloseCardInvoices)
+    ->daily()
+    ->withoutOverlapping()
+    ->sentryMonitor('fechamento-faturas-cartao');
