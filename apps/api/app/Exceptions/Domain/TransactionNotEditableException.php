@@ -26,7 +26,7 @@ final class TransactionNotEditableException extends DomainException
     public function __construct()
     {
         parent::__construct(
-            'Lançamentos de transferência ou vinculados a um boleto não podem ser editados — apague e recadastre.',
+            'Lançamentos de transferência ou vinculados a um boleto ou fatura de cartão não podem ser editados — apague e recadastre.',
         );
     }
 }

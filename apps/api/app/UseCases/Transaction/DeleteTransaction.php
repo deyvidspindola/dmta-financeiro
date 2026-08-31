@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\UseCases\Transaction;
 
 use App\Enums\BillStatus;
+use App\Enums\CardInvoiceStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\CardInvoice;
 use App\Models\Goal;
 use App\Models\StatementEntry;
 use App\UseCases\Goal\UpdateGoalProgress;
@@ -18,8 +20,9 @@ use Illuminate\Support\Facades\DB;
  * (sinal contrário ao de {@see RegisterTransaction}) e, se o lançamento
  * tinha um boleto vinculado, devolve o boleto pra `pending` — apagar o
  * pagamento é "desfazer que foi pago", não deixar o boleto órfão como
- * pago sem lançamento nenhum. Se tinha meta vinculada, tira o valor do
- * progresso ({@see UpdateGoalProgress}).
+ * pago sem lançamento nenhum. Se tinha fatura de cartão vinculada
+ * (`card_invoice_id`), reabre a fatura como `closed`. Se tinha meta
+ * vinculada, tira o valor do progresso ({@see UpdateGoalProgress}).
  *
  * Se o lançamento for uma perna de transferência ({@see TransferBetweenAccounts}),
  * apaga as duas pernas junto e reverte o saldo das duas contas — nunca
@@ -55,6 +58,15 @@ final class DeleteTransaction
             if ($entry->bill_id !== null) {
                 Bill::query()->whereKey($entry->bill_id)->update([
                     'status' => BillStatus::Pending->value,
+                    'paid_at' => null,
+                ]);
+            }
+
+            if ($entry->card_invoice_id !== null) {
+                // Apagar o pagamento reabre a fatura como `closed` (à espera
+                // de pagamento de novo) — ver PayCardInvoice.
+                CardInvoice::query()->whereKey($entry->card_invoice_id)->update([
+                    'status' => CardInvoiceStatus::Closed->value,
                     'paid_at' => null,
                 ]);
             }

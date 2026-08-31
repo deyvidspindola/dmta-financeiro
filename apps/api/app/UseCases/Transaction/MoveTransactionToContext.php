@@ -46,7 +46,8 @@ final class MoveTransactionToContext
      */
     public function execute(StatementEntry $entry, MoveTransactionToContextData $data): StatementEntry
     {
-        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null || $entry->goal_id !== null) {
+        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null
+            || $entry->goal_id !== null || $entry->card_invoice_id !== null) {
             throw new TransactionNotMovableException;
         }
 

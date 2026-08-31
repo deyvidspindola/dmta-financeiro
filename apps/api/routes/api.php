@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
 use App\Http\Controllers\Api\V1\PayBillController;
+use App\Http\Controllers\Api\V1\PayCardInvoiceController;
 use App\Http\Controllers\Api\V1\PollBillCapturesController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
@@ -157,6 +158,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('credit-cards/{creditCard}', [CreditCardController::class, 'destroy']);
             Route::get('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'index']);
             Route::post('credit-cards/{creditCard}/invoices', [CardInvoiceController::class, 'store']);
+            Route::post('credit-cards/{creditCard}/invoices/{invoice}/pay', PayCardInvoiceController::class);
             Route::get('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'index']);
             Route::post('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'store']);
             Route::delete('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'destroy']);
