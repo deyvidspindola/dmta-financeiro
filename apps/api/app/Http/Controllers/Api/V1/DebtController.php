@@ -5,9 +5,11 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterDebtData;
+use App\DTOs\SettleDebtData;
 use App\DTOs\UpdateDebtData;
 use App\Enums\DebtDirection;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\SettleDebtRequest;
 use App\Http\Requests\Api\StoreDebtRequest;
 use App\Http\Requests\Api\UpdateDebtRequest;
 use App\Http\Resources\DebtResource;
@@ -64,10 +66,13 @@ final class DebtController extends Controller
         )));
     }
 
-    /** Marca como quitada — ver {@see SettleDebt}. */
-    public function settle(Context $context, Debt $debt, SettleDebt $useCase): DebtResource
+    /** Marca como quitada; com `account_id`, também gera o lançamento — ver {@see SettleDebt}. */
+    public function settle(SettleDebtRequest $request, Context $context, Debt $debt, SettleDebt $useCase): DebtResource
     {
-        return new DebtResource($useCase->execute($debt));
+        return new DebtResource($useCase->execute($debt, new SettleDebtData(
+            accountId: $request->integer('account_id') ?: null,
+            occurredAt: $request->input('occurred_at'),
+        )));
     }
 
     public function destroy(Context $context, Debt $debt): JsonResponse

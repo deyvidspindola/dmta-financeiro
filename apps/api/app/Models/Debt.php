@@ -15,7 +15,7 @@ use Illuminate\Support\Carbon;
 
 #[Fillable([
     'context_id', 'description', 'counterparty', 'amount', 'direction',
-    'status', 'due_date', 'notes', 'settled_at',
+    'status', 'statement_entry_id', 'due_date', 'notes', 'settled_at',
 ])]
 /**
  * Dívida pendente de registro (empréstimo entre pessoas, parcelamento
@@ -50,6 +50,17 @@ class Debt extends Model
     public function context(): BelongsTo
     {
         return $this->belongsTo(Context::class);
+    }
+
+    /**
+     * Lançamento gerado se a quitação moveu dinheiro de verdade
+     * ({@see SettleDebt} com `account_id`); nulo quando foi só marcação.
+     *
+     * @return BelongsTo<StatementEntry, $this>
+     */
+    public function statementEntry(): BelongsTo
+    {
+        return $this->belongsTo(StatementEntry::class);
     }
 
     /** Se a dívida já foi quitada. */
