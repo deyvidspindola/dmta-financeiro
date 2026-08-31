@@ -10,6 +10,7 @@ use App\Models\StatementEntry;
 use App\UseCases\Transaction\RegisterTransaction;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -28,6 +29,12 @@ use Throwable;
  * fora do ar por semanas) — o loop avança até `next_occurrence_date`
  * ficar no futuro, gerando uma ocorrência por vez, nunca pulando nenhuma.
  * Erro numa regra não impede as outras de rodar.
+ *
+ * Idempotente: antes de materializar, confere se aquela ocorrência (regra
+ * + data) já existe; o índice único `se_recurrence_occurrence_unique` é o
+ * backstop se duas execuções correrem juntas. Reexecutar o job — ou
+ * reprocessar uma ocorrência cuja data foi rebobinada por falha no meio
+ * do caminho — não duplica.
  *
  * @package App\Jobs
  *
@@ -73,20 +80,9 @@ final class GenerateRecurringTransactionEntries implements ShouldQueue
         // método casts() deste model e trata como string cru.
         // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
         while ($rule->active && $rule->next_occurrence_date->lte($today)) {
-            $occurrence = $rule->next_occurrence_date;
+            $occurrence = Carbon::parse($rule->next_occurrence_date);
 
-            $useCase->execute(new RegisterTransactionData(
-                contextId: $rule->context_id,
-                accountId: $rule->account_id,
-                description: $rule->description,
-                amount: (float) $rule->amount,
-                // @phpstan-ignore-next-line argument.type (verificado em runtime)
-                type: $rule->type,
-                // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
-                occurredAt: $occurrence->toDateString(),
-                categoryId: $rule->category_id,
-                recurringTransactionId: $rule->id,
-            ));
+            $this->registerIfAbsent($rule, $useCase, $occurrence);
 
             // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
             $next = $rule->interval->nextAfter($occurrence);
@@ -99,6 +95,45 @@ final class GenerateRecurringTransactionEntries implements ShouldQueue
 
             $rule->update(['next_occurrence_date' => $next]);
             $rule->refresh();
+        }
+    }
+
+    /**
+     * Materializa a ocorrência só se ela ainda não existe. O `exists()`
+     * cobre o replay normal; o `catch` cobre a corrida em que o índice
+     * único dispara entre a checagem e a inserção.
+     */
+    private function registerIfAbsent(
+        RecurringTransaction $rule,
+        RegisterTransaction $useCase,
+        Carbon $occurrence,
+    ): void {
+        $alreadyMaterialized = StatementEntry::query()
+            ->where('recurring_transaction_id', $rule->id)
+            ->whereDate('occurred_at', $occurrence->toDateString())
+            ->exists();
+
+        if ($alreadyMaterialized) {
+            return;
+        }
+
+        try {
+            $useCase->execute(new RegisterTransactionData(
+                contextId: $rule->context_id,
+                accountId: $rule->account_id,
+                description: $rule->description,
+                amount: (float) $rule->amount,
+                // @phpstan-ignore-next-line argument.type (verificado em runtime)
+                type: $rule->type,
+                occurredAt: $occurrence->toDateString(),
+                categoryId: $rule->category_id,
+                recurringTransactionId: $rule->id,
+            ));
+        } catch (QueryException) {
+            Log::warning('Ocorrência de lançamento recorrente já existia (índice único)', [
+                'recurring_transaction_id' => $rule->id,
+                'occurred_at' => $occurrence->toDateString(),
+            ]);
         }
     }
 }

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
 #[Fillable([
-    'context_id', 'category_id', 'description', 'amount', 'due_date',
+    'context_id', 'category_id', 'recurring_bill_id', 'description', 'amount', 'due_date',
     'direction', 'status', 'origin', 'barcode', 'beneficiary', 'paid_at',
 ])]
 /**
@@ -50,6 +50,16 @@ class Bill extends Model
     public function category(): BelongsTo
     {
         return $this->belongsTo(Category::class);
+    }
+
+    /**
+     * Regra de obrigação recorrente que gerou este boleto, se veio de uma.
+     *
+     * @return BelongsTo<RecurringBill, $this>
+     */
+    public function recurringBill(): BelongsTo
+    {
+        return $this->belongsTo(RecurringBill::class);
     }
 
     /** @return HasOne<StatementEntry, $this> */

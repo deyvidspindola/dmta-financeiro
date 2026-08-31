@@ -9,6 +9,7 @@ use App\Models\Bill;
 use App\Models\RecurringBill;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
+use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
@@ -73,20 +74,9 @@ final class GenerateRecurringBillEntries implements ShouldQueue
         // não enxerga o método casts() deste model.
         // @phpstan-ignore-next-line method.nonObject (verificado em runtime, mesmo padrão de RecurringTransaction)
         while ($rule->active && $rule->next_due_date->lte($today)) {
-            $occurrence = $rule->next_due_date;
+            $occurrence = Carbon::parse($rule->next_due_date);
 
-            Bill::create([
-                'context_id' => $rule->context_id,
-                'category_id' => $rule->category_id,
-                'description' => $rule->description,
-                'amount' => $rule->amount,
-                // @phpstan-ignore-next-line method.nonObject ($occurrence vem de $rule->next_due_date, cast Carbon confirmado em runtime — mesmo caso da linha 75)
-                'due_date' => $occurrence->toDateString(),
-                // @phpstan-ignore-next-line property.nonObject (verificado em runtime)
-                'direction' => $rule->direction->value,
-                'status' => BillStatus::Pending->value,
-                'origin' => 'manual',
-            ]);
+            $this->materializeOccurrence($rule, $occurrence);
 
             // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
             $next = $rule->interval->nextAfter($occurrence);
@@ -99,6 +89,43 @@ final class GenerateRecurringBillEntries implements ShouldQueue
 
             $rule->update(['next_due_date' => $next]);
             $rule->refresh();
+        }
+    }
+
+    /**
+     * Cria o `Bill` da ocorrência só se ainda não existe (regra + data).
+     * O `exists()` cobre o replay; o `catch` cobre a corrida contra o
+     * índice único `bills_recurrence_occurrence_unique`.
+     */
+    private function materializeOccurrence(RecurringBill $rule, Carbon $occurrence): void
+    {
+        $alreadyMaterialized = Bill::query()
+            ->where('recurring_bill_id', $rule->id)
+            ->whereDate('due_date', $occurrence->toDateString())
+            ->exists();
+
+        if ($alreadyMaterialized) {
+            return;
+        }
+
+        try {
+            Bill::create([
+                'context_id' => $rule->context_id,
+                'category_id' => $rule->category_id,
+                'recurring_bill_id' => $rule->id,
+                'description' => $rule->description,
+                'amount' => $rule->amount,
+                'due_date' => $occurrence->toDateString(),
+                // @phpstan-ignore-next-line property.nonObject (verificado em runtime)
+                'direction' => $rule->direction->value,
+                'status' => BillStatus::Pending->value,
+                'origin' => 'manual',
+            ]);
+        } catch (QueryException) {
+            Log::warning('Ocorrência de obrigação recorrente já existia (índice único)', [
+                'recurring_bill_id' => $rule->id,
+                'due_date' => $occurrence->toDateString(),
+            ]);
         }
     }
 }

@@ -12,14 +12,14 @@ use App\Models\RecurringBill;
 use App\Models\RecurringTransaction;
 use App\Models\StatementEntry;
 use App\UseCases\Transaction\RegisterTransaction;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Tests\Feature\Support\FinanceScenario;
 
 /**
- * Caracteriza os dois jobs de recorrência (fase A0), incluindo o teste
- * que marca a NÃO-idempotência: reprocessar a mesma ocorrência duplica,
- * porque não há índice único `(recurring_*_id, data)`. O PR A7 fecha isso
- * e é pré-requisito da unificação em `Commitment` (fase A3).
+ * Os dois jobs de recorrência — comportamento caracterizado na fase A0;
+ * a idempotência real (checagem + índice único `(recurring_*_id, data)`)
+ * entrou no PR A7.
  */
 beforeEach(function () {
     Carbon::setTestNow('2026-08-15');
@@ -114,7 +114,7 @@ test('lançamento recorrente: rodar o job de novo no mesmo dia não duplica (dat
     expect(StatementEntry::query()->count())->toBe(1);
 });
 
-test('BUG (ver PR A7): reprocessar a mesma ocorrência duplica — não há índice único', function () {
+test('reprocessar a mesma ocorrência não duplica (checagem de idempotência)', function () {
     $account = $this->scenario->account(balance: 1000.0);
     $rule = RecurringTransaction::factory()->for($this->scenario->pf)->create([
         'account_id' => $account->id,
@@ -134,9 +134,9 @@ test('BUG (ver PR A7): reprocessar a mesma ocorrência duplica — não há índ
     $rule->refresh()->update(['next_occurrence_date' => '2026-08-10']);
     runTransactionJob();
 
-    // Comportamento atual: a ocorrência de 10/08 é materializada de novo.
-    // O PR A7 (índice único) impede.
-    expect(StatementEntry::query()->count())->toBe(2);
+    // A ocorrência de 10/08 já existe — não é materializada de novo.
+    expect(StatementEntry::query()->count())->toBe(1)
+        ->and((float) $account->refresh()->balance)->toBe(900.0);
 });
 
 test('obrigação recorrente: gera Bill pendente e avança next_due_date', function () {
@@ -154,8 +154,26 @@ test('obrigação recorrente: gera Bill pendente e avança next_due_date', funct
     $bill = Bill::query()->sole();
     expect($bill->status)->toBe(BillStatus::Pending->value)
         ->and((float) $bill->amount)->toBe(200.0)
+        ->and($bill->recurring_bill_id)->toBe($rule->id)
         ->and($bill->due_date->toDateString())->toBe('2026-08-05')
         ->and($rule->refresh()->next_due_date->toDateString())->toBe('2026-09-05');
+});
+
+test('o banco rejeita duas ocorrências da mesma regra na mesma data', function () {
+    $account = $this->scenario->account(balance: 0.0);
+    $rule = RecurringTransaction::factory()->for($this->scenario->pf)->create([
+        'account_id' => $account->id,
+    ]);
+
+    StatementEntry::factory()->forAccount($account)->create([
+        'recurring_transaction_id' => $rule->id,
+        'occurred_at' => '2026-08-10',
+    ]);
+
+    expect(fn () => StatementEntry::factory()->forAccount($account)->create([
+        'recurring_transaction_id' => $rule->id,
+        'occurred_at' => '2026-08-10',
+    ]))->toThrow(QueryException::class);
 });
 
 test('obrigação recorrente: rodar de novo no mesmo dia não duplica', function () {
