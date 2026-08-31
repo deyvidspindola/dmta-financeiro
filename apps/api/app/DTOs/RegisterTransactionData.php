@@ -37,5 +37,6 @@ final readonly class RegisterTransactionData
         public CaptureOrigin $origin = CaptureOrigin::Manual,
         public ?int $recurringTransactionId = null,
         public ?int $goalId = null,
+        public ?int $cardInvoiceId = null,
     ) {}
 }

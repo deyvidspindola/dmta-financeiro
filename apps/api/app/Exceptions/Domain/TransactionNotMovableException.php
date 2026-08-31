@@ -26,7 +26,7 @@ final class TransactionNotMovableException extends DomainException
     public function __construct()
     {
         parent::__construct(
-            'Lançamentos de transferência, vinculados a um boleto ou a uma meta não podem ser movidos de contexto.',
+            'Lançamentos de transferência, vinculados a um boleto, a uma meta ou a uma fatura de cartão não podem ser movidos de contexto.',
         );
     }
 }

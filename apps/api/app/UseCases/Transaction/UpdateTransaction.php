@@ -43,7 +43,7 @@ final class UpdateTransaction
     /** @throws TransactionNotEditableException */
     public function execute(StatementEntry $entry, UpdateTransactionData $data): StatementEntry
     {
-        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null) {
+        if ($entry->transfer_pair_id !== null || $entry->bill_id !== null || $entry->card_invoice_id !== null) {
             throw new TransactionNotEditableException;
         }
 

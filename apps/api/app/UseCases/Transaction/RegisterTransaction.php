@@ -11,6 +11,7 @@ use App\Models\Account;
 use App\Models\Bill;
 use App\Models\Goal;
 use App\Models\StatementEntry;
+use App\UseCases\CreditCard\PayCardInvoice;
 use App\UseCases\Goal\UpdateGoalProgress;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +25,9 @@ use Illuminate\Support\Facades\DB;
  * a decisão de "isso já foi pago" em dois lugares. Se `goalId` vier
  * preenchido, soma o valor como aporte na meta ({@see UpdateGoalProgress})
  * — o lançamento continua movendo saldo normalmente, marcar a meta é só
- * rótulo (capítulo 9.7).
+ * rótulo (capítulo 9.7). `cardInvoiceId` vem do pagamento de fatura
+ * ({@see PayCardInvoice}) — só rótulo aqui, quem
+ * marca a fatura paga é aquele caso de uso.
  *
  * @package App\UseCases\Transaction
  *
@@ -48,6 +51,7 @@ final class RegisterTransaction
                 'account_id' => $data->accountId,
                 'category_id' => $data->categoryId,
                 'bill_id' => $data->billId,
+                'card_invoice_id' => $data->cardInvoiceId,
                 'recurring_transaction_id' => $data->recurringTransactionId,
                 'goal_id' => $data->goalId,
                 'description' => $data->description,
