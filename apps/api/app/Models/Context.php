@@ -77,6 +77,12 @@ class Context extends Model
         return $this->hasMany(Goal::class);
     }
 
+    /** @return HasMany<Budget, $this> */
+    public function budgets(): HasMany
+    {
+        return $this->hasMany(Budget::class);
+    }
+
     /** @return HasMany<StatementEntry, $this> */
     public function statementEntries(): HasMany
     {
