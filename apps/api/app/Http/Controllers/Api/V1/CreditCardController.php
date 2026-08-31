@@ -34,7 +34,18 @@ final class CreditCardController extends Controller
 {
     public function index(Context $context): AnonymousResourceCollection
     {
-        return CreditCardResource::collection($context->creditCards()->get());
+        $cards = $context->creditCards()
+            ->withSum(
+                ['invoices as unpaid_invoices_total' => fn ($query) => $query->where('status', '!=', 'paid')],
+                'total_amount',
+            )
+            ->withSum(
+                ['invoices as open_invoice_total' => fn ($query) => $query->where('status', 'open')],
+                'total_amount',
+            )
+            ->get();
+
+        return CreditCardResource::collection($cards);
     }
 
     public function store(StoreCreditCardRequest $request, Context $context, RegisterCreditCard $useCase): CreditCardResource

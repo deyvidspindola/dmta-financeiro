@@ -38,6 +38,7 @@ final class StoreCardPurchaseRequest extends FormRequest
             'amount' => ['required', 'numeric', 'min:0.01'],
             'occurred_at' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
+            'installments' => ['nullable', 'integer', 'min:1', 'max:48'],
         ];
     }
 }

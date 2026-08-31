@@ -13,15 +13,17 @@ use Illuminate\Support\Facades\DB;
  * `total_amount` da fatura. Não toca em saldo de conta (compra no cartão
  * nunca moveu saldo).
  *
- * O que NÃO faz: não reabre uma fatura já paga — apagar compra de fatura
- * paga é caso de borda que a tela deve impedir; aqui só o total é
- * ajustado.
+ * `$entireGroup` apaga todas as parcelas da mesma compra parcelada (mesmo
+ * `installment_group`), cada uma revertendo a sua fatura — apagar só uma
+ * parcela de uma compra em 12x quase nunca é o que se quer.
+ *
+ * O que NÃO faz: não reabre uma fatura já paga.
  *
  * @package App\UseCases\CreditCard
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
@@ -29,13 +31,19 @@ use Illuminate\Support\Facades\DB;
  */
 final class DeleteCardPurchase
 {
-    public function execute(CardPurchase $purchase): void
+    public function execute(CardPurchase $purchase, bool $entireGroup = false): void
     {
-        DB::transaction(function () use ($purchase): void {
-            CardInvoice::query()->whereKey($purchase->card_invoice_id)->lockForUpdate()
-                ->decrement('total_amount', (float) $purchase->amount);
+        DB::transaction(function () use ($purchase, $entireGroup): void {
+            $targets = $entireGroup && $purchase->installment_group !== null
+                ? CardPurchase::query()->where('installment_group', $purchase->installment_group)->get()
+                : collect([$purchase]);
 
-            $purchase->delete();
+            $targets->each(function (CardPurchase $target): void {
+                CardInvoice::query()->whereKey($target->card_invoice_id)->lockForUpdate()
+                    ->decrement('total_amount', (float) $target->amount);
+
+                $target->delete();
+            });
         });
     }
 }

@@ -7,8 +7,9 @@ namespace App\DTOs;
 use App\UseCases\CreditCard\RegisterCardPurchase;
 
 /**
- * Entrada do caso de uso {@see RegisterCardPurchase}. Parcelamento
- * (`installments > 1`) entra numa fase seguinte.
+ * Entrada do caso de uso {@see RegisterCardPurchase}. `installments`
+ * maior que 1 divide a compra em N parcelas — uma por fatura de mês
+ * consecutivo, ligadas pelo mesmo `installment_group`.
  *
  * @package App\DTOs
  *
