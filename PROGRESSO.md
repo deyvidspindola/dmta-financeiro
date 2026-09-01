@@ -4,8 +4,9 @@
 
 Roadmap completo em `~/.claude/plans/adaptive-twirling-gizmo.md`. Decisões:
 D-16 (motor de cartão), D-18 (revisão da D-09 — web+mobile compartilham
-código; **ainda não iniciado**, o `apps/web` é reformado primeiro), DT-08
-(limite de Controller 120), DT-09 (`MonthlyFlowProjector` único).
+código; **scaffold do `apps/app` iniciado**, o `apps/web` segue em paralelo
+até B7), DT-08 (limite de Controller 120), DT-09 (`MonthlyFlowProjector`
+único).
 
 **Backend — completo (18 PRs, #31–#47).** Suíte 19 → 123 testes rodando
 contra MySQL; `make check` agora usa `make test-mysql` (o atalho sqlite não
@@ -49,8 +50,20 @@ com `npm run build && npm run lint`.
   parcelas).
 - **Falta (FE3+):** dashboard rico (contas, últimos lançamentos, cards de
   orçamento/meta), gráficos, telas de detalhe/drilldown, unificar
-  recorrência na UI, gaveta de exportação/backup. Depois: base
-  multiplataforma `apps/app` (D-18).
+  recorrência na UI, gaveta de exportação/backup.
+
+**Trilho B — `apps/app` (Expo, multiplataforma).**
+
+- **B0** (scaffold): projeto Expo SDK 57 + Expo Router + React Native Web +
+  NativeWind 4 em `apps/app/`. Camada `src/api/*`, stores Zustand, tipos e
+  i18n portados do `apps/web` (adaptados: sem DOM; token no
+  `expo-secure-store`; `persist` em AsyncStorage). Fluxo ponta-a-ponta:
+  login (senha → TOTP) → seletor de contexto (PF/PJ/Consolidado) → Início
+  placeholder. `typecheck` + `lint` + `expo export -p web` limpos; build
+  nativo (EAS) não verificado. `react-native-reusables` **não adotado**
+  (CLI imatura) — design system mínimo NativeWind próprio, reavaliar no B1.
+- **Falta (B1+):** navegação Mobills, telas core + drilldown, cartões,
+  orçamento, metas/relatórios, gaveta "Mais", aposentar `apps/web` (B7).
 
 ---
 

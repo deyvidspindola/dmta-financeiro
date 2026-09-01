@@ -1,0 +1,46 @@
+{
+  "expo": {
+    "name": "DMTA Financeiro",
+    "slug": "dmta-financeiro-app",
+    "version": "0.0.0",
+    "scheme": "dmtafinanceiro",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "br.dev.dmta.financeiro"
+    },
+    "android": {
+      "package": "br.dev.dmta.financeiro",
+      "adaptiveIcon": {
+        "backgroundColor": "#ecfdf5",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "resizeMode": "contain",
+          "backgroundColor": "#f6f8f7",
+          "dark": { "backgroundColor": "#0a0f0d" }
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
