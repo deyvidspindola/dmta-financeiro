@@ -47,8 +47,33 @@ function computeDueDate(referenceMonth: string, dueDay: number): string {
 }
 
 /**
- * Linha do tempo de faturas: da mais antiga até a âncora (aberta ou mais
- * recente) + 3 meses futuros. Meses sem fatura real viram entrada sintética.
+ * A fatura "de agora" — a que você olha ao abrir a tela: a do ciclo
+ * corrente se existir, senão a fatura mais antiga ainda não paga
+ * (fechada ou aberta), senão a mais recente. Como as faturas vêm
+ * ordenadas desc da API, ordenamos asc aqui pra pegar a mais antiga.
+ */
+export function findDefaultInvoiceMonth(
+  invoices: CardInvoice[],
+  _timeline?: InvoiceTimelineEntry[],
+): string {
+  const asc = [...invoices].sort((a, b) =>
+    a.reference_month.localeCompare(b.reference_month),
+  )
+  const thisMonth = currentMonthKey()
+
+  const current = asc.find((invoice) => invoice.reference_month === thisMonth)
+  if (current) return current.reference_month
+
+  const oldestUnpaid = asc.find((invoice) => invoice.status !== 'paid')
+  if (oldestUnpaid) return oldestUnpaid.reference_month
+
+  return asc[asc.length - 1]?.reference_month ?? thisMonth
+}
+
+/**
+ * Linha do tempo de faturas: da mais antiga até `max(última fatura real,
+ * fatura de agora + 3 meses)`. Meses sem fatura real viram entrada
+ * sintética ("prevista").
  */
 export function buildInvoiceTimeline(
   invoices: CardInvoice[],
@@ -61,14 +86,12 @@ export function buildInvoiceTimeline(
     a.reference_month.localeCompare(b.reference_month),
   )
 
-  const openInvoice = invoices.find((invoice) => invoice.status === 'open')
-  const anchorMonth =
-    openInvoice?.reference_month ??
-    sorted[sorted.length - 1]?.reference_month ??
-    currentMonthKey()
+  const anchorMonth = findDefaultInvoiceMonth(invoices)
+  const lastRealMonth = sorted[sorted.length - 1]?.reference_month ?? anchorMonth
 
   const startMonth = sorted[0]?.reference_month ?? anchorMonth
-  const endMonth = shiftMonthKey(anchorMonth, FUTURE_INVOICE_MONTHS)
+  const projectedEnd = shiftMonthKey(anchorMonth, FUTURE_INVOICE_MONTHS)
+  const endMonth = projectedEnd > lastRealMonth ? projectedEnd : lastRealMonth
 
   const result: InvoiceTimelineEntry[] = []
   let cursor = startMonth
@@ -83,21 +106,4 @@ export function buildInvoiceTimeline(
     cursor = shiftMonthKey(cursor, 1)
   }
   return result
-}
-
-/** Mês inicial da faixa: fatura aberta ou a mais recente. */
-export function findDefaultInvoiceMonth(
-  invoices: CardInvoice[],
-  timeline: InvoiceTimelineEntry[],
-): string {
-  const open = invoices.find((invoice) => invoice.status === 'open')
-  if (open) return open.reference_month
-
-  const realMonths = timeline
-    .filter((entry) => entry.invoice)
-    .map((entry) => entry.reference_month)
-  if (realMonths.length > 0) return realMonths[realMonths.length - 1]!
-
-  const anchorIdx = Math.max(0, timeline.length - FUTURE_INVOICE_MONTHS - 1)
-  return timeline[anchorIdx]?.reference_month ?? currentMonthKey()
 }
