@@ -8,7 +8,7 @@ import { isMfaChallenge } from '@/types/models'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { useAuthStore } from '@/store/authStore'
-import { Button, ErrorBanner, Field, TextInput } from '@/components/ui'
+import { Button, ErrorBanner, Field, TextInput } from '@/components/ui-legacy'
 
 const loginSchema = z.object({
   email: z.string().email(),

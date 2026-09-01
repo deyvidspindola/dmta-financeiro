@@ -22,7 +22,7 @@ import {
   MoneyValue,
   PageHeader,
   Panel,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 
 export function AccountDetailPage() {
   const { id } = useParams<{ id: string }>()

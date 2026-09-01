@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
-import { PageHeader } from '@/components/ui'
+import { PageHeader } from '@/components/ui-legacy'
 import { strings } from '@/i18n/pt-BR'
 
 type Item = { to: string; label: string; icon: LucideIcon }

@@ -40,7 +40,7 @@ import {
   PageHeader,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { StatementEntry } from '@/types/models'
 
 const ALL_PERIODS = 'all'

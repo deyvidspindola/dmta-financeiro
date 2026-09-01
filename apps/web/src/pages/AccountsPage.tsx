@@ -24,7 +24,7 @@ import {
   PageHeader,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { Account } from '@/types/models'
 
 const schema = z.object({

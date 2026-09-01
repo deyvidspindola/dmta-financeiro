@@ -15,7 +15,7 @@ import {
   PageHeader,
   Panel,
   TextInput,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { MfaEnrollPayload } from '@/api/auth'
 
 const confirmSchema = z.object({

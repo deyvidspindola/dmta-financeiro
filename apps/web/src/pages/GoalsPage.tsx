@@ -22,7 +22,7 @@ import {
   Modal,
   PageHeader,
   TextInput,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { Goal } from '@/types/models'
 
 const schema = z.object({
