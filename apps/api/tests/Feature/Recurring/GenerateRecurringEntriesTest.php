@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Domain\Recurrence\RecurrenceWindow;
 use App\Enums\BillStatus;
 use App\Enums\RecurrenceInterval;
 use App\Enums\StatementEntryType;
@@ -18,8 +19,8 @@ use Tests\Feature\Support\FinanceScenario;
 
 /**
  * Os dois jobs de recorrência — comportamento caracterizado na fase A0;
- * a idempotência real (checagem + índice único `(recurring_*_id, data)`)
- * entrou no PR A7.
+ * idempotência no PR A7; laço compartilhado ({@see RecurrenceWindow}) no
+ * PR A13. As asserções de efeito não mudam entre versões.
  */
 beforeEach(function () {
     Carbon::setTestNow('2026-08-15');
@@ -32,7 +33,12 @@ afterEach(function () {
 
 function runTransactionJob(): void
 {
-    (new GenerateRecurringTransactionEntries)->handle(app(RegisterTransaction::class));
+    (new GenerateRecurringTransactionEntries)->handle(app(RecurrenceWindow::class), app(RegisterTransaction::class));
+}
+
+function runBillJob(): void
+{
+    (new GenerateRecurringBillEntries)->handle(app(RecurrenceWindow::class));
 }
 
 test('lançamento recorrente: uma ocorrência vencida gera um lançamento e avança a data', function () {
@@ -149,7 +155,7 @@ test('obrigação recorrente: gera Bill pendente e avança next_due_date', funct
         'active' => true,
     ]);
 
-    (new GenerateRecurringBillEntries)->handle();
+    runBillJob();
 
     $bill = Bill::query()->sole();
     expect($bill->status)->toBe(BillStatus::Pending->value)
@@ -185,8 +191,8 @@ test('obrigação recorrente: rodar de novo no mesmo dia não duplica', function
         'active' => true,
     ]);
 
-    (new GenerateRecurringBillEntries)->handle();
-    (new GenerateRecurringBillEntries)->handle();
+    runBillJob();
+    runBillJob();
 
     expect(Bill::query()->count())->toBe(1);
 });
