@@ -32,6 +32,7 @@ import type {
   RecurringTransaction,
   SimulationStatus,
   StatementEntry,
+  TransferDetails,
   User,
 } from '@/types/models'
 
@@ -327,9 +328,20 @@ export function mapTransaction(
     date?: string
     origin?: CaptureOrigin
     bill_id?: string | number | null
+    card_invoice_id?: string | number | null
     goal_id?: string | number | null
     transfer_pair_id?: string | number | null
     recurring_transaction_id?: string | number | null
+    transfer?: {
+      from: {
+        context: Parameters<typeof mapContextRef>[0]
+        account: { id: string | number; name: string }
+      }
+      to: {
+        context: Parameters<typeof mapContextRef>[0]
+        account: { id: string | number; name: string }
+      }
+    } | null
     context?: Parameters<typeof mapContextRef>[0] | null
   },
 ): StatementEntry {
@@ -351,6 +363,10 @@ export function mapTransaction(
       raw.bill_id === null || raw.bill_id === undefined
         ? null
         : asId(raw.bill_id),
+    card_invoice_id:
+      raw.card_invoice_id === null || raw.card_invoice_id === undefined
+        ? null
+        : asId(raw.card_invoice_id),
     goal_id:
       raw.goal_id === null || raw.goal_id === undefined
         ? null
@@ -364,7 +380,36 @@ export function mapTransaction(
       raw.recurring_transaction_id === undefined
         ? null
         : asId(raw.recurring_transaction_id),
+    transfer: raw.transfer ? mapTransferDetails(raw.transfer) : null,
     context,
+  }
+}
+
+function mapTransferDetails(raw: {
+  from: {
+    context: Parameters<typeof mapContextRef>[0]
+    account: { id: string | number; name: string }
+  }
+  to: {
+    context: Parameters<typeof mapContextRef>[0]
+    account: { id: string | number; name: string }
+  }
+}): TransferDetails {
+  return {
+    from: {
+      context: mapContextRef(raw.from.context),
+      account: {
+        id: asId(raw.from.account.id),
+        name: raw.from.account.name,
+      },
+    },
+    to: {
+      context: mapContextRef(raw.to.context),
+      account: {
+        id: asId(raw.to.account.id),
+        name: raw.to.account.name,
+      },
+    },
   }
 }
 

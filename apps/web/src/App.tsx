@@ -12,6 +12,8 @@ import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
 import { BillCapturesPage } from '@/pages/BillCapturesPage'
 import { BoletoPasswordRulesPage } from '@/pages/BoletoPasswordRulesPage'
+import { TransactionDetailPage } from '@/pages/TransactionDetailPage'
+import { AccountDetailPage } from '@/pages/AccountDetailPage'
 import { TransactionsPage } from '@/pages/TransactionsPage'
 import { RecurringTransactionsPage } from '@/pages/RecurringTransactionsPage'
 import { CategoriesPage } from '@/pages/CategoriesPage'
@@ -58,11 +60,13 @@ export default function App() {
             <Route path="novo" element={<QuickAddPage />} />
             <Route path="budgets" element={<BudgetsPage />} />
             <Route path="accounts" element={<AccountsPage />} />
+            <Route path="accounts/:id" element={<AccountDetailPage />} />
             <Route path="credit-cards" element={<CreditCardsPage />} />
             <Route path="bills" element={<BillsPage />} />
             <Route path="bill-captures" element={<BillCapturesPage />} />
             <Route path="boleto-passwords" element={<BoletoPasswordRulesPage />} />
             <Route path="transactions" element={<TransactionsPage />} />
+            <Route path="transactions/:id" element={<TransactionDetailPage />} />
             <Route path="recurring" element={<RecurringTransactionsPage />} />
             <Route path="categories" element={<CategoriesPage />} />
             <Route path="companies" element={<CompaniesPage />} />

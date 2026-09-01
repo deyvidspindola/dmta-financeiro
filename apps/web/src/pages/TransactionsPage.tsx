@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -17,6 +18,10 @@ import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
 import { currentMonthKey, isInMonth } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
+import {
+  canMutateEntry,
+  transactionDirection,
+} from '@/lib/transactionDisplay'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
@@ -77,24 +82,6 @@ const moveSchema = z.object({
 type EntryFormValues = z.infer<typeof entrySchema>
 type TransferFormValues = z.infer<typeof transferSchema>
 type MoveFormValues = z.infer<typeof moveSchema>
-
-function canMutateEntry(tx: StatementEntry): boolean {
-  return !tx.transfer_pair_id && !tx.bill_id && tx.type !== 'transfer'
-}
-
-/**
- * Crédito (entrada) ou débito (saída) pra colorir o valor na listagem.
- * Transferência não tem um `type` próprio pra cada perna — o mesmo
- * critério do backend decide: a perna de menor id é a origem (débito),
- * ver `StatementEntry::isTransferOrigin()` na API.
- */
-function transactionDirection(tx: StatementEntry): 'credit' | 'debit' {
-  if (tx.type === 'income') return 'credit'
-  if (tx.type === 'expense') return 'debit'
-  return tx.transfer_pair_id && Number(tx.id) < Number(tx.transfer_pair_id)
-    ? 'debit'
-    : 'credit'
-}
 
 const emptyEntry: EntryFormValues = {
   description: '',
@@ -499,7 +486,12 @@ export function TransactionsPage() {
               ) : null}
               <td>{formatDate(tx.date)}</td>
               <td>
-                {tx.description}
+                <Link
+                  to={`/transactions/${tx.id}?context=${tx.context_id}`}
+                  className="row-link"
+                >
+                  {tx.description}
+                </Link>
                 {tx.recurring_transaction_id ? (
                   <span className="muted small"> · recorrente</span>
                 ) : null}
