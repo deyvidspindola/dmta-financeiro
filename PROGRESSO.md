@@ -1,5 +1,53 @@
 # Progresso do monorepo
 
+## Reestruturação "tipo Mobills" (01–02/09/2026)
+
+Roadmap completo em `~/.claude/plans/adaptive-twirling-gizmo.md`. Decisões:
+D-16 (motor de cartão), D-18 (revisão da D-09 — web+mobile compartilham
+código; **ainda não iniciado**, o `apps/web` é reformado primeiro), DT-08
+(limite de Controller 120), DT-09 (`MonthlyFlowProjector` único).
+
+**Backend — completo (18 PRs, #31–#47).** Suíte 19 → 123 testes rodando
+contra MySQL; `make check` agora usa `make test-mysql` (o atalho sqlite não
+pegava `only_full_group_by`).
+
+- **A0/A1** — rede de caracterização do fluxo de saldo; isolamento de
+  contexto nos FormRequests (id de outro contexto → 422); meta reconciliada
+  ao editar aporte; coluna `transfer_role` explícita; idempotência dos jobs
+  de recorrência (índices únicos); `SettleDebt` com lançamento opcional.
+- **A2 — cartão de crédito de verdade** (#40–44): `CardPurchase` +
+  `InvoiceAllocator` (compra cai na fatura pelo `closing_day`);
+  `CloseCardInvoices` (job diário); `PayCardInvoice` (debita a conta,
+  reversível pelo delete); parcelamento (`InstallmentPlan`, abre faturas
+  futuras); limite disponível no `CreditCardResource`. Cadastro manual de
+  fatura → `@deprecated`.
+- **A5 — orçamento por categoria** (#45): tabela `budgets` (teto padrão +
+  override de mês), `BudgetProgressService` com rollup de subcategoria.
+- **A3/A4 — dedup** (#46/#47): `RecurrenceWindow` mata o laço copiado dos 2
+  jobs de recorrência; `MonthlyFlowProjector` unifica `FreeBudgetCalculator`
+  + `CashFlowProjector`. As tabelas `recurring_transactions`/`recurring_bills`
+  **não** foram fundidas num `Commitment` (migration de dado no banco vivo,
+  alto risco sem ganho visível) — anotado como evolução possível.
+- **Incidente:** PR A7 (#37) mergeado com CI vermelho por erro; hotfix #39.
+  Agora o merge só acontece com CI 100% verde e `make check` roda MySQL.
+
+**Frontend (`apps/web`) — em andamento.** `apps/web` não tem CI; validar
+com `npm run build && npm run lint`.
+
+- **FE1** (#48): navegação tipo Mobills — bottom nav + FAB (celular) / rail
+  de ícones (desktop), navegador de mês global (`monthStore`),
+  `ContextSwitcher` compacto, gaveta "Mais", `/novo` (lançamento rápido),
+  `/budgets` (orçamento com barra de progresso).
+- **FE2** (#49): `MoneyValue` `+/−` (adeus "C/D"); `CreditCardsPage`
+  reescrita para o motor A2 (limite, faturas com status, pagar, compras,
+  parcelas).
+- **Falta (FE3+):** dashboard rico (contas, últimos lançamentos, cards de
+  orçamento/meta), gráficos, telas de detalhe/drilldown, unificar
+  recorrência na UI, gaveta de exportação/backup. Depois: base
+  multiplataforma `apps/app` (D-18).
+
+---
+
 - **25/08/2026 — backend da F1 completo.** Os 3 itens que faltavam do
   lado Claude Code (`docs/04_WORKFLOW_PAREADO.md`) saíram em 3 PRs
   independentes, cada um com `make check` verde e validação por curl
