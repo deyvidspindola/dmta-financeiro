@@ -25,6 +25,14 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   `ui-legacy.tsx` (25 telas ainda importam dele, migram uma a uma). `/kit`
   reescrito como galeria completa. build + lint verdes; verificado nos 2 temas.
 - **F2 shell / F3 telas** (Cursor). **F4 limpeza** (Claude) — remove `ui-legacy`.
+- **F2 — Shell / navegação (esta rodada):** `AppLayout` repaginado com sidebar
+  premium colapsável (grupos Visão geral / Planejamento, rodapé com perfil,
+  tema claro/escuro/sistema e logout), topbar sticky com `MonthNavigator` e
+  `ContextSwitcher`, bottom nav mobile + FAB. `ContextSwitcher` com chip PF/PJ
+  e Consolidado separado. `MonthNavigator` com `IconButton` do design system.
+  `ToastHost` estilo Alert. `uiStore` para estado da sidebar. Strings novas em
+  `pt-BR.ts`. Cromo theme-aware; área de conteúdo sem `text-fg` (telas legadas).
+  build + lint verdes; smoke visual OK (claro/escuro, mobile ~360px).
 
 ## Feito
 

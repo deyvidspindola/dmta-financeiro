@@ -6,6 +6,7 @@ export const strings = {
 
   nav: {
     dashboard: 'Painel',
+    home: 'Início',
     accounts: 'Contas',
     creditCards: 'Cartões',
     bills: 'Boletos',
@@ -28,6 +29,36 @@ export const strings = {
     more: 'Mais',
     quickAdd: 'Lançar',
     budgets: 'Orçamentos',
+    groups: {
+      overview: 'Visão geral',
+      planning: 'Planejamento',
+    },
+    consolidatedView: 'Visão consolidada',
+    pf: 'PF',
+    pj: 'PJ',
+  },
+
+  monthNav: {
+    prevMonth: 'Mês anterior',
+    nextMonth: 'Próximo mês',
+    backToCurrent: 'Voltar para o mês atual',
+  },
+
+  theme: {
+    label: 'Tema',
+    light: 'Claro',
+    dark: 'Escuro',
+    system: 'Sistema',
+  },
+
+  shell: {
+    collapseSidebar: 'Recolher menu',
+    expandSidebar: 'Expandir menu',
+    brandShort: 'DMTA',
+  },
+
+  toast: {
+    close: 'Fechar',
   },
 
   quickAdd: {
