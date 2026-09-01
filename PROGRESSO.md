@@ -30,6 +30,12 @@ pegava `only_full_group_by`).
   alto risco sem ganho visível) — anotado como evolução possível.
 - **Incidente:** PR A7 (#37) mergeado com CI vermelho por erro; hotfix #39.
   Agora o merge só acontece com CI 100% verde e `make check` roda MySQL.
+- **BE-filtros** — filtros server-side em `GET /transactions`
+  (`from`/`to`/`account_id`/`category_id`/`type`/`q`) e `GET /bills`
+  (`from`/`to`/`status` com `overdue` derivado/`direction`/`category_id`/`q`)
+  via `IndexTransactionRequest`/`IndexBillRequest` + scope `applyFilters` nos
+  models. Sem filtro = comportamento anterior; id de outro contexto → 422.
+  Irmão do PR FE3 (o `apps/web` precisa do filtro de período no servidor).
 
 **Frontend (`apps/web`) — em andamento.** `apps/web` não tem CI; validar
 com `npm run build && npm run lint`.

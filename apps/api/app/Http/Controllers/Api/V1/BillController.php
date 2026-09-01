@@ -8,6 +8,7 @@ use App\DTOs\RegisterBillData;
 use App\DTOs\UpdateBillData;
 use App\Enums\BillDirection;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\IndexBillRequest;
 use App\Http\Requests\Api\StoreBillRequest;
 use App\Http\Requests\Api\UpdateBillRequest;
 use App\Http\Resources\BillResource;
@@ -33,9 +34,12 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class BillController extends Controller
 {
-    public function index(Context $context): AnonymousResourceCollection
+    /** Boletos do contexto por vencimento, com os filtros opcionais de {@see IndexBillRequest}. */
+    public function index(IndexBillRequest $request, Context $context): AnonymousResourceCollection
     {
-        return BillResource::collection($context->bills()->orderBy('due_date')->get());
+        return BillResource::collection(
+            $context->bills()->applyFilters($request->filters())->orderBy('due_date')->get(),
+        );
     }
 
     public function store(StoreBillRequest $request, Context $context, RegisterBill $useCase): BillResource

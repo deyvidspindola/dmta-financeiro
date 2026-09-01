@@ -7,6 +7,7 @@ namespace App\Models;
 use App\Enums\BillStatus;
 use Database\Factories\BillFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -66,6 +67,30 @@ class Bill extends Model
     public function statementEntry(): HasOne
     {
         return $this->hasOne(StatementEntry::class);
+    }
+
+    /**
+     * Filtros opcionais de `GET /bills`, já validados na camada HTTP
+     * (`IndexBillRequest`): `from`/`to` (`due_date`), `status`
+     * (`overdue` = pendente e vencido, sem linha própria no banco),
+     * `direction`, `category_id`, `q` (descrição). Chave ausente não
+     * filtra; não pagina nem ordena.
+     *
+     * @param  Builder<Bill>  $query
+     * @param  array<string, mixed>  $filters
+     * @return Builder<Bill>
+     */
+    public function scopeApplyFilters(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->whereDate('due_date', '>=', $v))
+            ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->whereDate('due_date', '<=', $v))
+            ->when($filters['direction'] ?? null, fn (Builder $q, $v) => $q->where('direction', $v))
+            ->when($filters['category_id'] ?? null, fn (Builder $q, $v) => $q->where('category_id', (int) $v))
+            ->when($filters['q'] ?? null, fn (Builder $q, $v) => $q->whereLike('description', '%'.$v.'%'))
+            ->when($filters['status'] ?? null, fn (Builder $q, $v) => $v === 'overdue'
+                ? $q->where('status', BillStatus::Pending->value)->whereDate('due_date', '<', Carbon::today())
+                : $q->where('status', $v));
     }
 
     /** Se o vencimento já passou e o boleto ainda não foi pago/cancelado. */
