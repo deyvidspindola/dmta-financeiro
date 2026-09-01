@@ -10,6 +10,7 @@ import type {
   BillStatus,
   CaptureOrigin,
   CardInvoice,
+  CardPurchase,
   Category,
   Company,
   Context,
@@ -542,6 +543,9 @@ export function mapCreditCard(
     limit?: number
     closing_day: number
     due_day: number
+    available_limit?: number | null
+    unpaid_invoices_total?: number
+    current_invoice_total?: number
   },
 ): CreditCard {
   return {
@@ -552,6 +556,38 @@ export function mapCreditCard(
     limit: Number(raw.credit_limit ?? raw.limit ?? 0),
     closing_day: raw.closing_day,
     due_day: raw.due_day,
+    available_limit:
+      raw.available_limit === null || raw.available_limit === undefined
+        ? null
+        : Number(raw.available_limit),
+    unpaid_invoices_total: Number(raw.unpaid_invoices_total ?? 0),
+    current_invoice_total: Number(raw.current_invoice_total ?? 0),
+  }
+}
+
+export function mapCardPurchase(
+  creditCardId: string,
+  raw: {
+    id: string | number
+    card_invoice_id: string | number
+    category_id: string | number | null
+    description: string
+    amount: number
+    occurred_at: string
+    installment_number: number | null
+    installment_total: number | null
+  },
+): CardPurchase {
+  return {
+    id: asId(raw.id),
+    credit_card_id: creditCardId,
+    card_invoice_id: asId(raw.card_invoice_id),
+    category_id: raw.category_id === null ? null : asId(raw.category_id),
+    description: raw.description,
+    amount: Number(raw.amount),
+    occurred_at: raw.occurred_at,
+    installment_number: raw.installment_number,
+    installment_total: raw.installment_total,
   }
 }
 

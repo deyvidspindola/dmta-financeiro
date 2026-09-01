@@ -1279,3 +1279,120 @@ select {
     text-decoration: none;
   }
 }
+
+/* ---- cartões de crédito (PR FE2) ---- */
+
+.card-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.cc-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper-elevated);
+}
+
+.cc-card__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.cc-card__toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+
+.cc-card__limit-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  margin-top: 0.3rem;
+}
+
+.cc-card__invoices {
+  display: grid;
+  gap: 0.4rem;
+  border-top: 1px solid var(--line);
+  padding-top: 0.7rem;
+}
+
+.cc-invoice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0;
+}
+
+.cc-invoice__row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+  flex-wrap: wrap;
+}
+
+.cc-invoice__ref {
+  font-weight: 600;
+  min-width: 62px;
+}
+
+.cc-badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cc-badge--open {
+  background: #eef4ff;
+  color: #29508c;
+}
+
+.cc-badge--closed {
+  background: #fff4e5;
+  color: #92600a;
+}
+
+.cc-badge--paid {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.cc-purchases {
+  grid-column: 1 / -1;
+  list-style: none;
+  margin: 0.3rem 0 0.2rem;
+  padding: 0.5rem 0.6rem;
+  background: var(--paper);
+  border-radius: 10px;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.cc-purchases li {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.85rem;
+}

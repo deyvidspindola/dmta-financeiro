@@ -1,16 +1,25 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
 import {
+  asApiId,
   mapCardInvoice,
+  mapCardPurchase,
   mapCreditCard,
   toCreateCardInvoiceBody,
   toCreateCreditCardBody,
   toUpdateCreditCardBody,
 } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
-import type { CardInvoice, CreditCard } from '@/types/models'
+import type { CardInvoice, CardPurchase, CreditCard } from '@/types/models'
 
-export type CreateCreditCardInput = Omit<CreditCard, 'id' | 'context_id'>
+export type CreateCreditCardInput = Omit<
+  CreditCard,
+  | 'id'
+  | 'context_id'
+  | 'available_limit'
+  | 'unpaid_invoices_total'
+  | 'current_invoice_total'
+>
 
 export type CreateCardInvoiceInput = {
   reference_month: string
@@ -112,4 +121,86 @@ export async function createCardInvoice(
     ),
   )
   return mapCardInvoice(contextId, creditCardId, created)
+}
+
+/** Faturas de um cartão específico (não de todos, como listCardInvoices). */
+export async function listInvoicesForCard(
+  contextId: string,
+  creditCardId: string,
+): Promise<CardInvoice[]> {
+  const payload = await http.get<
+    | Array<Parameters<typeof mapCardInvoice>[2]>
+    | { data: Array<Parameters<typeof mapCardInvoice>[2]> }
+  >(`/contexts/${contextId}/credit-cards/${creditCardId}/invoices`)
+  return unwrapData(payload).map((row) =>
+    mapCardInvoice(contextId, creditCardId, row),
+  )
+}
+
+export async function listCardPurchases(
+  contextId: string,
+  creditCardId: string,
+  invoiceId?: string,
+): Promise<CardPurchase[]> {
+  const query = invoiceId ? `?invoice_id=${asApiId(invoiceId)}` : ''
+  const payload = await http.get<
+    | Array<Parameters<typeof mapCardPurchase>[1]>
+    | { data: Array<Parameters<typeof mapCardPurchase>[1]> }
+  >(`/contexts/${contextId}/credit-cards/${creditCardId}/purchases${query}`)
+  return unwrapData(payload).map((row) => mapCardPurchase(creditCardId, row))
+}
+
+export type CreateCardPurchaseInput = {
+  description: string
+  amount: number
+  occurred_at: string
+  category_id?: string | null
+  installments?: number
+}
+
+export async function createCardPurchase(
+  contextId: string,
+  creditCardId: string,
+  input: CreateCardPurchaseInput,
+): Promise<void> {
+  await http.post(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/purchases`,
+    {
+      description: input.description,
+      amount: input.amount,
+      occurred_at: input.occurred_at,
+      ...(input.category_id ? { category_id: asApiId(input.category_id) } : {}),
+      ...(input.installments && input.installments > 1
+        ? { installments: input.installments }
+        : {}),
+    },
+  )
+}
+
+export async function deleteCardPurchase(
+  contextId: string,
+  creditCardId: string,
+  purchaseId: string,
+  scope?: 'group',
+): Promise<void> {
+  const query = scope ? '?scope=group' : ''
+  await http.delete(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/purchases/${asApiId(purchaseId)}${query}`,
+  )
+}
+
+export async function payCardInvoice(
+  contextId: string,
+  creditCardId: string,
+  invoiceId: string,
+  accountId: string,
+  occurredAt?: string,
+): Promise<void> {
+  await http.post(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/invoices/${asApiId(invoiceId)}/pay`,
+    {
+      account_id: asApiId(accountId),
+      ...(occurredAt ? { occurred_at: occurredAt } : {}),
+    },
+  )
 }
