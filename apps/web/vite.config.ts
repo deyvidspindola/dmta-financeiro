@@ -1,5 +1,6 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
 import path from 'node:path'
 
 export default defineConfig({
@@ -8,7 +9,7 @@ export default defineConfig({
   // Sem isso o build referencia /assets/... (raiz) em vez de
   // /app/assets/..., e todo asset 404 (cai no roteador da API).
   base: '/app/',
-  plugins: [react()],
+  plugins: [tailwindcss(), react()],
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),

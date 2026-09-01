@@ -12,6 +12,7 @@ import { authApi } from '@/api'
 import { ContextSwitcher } from '@/components/ContextSwitcher'
 import { MonthNavigator } from '@/components/MonthNavigator'
 import { strings } from '@/i18n/pt-BR'
+import { usePrelineInit } from '@/lib/preline'
 import { useAuthStore } from '@/store/authStore'
 
 type Tab = { to: string; label: string; icon: LucideIcon; end?: boolean }
@@ -26,6 +27,8 @@ const TABS: Tab[] = [
 export function AppLayout() {
   const navigate = useNavigate()
   const { user, clearSession } = useAuthStore()
+
+  usePrelineInit()
 
   async function handleLogout() {
     try {

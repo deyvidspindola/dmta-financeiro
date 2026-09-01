@@ -1,6 +1,23 @@
 # Progresso — apps/web (F0 + F1 + reestruturação Mobills)
 
-Atualizado em 2026-09-01 (PR FE3 — dashboard rico + drilldown).
+Atualizado em 2026-09-01 (reforma visual F0 — Tailwind + Preline).
+
+## Reforma visual (D-17 / DT-10)
+
+Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
+
+- **F0 — Fundação (esta rodada):** Tailwind CSS v4 (`@tailwindcss/vite`) +
+  Preline UI (OSS, plugins importados um a um em `src/lib/preline.ts`,
+  re-init por rota). Tokens de tema em `src/styles/theme.css` (paleta
+  `brand` verde / `accent` violeta / `cat-1..12`; semânticas `surface`/`fg`/
+  `line` por tema). Dark mode por classe (`themeStore` + anti-flash no
+  `index.html`). `global.css` legado isolado em `@layer legacy` — telas
+  antigas intactas, sai na F4. Página `/kit` (só em dev) = vitrine de tokens.
+  `apps/web/CLAUDE.md` criado. `build` + `lint` verdes; smoke visual OK
+  (claro/escuro, dropdown Preline, login legado).
+- **F1 — Design system** (Claude, próximo): `components/ui` vira wrappers
+  Preline.
+- **F2 shell / F3 telas** (Cursor). **F4 limpeza** (Claude).
 
 ## Feito
 
@@ -25,7 +42,8 @@ Atualizado em 2026-09-01 (PR FE3 — dashboard rico + drilldown).
 ## Falta / pendências
 
 - IMAP real (caixa de e-mail)
-- Filtro de período server-side (se a API passar a aceitar)
+- Consumir os filtros server-side de `GET /transactions` e `GET /bills` (a API
+  já aceita `from`/`to`/`account_id`/`category_id`/`type`/`status`/`q` — PR #51)
 - `GET /accounts/{id}` dedicado (hoje resolve via listagem no cliente)
 - Dashboard API não recebe mês — métricas do topo são do mês corrente da API;
   seções novas (lançamentos, orçamentos) respeitam `monthStore`
