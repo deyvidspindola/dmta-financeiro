@@ -1,38 +1,31 @@
+import {
+  CreditCard,
+  Home,
+  LayoutGrid,
+  ListPlus,
+  LogOut,
+  Plus,
+} from 'lucide-react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import type { LucideIcon } from 'lucide-react'
 import { authApi } from '@/api'
+import { ContextSwitcher } from '@/components/ContextSwitcher'
+import { MonthNavigator } from '@/components/MonthNavigator'
 import { strings } from '@/i18n/pt-BR'
-import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { Button } from '@/components/ui'
+import { useAuthStore } from '@/store/authStore'
 
-const links = [
-  { to: '/', label: strings.nav.dashboard, end: true },
-  { to: '/accounts', label: strings.nav.accounts },
-  { to: '/credit-cards', label: strings.nav.creditCards },
-  { to: '/bills', label: strings.nav.bills },
-  { to: '/bill-captures', label: strings.nav.billCaptures },
-  { to: '/boleto-passwords', label: strings.nav.boletoPasswords },
-  { to: '/transactions', label: strings.nav.transactions },
-  { to: '/recurring', label: strings.nav.recurring },
-  { to: '/categories', label: strings.nav.categories },
-  { to: '/companies', label: strings.nav.companies },
-  { to: '/investments', label: strings.nav.investments },
-  { to: '/goals', label: strings.nav.goals },
-  { to: '/simulator', label: strings.nav.simulator },
-  { to: '/debts', label: strings.nav.debts },
-  { to: '/import-bills', label: strings.nav.importBills },
-  { to: '/import-statement', label: strings.nav.importStatement },
-  { to: '/security', label: strings.nav.security },
+type Tab = { to: string; label: string; icon: LucideIcon; end?: boolean }
+
+const TABS: Tab[] = [
+  { to: '/', label: strings.nav.dashboard, icon: Home, end: true },
+  { to: '/transactions', label: strings.nav.transactions, icon: ListPlus },
+  { to: '/credit-cards', label: strings.nav.creditCards, icon: CreditCard },
+  { to: '/mais', label: strings.nav.more, icon: LayoutGrid },
 ]
 
 export function AppLayout() {
   const navigate = useNavigate()
-  const { user, contexts, activeScope, setActiveScope, clearSession } =
-    useAuthStore()
-
-  const orderedContexts = [...contexts].sort((a, b) => {
-    if (a.type === b.type) return a.name.localeCompare(b.name, 'pt-BR')
-    return a.type === 'pf' ? -1 : 1
-  })
+  const { user, clearSession } = useAuthStore()
 
   async function handleLogout() {
     try {
@@ -44,56 +37,72 @@ export function AppLayout() {
   }
 
   return (
-    <div className="shell">
-      <aside className="shell__sidebar">
-        <div className="brand">
-          <span className="brand__mark">DMTA</span>
-          <span className="brand__name">{strings.appName}</span>
-        </div>
-        <nav className="nav">
-          {links.map((link) => (
+    <div className="app">
+      <aside className="rail">
+        <div className="rail__brand">DMTA</div>
+        <nav className="rail__nav">
+          {TABS.map((tab) => (
             <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.end}
+              key={tab.to}
+              to={tab.to}
+              end={tab.end}
               className={({ isActive }) =>
-                `nav__link${isActive ? ' nav__link--active' : ''}`
+                `rail__link${isActive ? ' is-active' : ''}`
               }
             >
-              {link.label}
+              <tab.icon size={20} />
+              <span>{tab.label}</span>
             </NavLink>
           ))}
         </nav>
-        <div className="shell__sidebar-foot">
-          <p className="muted small">{user?.name}</p>
-          <Button variant="ghost" onClick={() => void handleLogout()}>
-            {strings.nav.logout}
-          </Button>
-        </div>
+        <NavLink to="/novo" className="rail__link rail__link--accent">
+          <Plus size={20} />
+          <span>{strings.nav.quickAdd}</span>
+        </NavLink>
+        <button
+          type="button"
+          className="rail__link rail__logout"
+          onClick={() => void handleLogout()}
+        >
+          <LogOut size={18} />
+          <span>{user?.name ?? strings.nav.logout}</span>
+        </button>
       </aside>
 
-      <div className="shell__main">
-        <div className="context-bar">
-          <label className="context-bar__label">
-            {strings.nav.context}
-            <select
-              className="input context-bar__select"
-              value={activeScope}
-              onChange={(event) => setActiveScope(event.target.value)}
-            >
-              <option value={CONSOLIDATED}>{strings.nav.consolidated}</option>
-              {orderedContexts.map((ctx) => (
-                <option key={ctx.id} value={ctx.id}>
-                  {ctx.name}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <main className="shell__content">
+      <div className="app__main">
+        <header className="topbar">
+          <MonthNavigator />
+          <ContextSwitcher />
+        </header>
+        <main className="app__content">
           <Outlet />
         </main>
       </div>
+
+      <nav className="bottomnav">
+        {TABS.slice(0, 2).map((tab) => (
+          <BottomLink key={tab.to} {...tab} />
+        ))}
+        <NavLink to="/novo" className="bottomnav__fab" aria-label={strings.nav.quickAdd}>
+          <Plus size={24} />
+        </NavLink>
+        {TABS.slice(2).map((tab) => (
+          <BottomLink key={tab.to} {...tab} />
+        ))}
+      </nav>
     </div>
+  )
+}
+
+function BottomLink({ to, label, icon: Icon, end }: Tab) {
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className={({ isActive }) => `bottomnav__link${isActive ? ' is-active' : ''}`}
+    >
+      <Icon size={20} />
+      <span>{label}</span>
+    </NavLink>
   )
 }

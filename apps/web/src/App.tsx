@@ -4,6 +4,9 @@ import { AppLayout } from '@/components/AppLayout'
 import { RequireAuth } from '@/components/RequireAuth'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
+import { MorePage } from '@/pages/MorePage'
+import { QuickAddPage } from '@/pages/QuickAddPage'
+import { BudgetsPage } from '@/pages/BudgetsPage'
 import { AccountsPage } from '@/pages/AccountsPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
@@ -51,6 +54,9 @@ export default function App() {
             }
           >
             <Route index element={<DashboardPage />} />
+            <Route path="mais" element={<MorePage />} />
+            <Route path="novo" element={<QuickAddPage />} />
+            <Route path="budgets" element={<BudgetsPage />} />
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="credit-cards" element={<CreditCardsPage />} />
             <Route path="bills" element={<BillsPage />} />
