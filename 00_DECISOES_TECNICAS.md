@@ -167,6 +167,34 @@ datas. E os dois jobs de recorrência tinham o mesmo `while`-loop copiado.
   diferente. Documentado no docblock.
 **Data:** rodada 8 (fase A3/A4, 02/09/2026).
 
+### DT-10 — Tailwind CSS v4 + Preline UI no `apps/web` (Fase 0 da reforma visual)
+**Contexto:** D-17 — reforma visual do `apps/web` tipo Mobills. Precisava de
+uma base de estilo sem quebrar as ~24 telas que ainda usam
+`src/styles/global.css` (~1.560 linhas à mão).
+**Decisão:**
+- **Tailwind v4** via `@tailwindcss/vite` (não PostCSS). Entrada em
+  `src/styles/theme.css`.
+- **Preline UI** (`preline`, OSS): só os plugins em uso são importados em
+  `src/lib/preline.ts` (o `import 'preline'` cheio arrasta datatables.net,
+  dropzone, nouislider, vanilla-calendar-pro — ~380 kB). `usePrelineInit()`
+  re-roda `HSStaticMethods.autoInit()` a cada troca de rota.
+- **Convivência com o CSS legado:** `@import './global.css' layer(legacy)`
+  com ordem `@layer theme, base, legacy, components, utilities` — o legado
+  ganha do preflight do Tailwind, mas perde para qualquer utilitário. Sai
+  de vez na Fase 4.
+- **Tokens:** `@theme static` (força emitir todas as CSS vars — o Tailwind
+  faz tree-shake por padrão) para a paleta de marca (`brand` verde,
+  `accent` violeta, `cat-1..12`). Cores semânticas (`surface`, `fg`,
+  `line`...) via `@theme inline` + blocos `:root` / `.dark`.
+- **Dark mode por classe** (`.dark` no `<html>`, padrão do Preline), não por
+  media query — `themeStore` (system/light/dark) + script anti-flash no
+  `index.html`. O `<body>` **não** recebe `color`/`background`: telas
+  legadas usam cor fixa clara e herdariam texto claro no modo escuro. Cada
+  tela nova embrulha em `bg-canvas text-fg`.
+- **Página `/kit`** (só em `import.meta.env.DEV`) — vitrine viva de tokens e,
+  a partir da F1, do design system.
+**Data:** rodada 9 (F0, 01/09/2026).
+
 ---
 
 ## Próximos passos imediatos

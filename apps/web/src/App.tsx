@@ -1,6 +1,9 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppLayout } from '@/components/AppLayout'
+import { KitPage } from '@/pages/KitPage'
+import { applyTheme, useThemeStore } from '@/store/themeStore'
 import { RequireAuth } from '@/components/RequireAuth'
 import { LoginPage } from '@/pages/LoginPage'
 import { DashboardPage } from '@/pages/DashboardPage'
@@ -41,12 +44,27 @@ const queryClient = new QueryClient({
 
 bindAuthToken(() => useAuthStore.getState().token)
 
+/** Mantém o tema 'system' em sincronia quando o SO troca claro/escuro. */
+function useSystemThemeSync() {
+  useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)')
+    const sync = () => applyTheme(useThemeStore.getState().pref)
+    mq.addEventListener('change', sync)
+    return () => mq.removeEventListener('change', sync)
+  }, [])
+}
+
 export default function App() {
+  useSystemThemeSync()
+
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename="/app">
         <ToastHost />
         <Routes>
+          {import.meta.env.DEV ? (
+            <Route path="/kit" element={<KitPage />} />
+          ) : null}
           <Route path="/login" element={<LoginPage />} />
           <Route
             element={

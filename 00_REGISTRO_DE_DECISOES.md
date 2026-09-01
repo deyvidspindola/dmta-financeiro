@@ -94,6 +94,27 @@ lançamento de compra no cartão. Maior lacuna frente a um app tipo Mobills.
   `@deprecated` — só para migração de saldo inicial.
 **Data:** rodada 8 (fase A2, 01/09/2026).
 
+### D-17 — Reforma visual do `apps/web` com Preline UI + Tailwind
+**Contexto:** o dono pediu (01/09/2026) uma cara **moderna, colorida, premium
+e profissional** para o `apps/web`, referência **Mobills**. Hoje é ~1.560
+linhas de CSS à mão, sem lib de UI. A D-09 previa "duas bases de front" e o
+plano `adaptive-twirling-gizmo` (D-18, nunca formalizada) cogitava unificar
+web + mobile numa base React Native / NativeWind.
+**Decisão:**
+- Adotar **Preline UI (open source, MIT) + Tailwind CSS v4** no `apps/web`.
+  **Só free** — nada de Preline Pro / Preline MCP (grátis só até jan/2027).
+- A reforma é **por fases** (plano
+  `~/.claude/plans/reforma-visual-preline-apps-web.md`): F0 fundação →
+  F1 design system → F2 shell → F3 telas por grupo → F4 limpeza. 1 PR por
+  fase/grupo, revisado.
+- **Claude + Cursor em paralelo** é o modo de trabalho: Claude nas fases de
+  fundação/sistema/limpeza, Cursor no shell e nas telas.
+- **A D-09 continua valendo** para o mobile: o futuro `apps/app` (Expo /
+  React Native) NÃO usa Preline (é só-web). O investimento no `apps/web`
+  agora é assumidamente descartável quando/se o `apps/app` existir — o dono
+  aceitou esse retrabalho para ter o web apresentável já.
+**Data:** rodada 9 (F0, 01/09/2026).
+
 ---
 
 ## ABERTA

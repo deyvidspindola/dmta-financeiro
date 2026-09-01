@@ -1,0 +1,143 @@
+/*
+ * Tema do apps/web — Tailwind CSS v4 + Preline UI (Fase 0 da reforma visual).
+ * Ver ~/.claude/plans/reforma-visual-preline-apps-web.md e apps/web/CLAUDE.md.
+ *
+ * Ordem de camadas: `legacy` (o global.css antigo) fica ENTRE `base` e
+ * `components` — as regras antigas ganham do reset do Tailwind (preflight),
+ * mas qualquer utilitário Tailwind/Preline ganha das regras antigas. O
+ * global.css sai de vez na Fase 4.
+ */
+@layer theme, base, legacy, components, utilities;
+
+@import 'tailwindcss';
+
+/* Preline UI (open source) */
+@source '../../node_modules/preline/dist/*.js';
+@import 'preline/variants.css';
+
+/* CSS legado — isolado numa camada de baixa prioridade durante a migração */
+@import './global.css' layer(legacy);
+
+/* Dark mode por classe no <html> (padrão do Preline), não por media query */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* -------------------------------------------------------------------------
+ * Tokens de marca — geram utilitários (bg-brand-600, text-accent-500, ...).
+ * `static`: emite TODAS as CSS vars mesmo sem utilitário usando (o Tailwind v4
+ * faz tree-shake por padrão) — os componentes e `style={{ var(--color-*) }}`
+ * precisam da escala inteira sempre disponível.
+ * ---------------------------------------------------------------------- */
+@theme static {
+  --font-sans: 'Inter', 'Outfit', system-ui, -apple-system, sans-serif;
+  --font-display: 'Outfit', 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+
+  /* Primária — verde "dinheiro" tipo Mobills */
+  --color-brand-50: #ecfdf5;
+  --color-brand-100: #d1fae5;
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
+  --color-brand-400: #34d399;
+  --color-brand-500: #10b981;
+  --color-brand-600: #059669;
+  --color-brand-700: #047857;
+  --color-brand-800: #065f46;
+  --color-brand-900: #064e3b;
+  --color-brand-950: #022c22;
+
+  /* Acento — dados, gráficos, destaques */
+  --color-accent-50: #f5f3ff;
+  --color-accent-100: #ede9fe;
+  --color-accent-200: #ddd6fe;
+  --color-accent-300: #c4b5fd;
+  --color-accent-400: #a78bfa;
+  --color-accent-500: #8b5cf6;
+  --color-accent-600: #7c3aed;
+  --color-accent-700: #6d28d9;
+  --color-accent-800: #5b21b6;
+  --color-accent-900: #4c1d95;
+  --color-accent-950: #2e1065;
+
+  /* Paleta de categorias (chips, ícones, fatias de gráfico) */
+  --color-cat-1: #10b981;
+  --color-cat-2: #3b82f6;
+  --color-cat-3: #8b5cf6;
+  --color-cat-4: #ec4899;
+  --color-cat-5: #f97316;
+  --color-cat-6: #eab308;
+  --color-cat-7: #14b8a6;
+  --color-cat-8: #6366f1;
+  --color-cat-9: #ef4444;
+  --color-cat-10: #06b6d4;
+  --color-cat-11: #84cc16;
+  --color-cat-12: #a855f7;
+
+  --radius-lg: 0.625rem;
+  --radius-xl: 0.875rem;
+  --radius-2xl: 1.125rem;
+  --radius-3xl: 1.5rem;
+
+  --shadow-card: 0 1px 2px rgb(16 24 40 / 0.04), 0 8px 24px -8px rgb(16 24 40 / 0.12);
+  --shadow-pop: 0 4px 12px rgb(16 24 40 / 0.1), 0 16px 48px -12px rgb(16 24 40 / 0.24);
+}
+
+/* -------------------------------------------------------------------------
+ * Tokens semânticos — trocam com o tema. Exponho como cores utilitárias
+ * (`bg-surface`, `text-fg-muted`, `border-line`) via @theme inline.
+ * ---------------------------------------------------------------------- */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-line: var(--line);
+  --color-fg: var(--fg);
+  --color-fg-muted: var(--fg-muted);
+  --color-fg-subtle: var(--fg-subtle);
+  --color-positive: var(--positive);
+  --color-negative: var(--negative);
+}
+
+:root {
+  --canvas: #f6f8f7;
+  --surface: #ffffff;
+  --surface-2: #f1f5f4;
+  --line: #e3e9e7;
+  --fg: #0d1b16;
+  --fg-muted: #48605a;
+  --fg-subtle: #7c918b;
+  --positive: #059669;
+  --negative: #dc2626;
+
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: #0a0f0d;
+  --surface: #121917;
+  --surface-2: #1a2320;
+  --line: #263130;
+  --fg: #e7efec;
+  --fg-muted: #9db0aa;
+  --fg-subtle: #6b7f79;
+  --positive: #34d399;
+  --negative: #f87171;
+
+  color-scheme: dark;
+}
+
+/* -------------------------------------------------------------------------
+ * Base — deliberadamente mínima.
+ *
+ * NÃO setamos `color`/`background` no <body>: as telas legadas ainda usam
+ * cores fixas do tema claro (painéis brancos, `var(--paper)`), e herdar
+ * `color: var(--fg)` deixaria texto claro sobre fundo claro quando o modo
+ * escuro liga. Cada tela nova (a partir da Fase 2) embrulha o conteúdo em
+ * `bg-canvas text-fg` explícito. O global.css legado sai na Fase 4 e aí o
+ * <body> assume o tema.
+ * ---------------------------------------------------------------------- */
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+}

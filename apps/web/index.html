@@ -7,10 +7,21 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Outfit:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap"
       rel="stylesheet"
     />
     <title>DMTA Financeiro</title>
+    <script>
+      // Evita flash de tema errado: aplica a classe `dark` antes do CSS.
+      try {
+        var p = JSON.parse(localStorage.getItem('dmta-financeiro-theme') || '{}')
+        var pref = (p.state && p.state.pref) || 'system'
+        var sysDark = matchMedia('(prefers-color-scheme: dark)').matches
+        if (pref === 'dark' || (pref === 'system' && sysDark)) {
+          document.documentElement.classList.add('dark')
+        }
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>
