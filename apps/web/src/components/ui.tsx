@@ -127,10 +127,11 @@ export function MoneyValue({
   amount: number
   direction: CreditDebit
 }) {
+  const sign = direction === 'credit' ? '+' : '−'
   return (
     <span className={`money money--${direction}`}>
-      {formatMoney(amount)}
-      <span className="money__suffix">{direction === 'credit' ? 'C' : 'D'}</span>
+      {sign}
+      {formatMoney(Math.abs(amount))}
     </span>
   )
 }

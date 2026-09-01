@@ -169,6 +169,9 @@ let creditCards: CreditCard[] = [
     limit: 12000,
     closing_day: 5,
     due_day: 12,
+    available_limit: 12000,
+    unpaid_invoices_total: 0,
+    current_invoice_total: 0,
   },
 ]
 
@@ -810,12 +813,15 @@ export const mockApi = {
 
   async createCreditCard(
     contextId: string,
-    payload: Omit<CreditCard, 'id' | 'context_id'>,
+    payload: Omit<CreditCard, "id" | "context_id" | "available_limit" | "unpaid_invoices_total" | "current_invoice_total">,
   ): Promise<CreditCard> {
     await delay()
     const row: CreditCard = {
-      id: id('cc'),
+      id: id("cc"),
       context_id: contextId,
+      available_limit: null,
+      unpaid_invoices_total: 0,
+      current_invoice_total: 0,
       ...payload,
     }
     creditCards = [...creditCards, row]
@@ -825,7 +831,7 @@ export const mockApi = {
   async updateCreditCard(
     contextId: string,
     creditCardId: string,
-    payload: Omit<CreditCard, 'id' | 'context_id'>,
+    payload: Partial<Omit<CreditCard, 'id' | 'context_id'>>,
   ): Promise<CreditCard> {
     await delay()
     const index = creditCards.findIndex(

@@ -145,6 +145,9 @@ export interface CreditCard {
   limit: number
   closing_day: number
   due_day: number
+  available_limit: number | null
+  unpaid_invoices_total: number
+  current_invoice_total: number
 }
 
 export interface CardInvoice {
@@ -155,6 +158,18 @@ export interface CardInvoice {
   amount: number
   due_date: string
   status: InvoiceStatus
+}
+
+export interface CardPurchase {
+  id: string
+  credit_card_id: string
+  card_invoice_id: string
+  category_id: string | null
+  description: string
+  amount: number
+  occurred_at: string
+  installment_number: number | null
+  installment_total: number | null
 }
 
 export interface Investment {
