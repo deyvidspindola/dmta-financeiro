@@ -46,6 +46,13 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   nova compra. Modais extraídos em `components/creditCards/`. Utilitários em
   `lib/creditCardInvoices.ts`. `.legacy-light` no `<main>` virou opt-in por rota
   (`MIGRATED_ROUTE_PATTERNS` em `AppLayout`). build + lint verdes.
+- **F3a — Dashboard + Login (esta rodada, Cursor):** `DashboardPage` repaginada
+  no design system — saldo em destaque, KPIs (`Stat`), gráfico de evolução,
+  grid contas/lançamentos, cards de orçamento/meta (ocultos no consolidado),
+  `Skeleton` por seção. `LoginPage` com `Card` central, `Field`/`TextInput`/
+  `Button`, `Alert` de erro, toggle de tema no rodapé. Componentes locais em
+  `components/dashboard/`. Rota `/` em `MIGRATED_ROUTE_PATTERNS`. build + lint
+  verdes; smoke visual claro/escuro + mobile ~360px.
 
 ## Feito
 
