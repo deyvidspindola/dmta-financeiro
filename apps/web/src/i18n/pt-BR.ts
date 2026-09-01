@@ -25,6 +25,37 @@ export const strings = {
     context: 'Contexto',
     consolidated: 'Consolidado',
     security: 'Segurança',
+    more: 'Mais',
+    quickAdd: 'Lançar',
+    budgets: 'Orçamentos',
+  },
+
+  quickAdd: {
+    title: 'Novo lançamento',
+    expense: 'Despesa',
+    income: 'Receita',
+    amount: 'Valor',
+    description: 'Descrição',
+    account: 'Conta',
+    category: 'Categoria',
+    noCategory: 'Sem categoria',
+    date: 'Data',
+    save: 'Salvar lançamento',
+    saved: 'Lançamento registrado.',
+    pickContext: 'Selecione um contexto (PF ou empresa) para lançar.',
+  },
+
+  budgets: {
+    title: 'Orçamentos',
+    description: 'Teto de gasto por categoria no mês.',
+    empty: 'Nenhum orçamento neste mês. Crie um para acompanhar o quanto gastou.',
+    newBudget: 'Novo orçamento',
+    category: 'Categoria',
+    limit: 'Teto (R$)',
+    spent: 'Gasto',
+    remaining: 'Restante',
+    over: 'Estourou',
+    pickContext: 'Selecione um contexto para ver os orçamentos.',
   },
 
   auth: {
