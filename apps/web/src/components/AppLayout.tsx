@@ -51,7 +51,14 @@ const MOBILE_TABS: NavItem[] = [
 ]
 
 /** Rotas já migradas para tokens claros/escuros — sem `.legacy-light` no `<main>`. */
-const MIGRATED_ROUTE_PATTERNS = ['/', '/credit-cards', '/credit-cards/:id']
+const MIGRATED_ROUTE_PATTERNS = [
+  '/',
+  '/credit-cards',
+  '/credit-cards/:id',
+  '/transactions',
+  '/transactions/:id',
+  '/novo',
+]
 
 function useIsMigratedRoute(): boolean {
   const { pathname } = useLocation()
