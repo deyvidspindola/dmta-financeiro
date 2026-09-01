@@ -150,6 +150,23 @@ distinto). URLs inalteradas — nenhum impacto no `apps/web`.
 **Data:** rodada 8 (31/08/2026), fase A0 da reestruturação (plano
 `adaptive-twirling-gizmo`).
 
+### DT-09 — Motor único de projeção de fluxo futuro
+**Contexto:** `FreeBudgetCalculator` (orçamento livre por mês) e
+`CashFlowProjector` (fluxo de caixa 7/30/90 dias) reimplementavam a mesma
+soma — boletos + faturas de cartão + regras recorrentes numa janela de
+datas. E os dois jobs de recorrência tinham o mesmo `while`-loop copiado.
+**Decisão:**
+- `App\Domain\Recurrence\RecurrenceWindow` (puro) concentra "quais
+  ocorrências de uma regra venceram / quantas caem numa janela".
+- `App\Services\MonthlyFlowProjector::between(context, from, to)` é o
+  motor único de "quanto entra e sai já datado/recorrente nessa janela".
+  `FreeBudgetCalculator` e `CashFlowProjector` só montam o formato final
+  em cima dele.
+- `DashboardSummaryService::evolution` **não** entra nessa unificação —
+  é retrospectivo (agrega `statement_entries` já realizados), eixo
+  diferente. Documentado no docblock.
+**Data:** rodada 8 (fase A3/A4, 02/09/2026).
+
 ---
 
 ## Próximos passos imediatos
