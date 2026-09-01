@@ -34,7 +34,7 @@ export function MonthNavigator({ compact = false }: Props) {
         className={cn(
           'inline-flex items-center gap-1.5 rounded-lg font-medium text-fg transition',
           'hover:bg-surface-2 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
-          compact ? 'px-2 py-1 text-sm capitalize' : 'px-3 py-1.5 text-sm capitalize',
+          compact ? 'px-2 py-1 text-sm' : 'px-3 py-1.5 text-sm',
         )}
         onClick={reset}
         title={isCurrent ? undefined : strings.monthNav.backToCurrent}

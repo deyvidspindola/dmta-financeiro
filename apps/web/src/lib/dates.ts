@@ -13,8 +13,9 @@ export function isInMonth(isoDate: string, monthKey: string): boolean {
 export function formatMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number)
   if (!year || !month) return monthKey
-  return new Intl.DateTimeFormat('pt-BR', {
+  const label = new Intl.DateTimeFormat('pt-BR', {
     month: 'long',
     year: 'numeric',
   }).format(new Date(year, month - 1, 1))
+  return label.charAt(0).toUpperCase() + label.slice(1)
 }

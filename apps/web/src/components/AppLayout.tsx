@@ -232,8 +232,11 @@ export function AppLayout() {
           </div>
         </header>
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-5 pb-24 lg:px-8 lg:py-6 lg:pb-8">
-          <Outlet />
+        {/* legacy-light: telas não migradas não reagem ao modo escuro (Fase 3/4). */}
+        <main className="legacy-light flex-1">
+          <div className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 lg:px-8 lg:py-6 lg:pb-8">
+            <Outlet />
+          </div>
         </main>
       </div>
 

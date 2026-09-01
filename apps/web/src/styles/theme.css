@@ -125,6 +125,26 @@
   color-scheme: dark;
 }
 
+/*
+ * Telas ainda não migradas (Fase 3) usam cores fixas do tema claro. O shell
+ * embrulha o <Outlet> nesta classe pra elas NÃO reagirem ao modo escuro —
+ * senão fica texto/painel escuro do global.css sobre o `bg-canvas` escuro.
+ * Some quando a última tela migrar (Fase 4).
+ */
+.legacy-light {
+  color-scheme: light;
+  background-color: var(--paper, #f2f6f3);
+  --canvas: #f6f8f7;
+  --surface: #ffffff;
+  --surface-2: #f1f5f4;
+  --line: #e3e9e7;
+  --fg: #0d1b16;
+  --fg-muted: #48605a;
+  --fg-subtle: #7c918b;
+  --positive: #059669;
+  --negative: #dc2626;
+}
+
 /* -------------------------------------------------------------------------
  * Base — deliberadamente mínima.
  *
