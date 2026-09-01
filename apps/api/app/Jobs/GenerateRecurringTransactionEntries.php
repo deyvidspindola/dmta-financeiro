@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Domain\Recurrence\RecurrenceWindow;
 use App\DTOs\RegisterTransactionData;
 use App\Models\RecurringTransaction;
 use App\Models\StatementEntry;
@@ -19,32 +20,28 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 
 /**
- * Materializa em {@see StatementEntry} toda regra recorrente
- * cuja `next_occurrence_date` já venceu — roda uma vez por dia via
- * `schedule:run` (nunca processo permanente, ver skill
- * `padroes-laravel-dmta` seção 2). Reusa {@see RegisterTransaction}, o
- * mesmo caso de uso do lançamento manual, só muda a origem dos dados.
+ * Materializa em {@see StatementEntry} toda regra recorrente cuja
+ * `next_occurrence_date` já venceu — roda uma vez por dia via
+ * `schedule:run`. A matemática de "quais ocorrências venceram / quando é
+ * a próxima / a regra acabou?" mora em {@see RecurrenceWindow},
+ * compartilhada com o job de obrigações e o projetor de simulação.
  *
- * Uma regra pode ter mais de uma ocorrência vencida (ex.: sistema ficou
- * fora do ar por semanas) — o loop avança até `next_occurrence_date`
- * ficar no futuro, gerando uma ocorrência por vez, nunca pulando nenhuma.
- * Erro numa regra não impede as outras de rodar.
- *
- * Idempotente: antes de materializar, confere se aquela ocorrência (regra
- * + data) já existe; o índice único `se_recurrence_occurrence_unique` é o
- * backstop se duas execuções correrem juntas. Reexecutar o job — ou
- * reprocessar uma ocorrência cuja data foi rebobinada por falha no meio
- * do caminho — não duplica.
+ * Idempotente: só materializa a ocorrência que ainda não existe; o índice
+ * único `se_recurrence_occurrence_unique` é o backstop. Erro numa regra
+ * não impede as outras. A data e o `active` da regra são gravados uma vez
+ * por regra, depois de materializar todas as ocorrências vencidas —
+ * falhar no meio só faz o próximo run retomar do começo (as já criadas
+ * são puladas).
  *
  * @package App\Jobs
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 02/09/2026
  */
 final class GenerateRecurringTransactionEntries implements ShouldQueue
 {
@@ -53,16 +50,16 @@ final class GenerateRecurringTransactionEntries implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public function handle(RegisterTransaction $useCase): void
+    public function handle(RecurrenceWindow $window, RegisterTransaction $register): void
     {
         $today = Carbon::today();
 
         RecurringTransaction::query()
             ->where('active', true)
             ->where('next_occurrence_date', '<=', $today->toDateString())
-            ->each(function (RecurringTransaction $rule) use ($useCase, $today): void {
+            ->each(function (RecurringTransaction $rule) use ($window, $register, $today): void {
                 try {
-                    $this->materialize($rule, $useCase, $today);
+                    $this->process($rule, $window, $register, $today);
                 } catch (Throwable $e) {
                     Log::error('Falha ao gerar ocorrência de lançamento recorrente', [
                         'recurring_transaction_id' => $rule->id,
@@ -72,53 +69,44 @@ final class GenerateRecurringTransactionEntries implements ShouldQueue
             });
     }
 
-    private function materialize(RecurringTransaction $rule, RegisterTransaction $useCase, Carbon $today): void
-    {
-        // $rule->next_occurrence_date/type/interval já vêm cast (Carbon,
-        // StatementEntryType, RecurrenceInterval — confirmado em runtime
-        // via Tinker, gettype()/get_class()); larastan não enxerga o
-        // método casts() deste model e trata como string cru.
-        // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
-        while ($rule->active && $rule->next_occurrence_date->lte($today)) {
-            $occurrence = Carbon::parse($rule->next_occurrence_date);
+    private function process(
+        RecurringTransaction $rule,
+        RecurrenceWindow $window,
+        RegisterTransaction $register,
+        Carbon $today,
+    ): void {
+        $result = $window->due(
+            Carbon::parse($rule->next_occurrence_date),
+            // @phpstan-ignore-next-line argument.type (cast RecurrenceInterval confirmado em runtime — larastan não infere casts())
+            $rule->interval,
+            $rule->end_date !== null ? Carbon::parse($rule->end_date) : null,
+            $today,
+        );
 
-            $this->registerIfAbsent($rule, $useCase, $occurrence);
-
-            // @phpstan-ignore-next-line method.nonObject (verificado em runtime)
-            $next = $rule->interval->nextAfter($occurrence);
-
-            if ($rule->end_date !== null && $next->gt($rule->end_date)) {
-                $rule->update(['next_occurrence_date' => $next, 'active' => false]);
-
-                return;
-            }
-
-            $rule->update(['next_occurrence_date' => $next]);
-            $rule->refresh();
+        foreach ($result['occurrences'] as $occurrence) {
+            $this->materializeOne($rule, $register, $occurrence);
         }
+
+        $rule->update([
+            'next_occurrence_date' => $result['nextCursor'],
+            'active' => ! $result['deactivate'],
+        ]);
     }
 
-    /**
-     * Materializa a ocorrência só se ela ainda não existe. O `exists()`
-     * cobre o replay normal; o `catch` cobre a corrida em que o índice
-     * único dispara entre a checagem e a inserção.
-     */
-    private function registerIfAbsent(
-        RecurringTransaction $rule,
-        RegisterTransaction $useCase,
-        Carbon $occurrence,
-    ): void {
-        $alreadyMaterialized = StatementEntry::query()
+    /** Cria o lançamento da ocorrência só se ele ainda não existe. */
+    private function materializeOne(RecurringTransaction $rule, RegisterTransaction $register, Carbon $occurrence): void
+    {
+        $alreadyDone = StatementEntry::query()
             ->where('recurring_transaction_id', $rule->id)
             ->whereDate('occurred_at', $occurrence->toDateString())
             ->exists();
 
-        if ($alreadyMaterialized) {
+        if ($alreadyDone) {
             return;
         }
 
         try {
-            $useCase->execute(new RegisterTransactionData(
+            $register->execute(new RegisterTransactionData(
                 contextId: $rule->context_id,
                 accountId: $rule->account_id,
                 description: $rule->description,
