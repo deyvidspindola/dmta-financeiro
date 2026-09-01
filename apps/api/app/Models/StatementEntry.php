@@ -9,6 +9,7 @@ use App\Enums\TransferRole;
 use App\UseCases\Transaction\TransferBetweenAccounts;
 use Database\Factories\StatementEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -101,6 +102,27 @@ class StatementEntry extends Model
     public function recurringTransaction(): BelongsTo
     {
         return $this->belongsTo(RecurringTransaction::class);
+    }
+
+    /**
+     * Filtros opcionais de `GET /transactions`, já validados na camada
+     * HTTP (`IndexTransactionRequest`): `from`/`to` (`occurred_at`),
+     * `account_id`, `category_id`, `type`, `q` (descrição). Chave ausente
+     * não filtra; não pagina nem ordena.
+     *
+     * @param  Builder<StatementEntry>  $query
+     * @param  array<string, mixed>  $filters
+     * @return Builder<StatementEntry>
+     */
+    public function scopeApplyFilters(Builder $query, array $filters): Builder
+    {
+        return $query
+            ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->whereDate('occurred_at', '>=', $v))
+            ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->whereDate('occurred_at', '<=', $v))
+            ->when($filters['account_id'] ?? null, fn (Builder $q, $v) => $q->where('account_id', (int) $v))
+            ->when($filters['category_id'] ?? null, fn (Builder $q, $v) => $q->where('category_id', (int) $v))
+            ->when($filters['type'] ?? null, fn (Builder $q, $v) => $q->where('type', $v))
+            ->when($filters['q'] ?? null, fn (Builder $q, $v) => $q->whereLike('description', '%'.$v.'%'));
     }
 
     /** Sinal (+1/-1) do impacto deste lançamento no saldo da conta. */

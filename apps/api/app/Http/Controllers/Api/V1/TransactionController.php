@@ -8,6 +8,7 @@ use App\DTOs\RegisterTransactionData;
 use App\DTOs\UpdateTransactionData;
 use App\Enums\StatementEntryType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\IndexTransactionRequest;
 use App\Http\Requests\Api\StoreTransactionRequest;
 use App\Http\Requests\Api\UpdateTransactionRequest;
 use App\Http\Resources\StatementEntryResource;
@@ -42,10 +43,12 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  */
 final class TransactionController extends Controller
 {
-    public function index(Context $context): AnonymousResourceCollection
+    /** Extrato do contexto, do mais recente ao mais antigo, com os filtros opcionais de {@see IndexTransactionRequest}. */
+    public function index(IndexTransactionRequest $request, Context $context): AnonymousResourceCollection
     {
         $entries = $context->statementEntries()
             ->with('transferPair.account.context')
+            ->applyFilters($request->filters())
             ->latest('occurred_at')
             ->get();
 
