@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -172,7 +173,14 @@ export function AccountsPage() {
               {isConsolidated ? (
                 <td>{account.context?.name ?? '—'}</td>
               ) : null}
-              <td>{account.name}</td>
+              <td>
+                <Link
+                  to={`/accounts/${account.id}?context=${account.context_id}`}
+                  className="row-link"
+                >
+                  {account.name}
+                </Link>
+              </td>
               <td>{account.bank_name ?? '—'}</td>
               <td>{strings.accounts.types[account.type]}</td>
               <td className="mono">{formatMoney(account.balance)}</td>

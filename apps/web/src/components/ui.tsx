@@ -4,6 +4,7 @@ import type {
   ReactNode,
   SelectHTMLAttributes,
 } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { strings } from '@/i18n/pt-BR'
 import { formatMoney } from '@/lib/format'
@@ -168,16 +169,62 @@ export function Modal({
   onClose: () => void
   children: ReactNode
 }) {
+  const titleId = useId()
+  const dialogRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose])
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    if (!dialog) return
+
+    const focusable = dialog.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+    )
+    const first = focusable[0]
+    const last = focusable[focusable.length - 1]
+    first?.focus()
+
+    function trapFocus(event: KeyboardEvent) {
+      if (event.key !== 'Tab' || focusable.length === 0) return
+      if (event.shiftKey) {
+        if (document.activeElement === first) {
+          event.preventDefault()
+          last?.focus()
+        }
+      } else if (document.activeElement === last) {
+        event.preventDefault()
+        first?.focus()
+      }
+    }
+
+    dialog.addEventListener('keydown', trapFocus)
+    return () => dialog.removeEventListener('keydown', trapFocus)
+  }, [])
+
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div
+      className="modal-backdrop"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
       <div
+        ref={dialogRef}
         className="modal"
         role="dialog"
         aria-modal="true"
-        aria-label={title}
+        aria-labelledby={titleId}
       >
         <header className="modal__header">
-          <h2>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
           <button
             type="button"
             className="icon-btn"

@@ -105,6 +105,39 @@ export const strings = {
     investments: 'Investimentos',
     empty: 'Nenhum dado neste contexto ainda.',
     hint: 'Soma para exibir — contextos nunca se misturam ao movimentar.',
+    accounts: 'Contas',
+    recentTransactions: 'Últimos lançamentos',
+    viewAll: 'Ver todos',
+    budgetsSummary: 'Orçamentos do mês',
+    goalsSummary: 'Metas',
+    overBudgets: (count: number) =>
+      count === 1 ? '1 estourou' : `${count} estouraram`,
+    noBudgets: 'Nenhum orçamento neste mês.',
+    noGoals: 'Nenhuma meta ativa.',
+  },
+
+  transactionDetail: {
+    title: 'Detalhe do lançamento',
+    back: 'Voltar aos lançamentos',
+    notFound: 'Lançamento não encontrado.',
+    linkedBill: 'Boleto vinculado',
+    linkedGoal: 'Meta vinculada',
+    linkedInvoice: 'Fatura de cartão',
+    transferFrom: 'De',
+    transferTo: 'Para',
+    viewBill: 'Ver boleto',
+    viewGoal: 'Ver meta',
+    viewInvoice: 'Ver fatura',
+  },
+
+  accountDetail: {
+    title: 'Extrato da conta',
+    back: 'Voltar às contas',
+    notFound: 'Conta não encontrada.',
+    currentBalance: 'Saldo atual',
+    statement: 'Extrato',
+    runningBalance: 'Saldo',
+    emptyStatement: 'Nenhum lançamento nesta conta.',
   },
 
   accounts: {

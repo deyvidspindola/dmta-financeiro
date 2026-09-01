@@ -104,6 +104,16 @@ export interface Bill {
   context?: ContextRef | null
 }
 
+export interface TransferLeg {
+  context: ContextRef
+  account: { id: string; name: string }
+}
+
+export interface TransferDetails {
+  from: TransferLeg
+  to: TransferLeg
+}
+
 export interface StatementEntry {
   id: string
   context_id: string
@@ -115,9 +125,11 @@ export interface StatementEntry {
   date: string
   origin: CaptureOrigin
   bill_id: string | null
+  card_invoice_id: string | null
   goal_id: string | null
   transfer_pair_id: string | null
   recurring_transaction_id: string | null
+  transfer?: TransferDetails | null
   context?: ContextRef | null
 }
 
