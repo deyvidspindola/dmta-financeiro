@@ -38,3 +38,6 @@ export {
   Alert,
   ErrorBanner,
 } from './feedback'
+
+export { AreaChart, BarChart, DonutChart, Sparkline } from './charts'
+export { useChartPalette } from './charts/theme'

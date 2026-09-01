@@ -24,6 +24,11 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   `Spinner`/`LoadingBlock`/`Skeleton`. `src/lib/cn.ts`. O antigo `ui.tsx` virou
   `ui-legacy.tsx` (25 telas ainda importam dele, migram uma a uma). `/kit`
   reescrito como galeria completa. build + lint verdes; verificado nos 2 temas.
+- **Gráficos (DT-11, esta rodada):** ApexCharts no lugar do recharts (que
+  saiu). `src/components/ui/charts/` — `AreaChart`/`BarChart`/`DonutChart`/
+  `Sparkline` themados (reagem a claro/escuro), carregados sob demanda
+  (`LazyApex` → ApexCharts vira chunk async). Bundle inicial 248 → **151 kB
+  gzip**. `EvolutionChart` reescrito. `/kit` com seção de gráficos.
 - **F2 shell / F3 telas** (Cursor). **F4 limpeza** (Claude) — remove `ui-legacy`.
 
 ## Feito

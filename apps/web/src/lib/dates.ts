@@ -18,3 +18,13 @@ export function formatMonthLabel(monthKey: string): string {
     year: 'numeric',
   }).format(new Date(year, month - 1, 1))
 }
+
+/** "set/26" — para eixos de gráfico e rótulos compactos. */
+export function formatMonthShort(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number)
+  if (!year || !month) return monthKey
+  const label = new Intl.DateTimeFormat('pt-BR', { month: 'short' })
+    .format(new Date(year, month - 1, 1))
+    .replace('.', '')
+  return `${label}/${String(year).slice(2)}`
+}

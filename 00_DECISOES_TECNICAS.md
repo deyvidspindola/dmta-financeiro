@@ -195,6 +195,28 @@ uma base de estilo sem quebrar as ~24 telas que ainda usam
   a partir da F1, do design system.
 **Data:** rodada 9 (F0, 01/09/2026).
 
+### DT-11 — ApexCharts como lib de gráficos do `apps/web`
+**Contexto:** o `apps/web` precisa de gráficos (evolução receita×despesa,
+gastos por categoria, comparativo de meses, sparklines nos KPIs). O `recharts`
+tinha entrado no FE3 sem decisão. O dono pediu opções tipo Chart.js.
+**Decisão:** **ApexCharts** (`apexcharts` + `react-apexcharts@1`, só OSS/free).
+- Já vinha instalado como dependência do `preline` (o Preline é construído em
+  cima do ApexCharts — helper de tooltip, blocos de exemplo). Alinhamento
+  visual com o design system de graça.
+- `recharts` **removido**.
+- Wrappers finos em `src/components/ui/charts/` (`AreaChart`, `BarChart`,
+  `DonutChart`, `Sparkline`) com opções base themadas
+  (`useApexBase`/`useChartPalette` — resolvem CSS vars e reagem à troca de
+  tema via `MutationObserver` na classe do `<html>`).
+- **Carregado sob demanda:** `LazyApex` (`React.lazy` + `Suspense` +
+  skeleton) tira o ApexCharts (~155 kB gzip) do bundle principal — ele só
+  baixa quando um gráfico entra em tela. O bundle inicial caiu de 248 → 151
+  kB gzip (recharts saiu, ApexCharts virou chunk async).
+- `react-apexcharts@1` é CJS (`exports.default`) — o import fica isolado em
+  `charts/ApexChart.tsx` com desembrulho de interop.
+- Não vale pro futuro `apps/app` (React Native) — consistente com D-17.
+**Data:** rodada 9 (01/09/2026).
+
 ---
 
 ## Próximos passos imediatos
