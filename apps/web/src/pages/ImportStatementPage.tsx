@@ -11,7 +11,7 @@ import {
   Field,
   PageHeader,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { StatementImportSummary } from '@/types/models'
 
 export function ImportStatementPage() {

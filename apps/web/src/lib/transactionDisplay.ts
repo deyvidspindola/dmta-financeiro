@@ -1,4 +1,4 @@
-import type { CreditDebit } from '@/components/ui'
+import type { CreditDebit } from '@/components/ui-legacy'
 import type { StatementEntry } from '@/types/models'
 
 export function canMutateEntry(tx: StatementEntry): boolean {

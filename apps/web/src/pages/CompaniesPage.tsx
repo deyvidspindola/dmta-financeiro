@@ -9,7 +9,7 @@ import {
   Field,
   PageHeader,
   TextInput,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { useAuthStore } from '@/store/authStore'

@@ -23,7 +23,7 @@ import {
   PageHeader,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { Debt } from '@/types/models'
 
 const schema = z.object({

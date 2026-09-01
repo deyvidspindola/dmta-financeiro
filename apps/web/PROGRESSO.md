@@ -15,9 +15,16 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   antigas intactas, sai na F4. Página `/kit` (só em dev) = vitrine de tokens.
   `apps/web/CLAUDE.md` criado. `build` + `lint` verdes; smoke visual OK
   (claro/escuro, dropdown Preline, login legado).
-- **F1 — Design system** (Claude, próximo): `components/ui` vira wrappers
-  Preline.
-- **F2 shell / F3 telas** (Cursor). **F4 limpeza** (Claude).
+- **F1 — Design system (esta rodada):** `src/components/ui/` — Preline/Tailwind:
+  `Button`/`IconButton` (variantes, tamanhos, loading), `Card`/`CardHeader`/
+  `Panel`/`PageHeader`, `Modal` (Esc/backdrop/focus-trap/scroll-lock, footer),
+  `Field`/`TextInput`/`TextSelect`/`Textarea`, `DataTable`/`Tr`/`Td`,
+  `Badge`/`CategoryChip` (paleta cat-1..12), `MoneyValue`/`Money`, `Stat`,
+  `ProgressBar`/`ProgressRing`, `Tabs`, `Alert`/`ErrorBanner`, `EmptyState`,
+  `Spinner`/`LoadingBlock`/`Skeleton`. `src/lib/cn.ts`. O antigo `ui.tsx` virou
+  `ui-legacy.tsx` (25 telas ainda importam dele, migram uma a uma). `/kit`
+  reescrito como galeria completa. build + lint verdes; verificado nos 2 temas.
+- **F2 shell / F3 telas** (Cursor). **F4 limpeza** (Claude) — remove `ui-legacy`.
 
 ## Feito
 

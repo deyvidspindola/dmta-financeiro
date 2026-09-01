@@ -10,7 +10,7 @@ import {
   ErrorBanner,
   Field,
   PageHeader,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { BillImportSummary } from '@/types/models'
 
 export function ImportBillsPage() {

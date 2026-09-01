@@ -24,7 +24,7 @@ import {
   MoneyValue,
   PageHeader,
   Panel,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 
 const RECENT_LIMIT = 6
 

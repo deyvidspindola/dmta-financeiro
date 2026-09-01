@@ -16,7 +16,7 @@ import {
   PageHeader,
   Panel,
   TextInput,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { InstallmentPurchaseSimulation } from '@/types/models'
 
 const schema = z.object({

@@ -16,7 +16,7 @@ import {
   Modal,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { Category, MoneyDirection } from '@/types/models'
 
 const createSchema = z.object({

@@ -1,31 +1,62 @@
 import type { ReactNode } from 'react'
+import { useState } from 'react'
+import {
+  ArrowRight,
+  Check,
+  CreditCard,
+  Plus,
+  ShoppingCart,
+  Trash2,
+  Wallet,
+} from 'lucide-react'
+import {
+  Alert,
+  Badge,
+  Button,
+  Card,
+  CardHeader,
+  CategoryChip,
+  DataTable,
+  EmptyState,
+  Field,
+  IconButton,
+  LoadingBlock,
+  Modal,
+  MoneyValue,
+  ProgressBar,
+  ProgressRing,
+  Skeleton,
+  Stat,
+  Tabs,
+  Td,
+  TextInput,
+  TextSelect,
+  Tr,
+} from '@/components/ui'
 import { useThemeStore } from '@/store/themeStore'
 
 /*
- * Vitrine viva do tema (Fase 0) e, a partir da Fase 1, do design system.
- * Rota `/kit` — só montada em desenvolvimento (ver App.tsx). Página interna
- * de verificação visual: textos em PT-BR direto aqui são aceitáveis por ser
- * ferramenta de dev, não tela de produto.
- *
- * Os swatches usam `style={{ ... var(--color-*) }}` de propósito: o Tailwind
- * v4 só gera utilitários de classes que aparecem LITERAIS no código, então
- * `bg-${prefix}-${step}` montado em runtime não existiria. Componentes reais
- * (Fase 1+) usam classes literais ou mapa de literais — ver apps/web/CLAUDE.md.
+ * Vitrine viva do design system (Fase 1). Rota `/kit` — só em dev (App.tsx).
+ * PT-BR direto aqui é ok: ferramenta de dev, não tela de produto.
  */
 export function KitPage() {
-  const { pref, setPref, toggle } = useThemeStore()
+  const { pref, setPref } = useThemeStore()
+  const [modalOpen, setModalOpen] = useState(false)
+  const [tab, setTab] = useState<'todos' | 'pendentes' | 'pagos'>('todos')
 
   return (
     <div className="min-h-screen bg-canvas px-6 py-10 font-sans text-fg">
-      <div className="mx-auto flex max-w-5xl flex-col gap-10">
+      <div className="mx-auto flex max-w-5xl flex-col gap-8">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="font-display text-2xl font-bold tracking-tight">
-              Design tokens — Fase 0
+              Design system — Fase 1
             </h1>
-            <p className="text-sm text-fg-muted">Tailwind v4 + Preline UI</p>
+            <p className="text-sm text-fg-muted">
+              Tailwind v4 + Preline UI · `@/components/ui`
+            </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex gap-1">
             {(['system', 'light', 'dark'] as const).map((p) => (
               <button
                 key={p}
@@ -33,138 +64,250 @@ export function KitPage() {
                 onClick={() => setPref(p)}
                 className={
                   pref === p
-                    ? 'rounded-lg border border-brand-600 bg-brand-600 px-3 py-1.5 text-sm text-white'
-                    : 'rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg-muted transition hover:text-fg'
+                    ? 'rounded-lg bg-brand-600 px-3 py-1.5 text-sm text-white'
+                    : 'rounded-lg border border-line bg-surface px-3 py-1.5 text-sm text-fg-muted hover:text-fg'
                 }
               >
                 {p}
               </button>
             ))}
-            <button
-              type="button"
-              onClick={toggle}
-              className="rounded-lg bg-accent-600 px-3 py-1.5 text-sm font-medium text-white transition hover:bg-accent-700"
-            >
-              toggle
-            </button>
           </div>
         </header>
 
-        <Section title="Marca — brand">
-          <Ramp varName="brand" />
-        </Section>
-
-        <Section title="Acento — accent">
-          <Ramp varName="accent" />
-        </Section>
-
-        <Section title="Superfícies (trocam com o tema)">
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {(['canvas', 'surface', 'surface-2', 'line'] as const).map((t) => (
-              <div
-                key={t}
-                className="flex h-20 items-end rounded-xl border border-line p-2 text-xs text-fg-muted"
-                style={{ backgroundColor: `var(--${t})` }}
-              >
-                {t}
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Categorias">
-          <div className="flex flex-wrap gap-2">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
-              <span
-                key={n}
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-                style={{
-                  color: `var(--color-cat-${n})`,
-                  backgroundColor: `color-mix(in oklab, var(--color-cat-${n}) 14%, transparent)`,
-                }}
-              >
-                <span
-                  className="size-2 rounded-full"
-                  style={{ backgroundColor: `var(--color-cat-${n})` }}
-                />
-                cat-{n}
-              </span>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Botões (utilitários Tailwind + tokens de marca)">
+        <Section title="Botões">
           <div className="flex flex-wrap items-center gap-3">
-            <button className="rounded-xl bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-card transition hover:bg-brand-700">
-              Primário
-            </button>
-            <button className="rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium text-fg transition hover:bg-surface-2">
-              Secundário
-            </button>
-            <button className="rounded-xl px-4 py-2 text-sm font-medium text-fg-muted transition hover:bg-surface-2 hover:text-fg">
-              Fantasma
-            </button>
-            <button className="rounded-xl bg-negative px-4 py-2 text-sm font-medium text-white transition hover:opacity-90">
-              Perigo
-            </button>
+            <Button>Primário</Button>
+            <Button variant="secondary">Secundário</Button>
+            <Button variant="subtle" icon={Plus}>
+              Sutil
+            </Button>
+            <Button variant="ghost">Fantasma</Button>
+            <Button variant="danger" icon={Trash2}>
+              Excluir
+            </Button>
+            <Button loading>Salvando</Button>
+            <Button size="sm" iconRight={ArrowRight}>
+              Pequeno
+            </Button>
+            <Button size="lg">Grande</Button>
+            <IconButton label="Adicionar" icon={Plus} variant="secondary" />
+            <IconButton label="Remover" icon={Trash2} variant="danger" />
           </div>
         </Section>
 
-        <Section title="Preline — dropdown (prova de que o JS liga a cada rota)">
-          <div className="hs-dropdown relative inline-flex">
-            <button
-              type="button"
-              className="hs-dropdown-toggle inline-flex items-center gap-2 rounded-xl border border-line bg-surface px-4 py-2 text-sm font-medium shadow-card hover:bg-surface-2"
-            >
-              Abrir menu
-              <svg
-                className="size-4 transition hs-dropdown-open:rotate-180"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-              >
-                <path d="m6 9 6 6 6-6" />
-              </svg>
-            </button>
-            <div className="hs-dropdown-menu z-10 hidden min-w-48 rounded-xl border border-line bg-surface p-1 opacity-0 shadow-pop transition-[opacity,margin] hs-dropdown-open:opacity-100">
-              {['Item um', 'Item dois', 'Item três'].map((i) => (
-                <button
-                  key={i}
-                  type="button"
-                  className="flex w-full items-center rounded-lg px-3 py-2 text-sm text-fg-muted transition hover:bg-surface-2 hover:text-fg"
-                >
-                  {i}
-                </button>
+        <Section title="Indicadores (Stat)">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <Stat
+              label="Saldo total"
+              value="R$ 12.480,55"
+              icon={Wallet}
+              tone="brand"
+            />
+            <Stat
+              label="Receitas do mês"
+              value="R$ 8.200,00"
+              tone="positive"
+              delta={{ value: '12%', direction: 'up' }}
+            />
+            <Stat
+              label="Despesas do mês"
+              value="R$ 5.964,10"
+              tone="negative"
+              delta={{ value: '4%', direction: 'down' }}
+            />
+            <Stat
+              label="Faturas abertas"
+              value="R$ 2.130,00"
+              icon={CreditCard}
+              hint="2 cartões"
+              onClick={() => undefined}
+            />
+          </div>
+        </Section>
+
+        <Section title="Valores, badges e categorias">
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-wrap items-center gap-5">
+              <MoneyValue amount={4280} direction="credit" size="lg" />
+              <MoneyValue amount={1135.9} direction="debit" size="lg" />
+              <MoneyValue amount={42.5} direction="debit" size="sm" />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Badge tone="brand">Marca</Badge>
+              <Badge tone="success" icon={Check}>
+                Pago
+              </Badge>
+              <Badge tone="warning">Pendente</Badge>
+              <Badge tone="danger">Vencido</Badge>
+              <Badge tone="info">Recorrente</Badge>
+              <Badge tone="neutral" dot>
+                Manual
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {[
+                ['Mercado', 1, ShoppingCart],
+                ['Transporte', 5, undefined],
+                ['Salário', 7, undefined],
+                ['Lazer', 3, undefined],
+                ['Moradia', 9, undefined],
+              ].map(([name, i, Icon]) => (
+                <CategoryChip
+                  key={name as string}
+                  name={name as string}
+                  colorIndex={i as number}
+                  icon={Icon as never}
+                />
               ))}
             </div>
           </div>
         </Section>
 
-        <Section title="Valores">
-          <div className="flex flex-wrap items-center gap-6 tabular-nums">
-            <span className="text-2xl font-semibold text-positive">
-              + R$ 4.280,00
-            </span>
-            <span className="text-2xl font-semibold text-negative">
-              − R$ 1.135,90
-            </span>
-            <span className="font-mono text-lg text-fg-muted">R$ 12.345,67</span>
+        <Section title="Progresso">
+          <div className="flex flex-wrap items-center gap-8">
+            <div className="w-64 space-y-3">
+              <ProgressBar value={42} label="Alimentação" />
+              <ProgressBar value={78} tone="warning" />
+              <ProgressBar value={112} tone="negative" />
+            </div>
+            <ProgressRing value={65} size={72}>
+              65%
+            </ProgressRing>
+            <ProgressRing value={90} size={72} tone="positive">
+              90%
+            </ProgressRing>
           </div>
+        </Section>
+
+        <Section title="Abas / segmentado">
+          <Tabs
+            value={tab}
+            onChange={setTab}
+            items={[
+              { value: 'todos', label: 'Todos', count: 24 },
+              { value: 'pendentes', label: 'Pendentes', count: 5 },
+              { value: 'pagos', label: 'Pagos' },
+            ]}
+          />
+        </Section>
+
+        <Section title="Formulário">
+          <div className="grid max-w-md gap-4">
+            <Field label="Descrição" required>
+              <TextInput placeholder="Ex.: Mercado do mês" />
+            </Field>
+            <Field label="Conta" hint="De onde sai o dinheiro">
+              <TextSelect defaultValue="">
+                <option value="" disabled>
+                  Selecione
+                </option>
+                <option>Conta corrente</option>
+                <option>Poupança</option>
+              </TextSelect>
+            </Field>
+            <Field label="Valor" error="Informe um valor maior que zero">
+              <TextInput type="number" aria-invalid defaultValue={0} />
+            </Field>
+          </div>
+        </Section>
+
+        <Section title="Tabela">
+          <DataTable
+            headers={['Descrição', 'Categoria', { label: 'Valor', right: true }]}
+          >
+            <Tr onClick={() => undefined}>
+              <Td>Mercado do mês</Td>
+              <Td>
+                <CategoryChip name="Mercado" colorIndex={1} />
+              </Td>
+              <Td right>
+                <MoneyValue amount={432.1} direction="debit" />
+              </Td>
+            </Tr>
+            <Tr onClick={() => undefined}>
+              <Td>Salário</Td>
+              <Td>
+                <CategoryChip name="Salário" colorIndex={7} />
+              </Td>
+              <Td right>
+                <MoneyValue amount={8200} direction="credit" />
+              </Td>
+            </Tr>
+          </DataTable>
+        </Section>
+
+        <Section title="Feedback">
+          <div className="flex flex-col gap-3">
+            <Alert tone="info">Sincronizado há 2 minutos.</Alert>
+            <Alert tone="warning" title="Orçamento estourado">
+              Você passou do teto em Alimentação.
+            </Alert>
+            <Alert tone="danger">Não foi possível carregar as contas.</Alert>
+            <LoadingBlock label="Carregando lançamentos…" />
+            <div className="flex gap-2">
+              <Skeleton className="h-10 w-32" />
+              <Skeleton className="h-10 grow" />
+            </div>
+            <EmptyState
+              message="Nenhum lançamento neste mês."
+              icon={Wallet}
+              action={<Button size="sm" icon={Plus}>Novo lançamento</Button>}
+            />
+          </div>
+        </Section>
+
+        <Section title="Cartão e modal">
+          <Card>
+            <CardHeader
+              title="Cartão de crédito"
+              description="Fatura fecha dia 5"
+              actions={<Button size="sm" variant="secondary">Ver faturas</Button>}
+            />
+            <div className="flex items-end justify-between">
+              <div>
+                <p className="text-sm text-fg-muted">Limite disponível</p>
+                <p className="font-display text-xl font-bold tabular-nums">
+                  R$ 3.870,00
+                </p>
+              </div>
+              <Button icon={Plus} onClick={() => setModalOpen(true)}>
+                Nova compra
+              </Button>
+            </div>
+          </Card>
+          {modalOpen ? (
+            <Modal
+              title="Nova compra no cartão"
+              onClose={() => setModalOpen(false)}
+              footer={
+                <>
+                  <Button
+                    variant="ghost"
+                    onClick={() => setModalOpen(false)}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button onClick={() => setModalOpen(false)}>Salvar</Button>
+                </>
+              }
+            >
+              <div className="grid gap-4">
+                <Field label="Descrição">
+                  <TextInput placeholder="Ex.: Supermercado" />
+                </Field>
+                <Field label="Valor">
+                  <TextInput type="number" />
+                </Field>
+              </div>
+            </Modal>
+          ) : null}
         </Section>
       </div>
     </div>
   )
 }
 
-function Section({
-  title,
-  children,
-}: {
-  title: string
-  children: ReactNode
-}) {
+function Section({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-3">
       <h2 className="text-sm font-semibold uppercase tracking-wide text-fg-subtle">
@@ -174,22 +317,5 @@ function Section({
         {children}
       </div>
     </section>
-  )
-}
-
-function Ramp({ varName }: { varName: 'brand' | 'accent' }) {
-  const steps = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950]
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {steps.map((s) => (
-        <div key={s} className="flex flex-col items-center gap-1">
-          <div
-            className="size-12 rounded-lg border border-black/5"
-            style={{ backgroundColor: `var(--color-${varName}-${s})` }}
-          />
-          <span className="text-[10px] text-fg-subtle">{s}</span>
-        </div>
-      ))}
-    </div>
   )
 }

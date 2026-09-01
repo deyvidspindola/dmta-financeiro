@@ -17,7 +17,7 @@ import {
   PageHeader,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { toastError, toastSuccess } from '@/store/toastStore'

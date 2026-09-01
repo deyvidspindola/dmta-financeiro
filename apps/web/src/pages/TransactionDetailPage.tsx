@@ -33,7 +33,7 @@ import {
   Panel,
   TextInput,
   TextSelect,
-} from '@/components/ui'
+} from '@/components/ui-legacy'
 import type { ReactNode } from 'react'
 
 const entrySchema = z.object({

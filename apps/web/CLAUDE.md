@@ -34,9 +34,15 @@ hardcoded em TSX. Exceção: `src/pages/KitPage.tsx` (ferramenta de dev).
   (adicione o import ao adotar um componente novo — select, datepicker...).
   Markup que aparece após a rota montar (modal por estado, lista async)
   precisa de `reinitPreline()` na mão.
-- **Componentes base:** use os de `src/components/ui` (ou `ui.tsx`). Se
-  faltar um, adicione lá — não faça variação solta na tela. `/kit` mostra
-  o que existe (só em dev).
+- **Componentes base:** `src/components/ui/` (design system Preline/Tailwind —
+  `Button`, `Card`, `Modal`, `DataTable`, `Badge`, `MoneyValue`, `Stat`,
+  `ProgressBar/Ring`, `Tabs`, `Field/TextInput/TextSelect`, `Alert`,
+  `EmptyState`, `Skeleton`...). `/kit` mostra tudo (só em dev). Se faltar
+  um, adicione lá — nunca variação solta na tela.
+- **`src/components/ui-legacy.tsx`** é o conjunto antigo (CSS à mão). As
+  telas ainda não migradas importam dele. Migrar uma tela = trocar o import
+  de `@/components/ui-legacy` para `@/components/ui` e ajustar o que mudou.
+  Sai na Fase 4.
 - **Mobile-first.** Testar 360–430px de verdade. Referência de layout: Mobills.
 
 ## Verificação (apps/web não tem CI)
@@ -48,4 +54,4 @@ commit. Smoke visual da tela mexida nos dois temas.
 
 Branches `claude/*` e `cursor/*`, 1 tarefa por PR pra `main`, cada PR
 revisado pelo outro lado. Uma fase de Cursor por vez pra não conflitar em
-`ui.tsx` / `theme.css`. Ver `../../docs/04_WORKFLOW_PAREADO.md`.
+`components/ui/` / `theme.css`. Ver `../../docs/04_WORKFLOW_PAREADO.md`.
