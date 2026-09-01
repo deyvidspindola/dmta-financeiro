@@ -43,6 +43,11 @@ hardcoded em TSX. Exceção: `src/pages/KitPage.tsx` (ferramenta de dev).
   telas ainda não migradas importam dele. Migrar uma tela = trocar o import
   de `@/components/ui-legacy` para `@/components/ui` e ajustar o que mudou.
   Sai na Fase 4.
+- **Gráficos (ApexCharts, DT-11):** `AreaChart`, `BarChart`, `DonutChart`,
+  `Sparkline` de `@/components/ui` — recebem dados tipados simples, já vêm
+  themados e reagem a claro/escuro. Carregam sob demanda (o ApexCharts não
+  está no bundle principal). Não importe `react-apexcharts` direto nem use
+  `recharts` (removido). Cores da marca pra série: `useChartPalette()`.
 - **Mobile-first.** Testar 360–430px de verdade. Referência de layout: Mobills.
 
 ## Verificação (apps/web não tem CI)

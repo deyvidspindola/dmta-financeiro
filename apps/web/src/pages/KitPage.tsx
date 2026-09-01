@@ -11,12 +11,15 @@ import {
 } from 'lucide-react'
 import {
   Alert,
+  AreaChart,
   Badge,
+  BarChart,
   Button,
   Card,
   CardHeader,
   CategoryChip,
   DataTable,
+  DonutChart,
   EmptyState,
   Field,
   IconButton,
@@ -26,12 +29,14 @@ import {
   ProgressBar,
   ProgressRing,
   Skeleton,
+  Sparkline,
   Stat,
   Tabs,
   Td,
   TextInput,
   TextSelect,
   Tr,
+  useChartPalette,
 } from '@/components/ui'
 import { useThemeStore } from '@/store/themeStore'
 
@@ -41,6 +46,7 @@ import { useThemeStore } from '@/store/themeStore'
  */
 export function KitPage() {
   const { pref, setPref } = useThemeStore()
+  const chartPalette = useChartPalette()
   const [modalOpen, setModalOpen] = useState(false)
   const [tab, setTab] = useState<'todos' | 'pendentes' | 'pagos'>('todos')
 
@@ -253,6 +259,75 @@ export function KitPage() {
               icon={Wallet}
               action={<Button size="sm" icon={Plus}>Novo lançamento</Button>}
             />
+          </div>
+        </Section>
+
+        <Section title="Gráficos (ApexCharts)">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <div>
+              <p className="mb-2 text-xs text-fg-subtle">Evolução (barras)</p>
+              <BarChart
+                height={220}
+                categories={['abr', 'mai', 'jun', 'jul', 'ago', 'set']}
+                series={[
+                  {
+                    name: 'Receitas',
+                    data: [7200, 7800, 6900, 8200, 8100, 8200],
+                    color: chartPalette.positive,
+                  },
+                  {
+                    name: 'Despesas',
+                    data: [5400, 6100, 5800, 5200, 6400, 5964],
+                    color: chartPalette.negative,
+                  },
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-xs text-fg-subtle">Saldo (área)</p>
+              <AreaChart
+                height={220}
+                categories={['abr', 'mai', 'jun', 'jul', 'ago', 'set']}
+                series={[
+                  {
+                    name: 'Saldo',
+                    data: [1800, 3500, 4600, 7600, 9300, 11536],
+                    color: chartPalette.brand,
+                  },
+                ]}
+              />
+            </div>
+            <div>
+              <p className="mb-2 text-xs text-fg-subtle">
+                Gastos por categoria (rosca)
+              </p>
+              <DonutChart
+                height={240}
+                labels={['Mercado', 'Transporte', 'Moradia', 'Lazer', 'Outros']}
+                values={[1240, 680, 2100, 430, 514]}
+                colors={chartPalette.cat.slice(0, 5)}
+                centerLabel="Gastos"
+              />
+            </div>
+            <div className="flex flex-col justify-center gap-4">
+              <p className="text-xs text-fg-subtle">Sparklines (cartão de KPI)</p>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-fg-muted">Saldo</span>
+                <div className="w-40">
+                  <Sparkline data={[3, 4, 3.5, 5, 4.8, 6, 7.2]} tone="brand" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-fg-muted">Despesa</span>
+                <div className="w-40">
+                  <Sparkline
+                    data={[5, 6, 5.5, 4, 6.4, 5.9]}
+                    tone="negative"
+                    type="bar"
+                  />
+                </div>
+              </div>
+            </div>
           </div>
         </Section>
 

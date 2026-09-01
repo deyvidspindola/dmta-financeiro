@@ -47,10 +47,17 @@ export function LoadingBlock({ label }: { label: string }) {
   )
 }
 
-export function Skeleton({ className }: { className?: string }) {
+export function Skeleton({
+  className,
+  style,
+}: {
+  className?: string
+  style?: React.CSSProperties
+}) {
   return (
     <div
       className={cn('animate-pulse rounded-lg bg-surface-2', className)}
+      style={style}
       aria-hidden
     />
   )
