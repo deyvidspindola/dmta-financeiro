@@ -15,7 +15,7 @@ import {
   Target,
   Wallet,
 } from 'lucide-react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { matchPath, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import { authApi } from '@/api'
 import { ContextSwitcher } from '@/components/ContextSwitcher'
@@ -50,6 +50,16 @@ const MOBILE_TABS: NavItem[] = [
   { to: '/mais', label: strings.nav.more, icon: LayoutGrid },
 ]
 
+/** Rotas já migradas para tokens claros/escuros — sem `.legacy-light` no `<main>`. */
+const MIGRATED_ROUTE_PATTERNS = ['/credit-cards', '/credit-cards/:id']
+
+function useIsMigratedRoute(): boolean {
+  const { pathname } = useLocation()
+  return MIGRATED_ROUTE_PATTERNS.some((pattern) =>
+    matchPath({ path: pattern, end: true }, pathname),
+  )
+}
+
 const THEME_OPTIONS: { value: ThemePref; label: string; icon: LucideIcon }[] = [
   { value: 'light', label: strings.theme.light, icon: Sun },
   { value: 'dark', label: strings.theme.dark, icon: Moon },
@@ -61,6 +71,7 @@ export function AppLayout() {
   const { user, clearSession } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
   const { pref, setPref } = useThemeStore()
+  const isMigratedRoute = useIsMigratedRoute()
 
   usePrelineInit()
 
@@ -232,8 +243,8 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* legacy-light: telas não migradas não reagem ao modo escuro (Fase 3/4). */}
-        <main className="legacy-light flex-1">
+        {/* legacy-light: opt-in por rota — telas migradas usam tokens em bg-canvas/text-fg. */}
+        <main className={cn('flex-1', !isMigratedRoute && 'legacy-light')}>
           <div className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 lg:px-8 lg:py-6 lg:pb-8">
             <Outlet />
           </div>

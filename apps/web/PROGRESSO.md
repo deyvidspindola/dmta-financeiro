@@ -38,6 +38,14 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   `ToastHost` estilo Alert. `uiStore` para estado da sidebar. Strings novas em
   `pt-BR.ts`. Cromo theme-aware; área de conteúdo sem `text-fg` (telas legadas).
   build + lint verdes; smoke visual OK (claro/escuro, mobile ~360px).
+- **F3 — Cartões (esta rodada, Cursor):** `CreditCardsPage` migrada para o
+  design system — grade de cartões visuais clicáveis (`VisualCreditCard`).
+  Nova rota `/credit-cards/:id` (`CreditCardDetailPage`): limite/uso, navegador
+  de faturas estilo `MonthNavigator`, faixa de chips rolável (histórico +
+  atual + 3 meses previstos sintéticos), compras da fatura, pagar (modal) e
+  nova compra. Modais extraídos em `components/creditCards/`. Utilitários em
+  `lib/creditCardInvoices.ts`. `.legacy-light` no `<main>` virou opt-in por rota
+  (`MIGRATED_ROUTE_PATTERNS` em `AppLayout`). build + lint verdes.
 
 ## Feito
 

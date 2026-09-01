@@ -11,6 +11,7 @@ import { MorePage } from '@/pages/MorePage'
 import { QuickAddPage } from '@/pages/QuickAddPage'
 import { BudgetsPage } from '@/pages/BudgetsPage'
 import { AccountsPage } from '@/pages/AccountsPage'
+import { CreditCardDetailPage } from '@/pages/CreditCardDetailPage'
 import { CreditCardsPage } from '@/pages/CreditCardsPage'
 import { BillsPage } from '@/pages/BillsPage'
 import { BillCapturesPage } from '@/pages/BillCapturesPage'
@@ -80,6 +81,7 @@ export default function App() {
             <Route path="accounts" element={<AccountsPage />} />
             <Route path="accounts/:id" element={<AccountDetailPage />} />
             <Route path="credit-cards" element={<CreditCardsPage />} />
+            <Route path="credit-cards/:id" element={<CreditCardDetailPage />} />
             <Route path="bills" element={<BillsPage />} />
             <Route path="bill-captures" element={<BillCapturesPage />} />
             <Route path="boleto-passwords" element={<BoletoPasswordRulesPage />} />
