@@ -42,6 +42,13 @@ use Illuminate\Support\Facades\Log;
  */
 final class RecurringTransactionMaterializer
 {
+    /**
+     * Quantos meses à frente materializar as ocorrências futuras (como
+     * `pending`) — dá visibilidade dos próximos meses na lista sem esperar
+     * cada data chegar. O job diário estende essa janela.
+     */
+    public const HORIZON_MONTHS = 12;
+
     public function __construct(
         private readonly RecurrenceWindow $window,
         private readonly RegisterTransaction $register,
@@ -50,9 +57,11 @@ final class RecurringTransactionMaterializer
     /**
      * Gera as ocorrências de `$rule` até `$asOf` (inclusive) e grava o
      * novo `next_occurrence_date` / `active` uma única vez ao final.
+     * Ocorrência com data até hoje entra efetivada (moveu o saldo); data
+     * futura entra `pending` (previsto) — ver {@see StatementEntry}.
      *
      * @param  RecurringTransaction  $rule  Regra ativa a processar.
-     * @param  Carbon  $asOf  Data-limite — normalmente hoje.
+     * @param  Carbon  $asOf  Data-limite — hoje + {@see self::HORIZON_MONTHS} nos chamadores.
      */
     public function materializeDue(RecurringTransaction $rule, Carbon $asOf): void
     {
@@ -64,8 +73,10 @@ final class RecurringTransactionMaterializer
             $asOf,
         );
 
+        $today = Carbon::today();
+
         foreach ($result['occurrences'] as $occurrence) {
-            $this->materializeOne($rule, $occurrence);
+            $this->materializeOne($rule, $occurrence, settled: $occurrence->lte($today));
         }
 
         $rule->update([
@@ -75,7 +86,7 @@ final class RecurringTransactionMaterializer
     }
 
     /** Cria o lançamento da ocorrência só se ele ainda não existe. */
-    private function materializeOne(RecurringTransaction $rule, Carbon $occurrence): void
+    private function materializeOne(RecurringTransaction $rule, Carbon $occurrence, bool $settled): void
     {
         $alreadyDone = StatementEntry::query()
             ->where('recurring_transaction_id', $rule->id)
@@ -97,6 +108,7 @@ final class RecurringTransactionMaterializer
                 occurredAt: $occurrence->toDateString(),
                 categoryId: $rule->category_id,
                 recurringTransactionId: $rule->id,
+                settled: $settled,
             ));
         } catch (QueryException) {
             Log::warning('Ocorrência de lançamento recorrente já existia (índice único)', [

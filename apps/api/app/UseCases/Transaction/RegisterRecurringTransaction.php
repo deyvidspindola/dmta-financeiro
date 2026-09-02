@@ -54,7 +54,10 @@ final class RegisterRecurringTransaction
                 'active' => true,
             ]);
 
-            $this->materializer->materializeDue($rule, Carbon::today());
+            $this->materializer->materializeDue(
+                $rule,
+                Carbon::today()->addMonthsNoOverflow(RecurringTransactionMaterializer::HORIZON_MONTHS),
+            );
 
             return $rule->refresh();
         });

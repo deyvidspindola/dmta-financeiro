@@ -14,6 +14,7 @@ use App\Models\CardPurchase;
 use App\Models\Context;
 use App\Models\RecurringBill;
 use App\Models\RecurringTransaction;
+use App\Models\StatementEntry;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
@@ -72,6 +73,12 @@ final class BudgetProjectionService
             $push('card_purchase', $purchase->category_id, $purchase->description, (float) $purchase->amount, $this->day($purchase->occurred_at));
         }
 
+        // Lançamentos previstos (pending) do mês — inclui as ocorrências
+        // futuras de recorrência já materializadas ({@see RecurringTransactionMaterializer}).
+        foreach ($this->pendingEntries($context, $from, $to) as $entry) {
+            $push('pending_entry', $entry->category_id, $entry->description, (float) $entry->amount, $this->day($entry->occurred_at));
+        }
+
         foreach ($context->recurringTransactions()->where('active', true)->where('type', StatementEntryType::Expense->value)->get() as $rule) {
             foreach ($this->occurrences($rule->next_occurrence_date, $rule, $from, $to) as $date) {
                 $push('recurring_transaction', $rule->category_id, $rule->description, (float) $rule->amount, $date);
@@ -109,6 +116,17 @@ final class BudgetProjectionService
             ->where('direction', BillDirection::Payable->value)
             ->whereNotNull('category_id')
             ->whereBetween('due_date', [$from->toDateString(), $to->toDateString()])
+            ->get();
+    }
+
+    /** @return Collection<int, StatementEntry> */
+    private function pendingEntries(Context $context, Carbon $from, Carbon $to): Collection
+    {
+        return $context->statementEntries()
+            ->pending()
+            ->where('type', StatementEntryType::Expense->value)
+            ->whereNotNull('category_id')
+            ->whereBetween('occurred_at', [$from->toDateString(), $to->toDateString()])
             ->get();
     }
 
