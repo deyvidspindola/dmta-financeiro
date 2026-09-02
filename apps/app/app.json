@@ -12,7 +12,8 @@
       "policy": "fingerprint"
     },
     "updates": {
-      "fallbackToCacheTimeout": 0
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/0b1fc021-30e9-4c54-a22c-8d1a2ff11003"
     },
     "ios": {
       "supportsTablet": true,
@@ -42,12 +43,20 @@
           "image": "./assets/splash-icon.png",
           "resizeMode": "contain",
           "backgroundColor": "#f6f8f7",
-          "dark": { "backgroundColor": "#0a0f0d" }
+          "dark": {
+            "backgroundColor": "#0a0f0d"
+          }
         }
       ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "0b1fc021-30e9-4c54-a22c-8d1a2ff11003"
+      }
     }
   }
 }
