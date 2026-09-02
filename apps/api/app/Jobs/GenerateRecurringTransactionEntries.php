@@ -43,14 +43,14 @@ final class GenerateRecurringTransactionEntries implements ShouldQueue
 
     public function handle(RecurringTransactionMaterializer $materializer): void
     {
-        $today = Carbon::today();
+        $horizon = Carbon::today()->addMonthsNoOverflow(RecurringTransactionMaterializer::HORIZON_MONTHS);
 
         RecurringTransaction::query()
             ->where('active', true)
-            ->where('next_occurrence_date', '<=', $today->toDateString())
-            ->each(function (RecurringTransaction $rule) use ($materializer, $today): void {
+            ->where('next_occurrence_date', '<=', $horizon->toDateString())
+            ->each(function (RecurringTransaction $rule) use ($materializer, $horizon): void {
                 try {
-                    $materializer->materializeDue($rule, $today);
+                    $materializer->materializeDue($rule, $horizon);
                 } catch (Throwable $e) {
                     Log::error('Falha ao gerar ocorrência de lançamento recorrente', [
                         'recurring_transaction_id' => $rule->id,

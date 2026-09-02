@@ -20,7 +20,13 @@ use Tests\Feature\Support\FinanceScenario;
 /**
  * Os dois jobs de recorrência — comportamento caracterizado na fase A0;
  * idempotência no PR A7; laço compartilhado ({@see RecurrenceWindow}) no
- * PR A13. As asserções de efeito não mudam entre versões.
+ * PR A13.
+ *
+ * Atualizado: o job de lançamento recorrente agora materializa também as
+ * ocorrências FUTURAS (até {@see RecurringTransactionMaterializer::HORIZON_MONTHS}
+ * meses) como `pending`, além das vencidas (`settled`). As asserções de
+ * saldo/efeito não mudam — só passam a contar `->settled()` onde antes
+ * `count()` bastava.
  */
 beforeEach(function () {
     Carbon::setTestNow('2026-08-15');
@@ -56,9 +62,9 @@ test('lançamento recorrente: uma ocorrência vencida gera um lançamento e avan
 
     runTransactionJob();
 
-    expect(StatementEntry::query()->count())->toBe(1)
+    expect(StatementEntry::query()->settled()->count())->toBe(1)
         ->and((float) $account->refresh()->balance)->toBe(900.0)
-        ->and($rule->refresh()->next_occurrence_date->toDateString())->toBe('2026-09-10')
+        ->and($rule->refresh()->next_occurrence_date->toDateString())->toBe('2027-09-10')
         ->and($rule->active)->toBeTrue();
 });
 
@@ -77,8 +83,8 @@ test('lançamento recorrente: catch-up gera uma ocorrência por mês perdido, se
 
     runTransactionJob();
 
-    // 15/05, 15/06, 15/07, 15/08 — quatro ocorrências até "hoje" (15/08).
-    expect(StatementEntry::query()->count())->toBe(4)
+    // 15/05, 15/06, 15/07, 15/08 — quatro ocorrências efetivadas até "hoje" (15/08).
+    expect(StatementEntry::query()->settled()->count())->toBe(4)
         ->and((float) $account->refresh()->balance)->toBe(960.0);
 });
 
@@ -115,9 +121,11 @@ test('lançamento recorrente: rodar o job de novo no mesmo dia não duplica (dat
     ]);
 
     runTransactionJob();
+    $after = StatementEntry::query()->count();
     runTransactionJob();
 
-    expect(StatementEntry::query()->count())->toBe(1);
+    expect(StatementEntry::query()->count())->toBe($after)
+        ->and(StatementEntry::query()->settled()->count())->toBe(1);
 });
 
 test('reprocessar a mesma ocorrência não duplica (checagem de idempotência)', function () {
@@ -133,7 +141,8 @@ test('reprocessar a mesma ocorrência não duplica (checagem de idempotência)',
     ]);
 
     runTransactionJob();
-    expect(StatementEntry::query()->count())->toBe(1);
+    $after = StatementEntry::query()->count();
+    expect(StatementEntry::query()->settled()->count())->toBe(1);
 
     // Simula falha entre RegisterTransaction (commitado) e rule->update:
     // a data volta pra ocorrência já materializada.
@@ -141,7 +150,7 @@ test('reprocessar a mesma ocorrência não duplica (checagem de idempotência)',
     runTransactionJob();
 
     // A ocorrência de 10/08 já existe — não é materializada de novo.
-    expect(StatementEntry::query()->count())->toBe(1)
+    expect(StatementEntry::query()->count())->toBe($after)
         ->and((float) $account->refresh()->balance)->toBe(900.0);
 });
 
