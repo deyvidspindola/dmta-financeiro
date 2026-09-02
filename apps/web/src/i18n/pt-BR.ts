@@ -587,6 +587,7 @@ export const strings = {
       'Opcionalmente escolha uma conta para gerar o lançamento da quitação.',
     accountOptional: 'Conta (opcional)',
     noAccount: 'Só marcar como quitada',
+    noDueDate: 'Sem vencimento',
   },
 
   imports: {

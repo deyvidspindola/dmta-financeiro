@@ -6,6 +6,7 @@ import { accountsApi, consolidatedApi, transactionsApi } from '@/api'
 import { AccountForm } from '@/components/accounts/AccountForm'
 import { AccountStatement } from '@/components/accounts/AccountStatement'
 import type { AccountFormValues } from '@/components/accounts/schemas'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import {
   Badge,
   Button,
@@ -20,6 +21,7 @@ import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
+import type { StatementEntry } from '@/types/models'
 
 const t = strings.accountDetail
 const ta = strings.accounts
@@ -32,6 +34,7 @@ export function AccountDetailPage() {
   const contextId = useWritableContextId()
   const isConsolidated = activeScope === CONSOLIDATED
   const [editOpen, setEditOpen] = useState(false)
+  const [detail, setDetail] = useState<StatementEntry | null>(null)
 
   const urlContextId =
     searchParams.get('context') ??
@@ -171,9 +174,21 @@ export function AccountDetailPage() {
           <AccountStatement
             account={account}
             transactions={transactionsQuery.data ?? []}
+            onSelect={setDetail}
           />
         ) : null}
       </Panel>
+
+      {detail ? (
+        <TransactionDetailModal
+          key={`${detail.context_id}-${detail.id}`}
+          transactionId={detail.id}
+          contextId={detail.context_id}
+          onClose={() => setDetail(null)}
+          onDeleted={() => setDetail(null)}
+          onMoved={(moved) => setDetail(moved)}
+        />
+      ) : null}
 
       {editOpen && contextId ? (
         <Modal title={ta.edit} onClose={() => setEditOpen(false)}>

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Pencil, Trash2 } from 'lucide-react'
 import { accountsApi, debtsApi } from '@/api'
@@ -12,21 +12,22 @@ import {
 import {
   Badge,
   Button,
-  DataTable,
   EmptyState,
   ErrorBanner,
   IconButton,
   LoadingBlock,
   Modal,
   Money,
+  MoneyValue,
   PageHeader,
+  StatementGroup,
+  StatementList,
+  StatementRow,
   Stat,
-  Td,
-  Tr,
   useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
@@ -34,6 +35,25 @@ import { toastError, toastSuccess } from '@/store/toastStore'
 import type { Debt } from '@/types/models'
 
 const t = strings.debts
+
+function groupDebts(rows: Debt[]): [string, Debt[]][] {
+  const map = new Map<string, Debt[]>()
+  for (const item of rows) {
+    const day = item.due_date ?? ''
+    const list = map.get(day) ?? []
+    list.push(item)
+    map.set(day, list)
+  }
+  return [...map.entries()].sort(([a], [b]) => {
+    if (a === '') return 1
+    if (b === '') return -1
+    return b.localeCompare(a)
+  })
+}
+
+function debtDirectionMoney(direction: Debt['direction']): 'credit' | 'debit' {
+  return direction === 'owed_to_me' ? 'credit' : 'debit'
+}
 
 export function DebtsPage() {
   const confirm = useConfirm()
@@ -44,6 +64,7 @@ export function DebtsPage() {
   const [editing, setEditing] = useState<Debt | null>(null)
   const [open, setOpen] = useState(false)
   const [settling, setSettling] = useState<Debt | null>(null)
+  const [detail, setDetail] = useState<Debt | null>(null)
   const isEdit = editing !== null
 
   const { data = [], isLoading, isError } = useQuery({
@@ -59,6 +80,7 @@ export function DebtsPage() {
   })
 
   const summary = useMemo(() => summarizeDebts(data), [data])
+  const grouped = useMemo(() => groupDebts(data), [data])
 
   function openCreate() {
     setEditing(null)
@@ -138,6 +160,7 @@ export function DebtsPage() {
       return
     }
     deleteMutation.mutate(debtId)
+    setDetail(null)
   }
 
   return (
@@ -182,78 +205,93 @@ export function DebtsPage() {
       ) : null}
 
       {data.length > 0 ? (
-        <DataTable
-          headers={[
-            t.description,
-            t.counterparty,
-            { label: t.amount, right: true },
-            t.direction,
-            t.dueDate,
-            t.status,
-            strings.common.actions,
-          ]}
-        >
-          {data.map((item) => (
-            <Tr key={item.id}>
-              <Td>{item.description}</Td>
-              <Td>{item.counterparty ?? '—'}</Td>
-              <Td right>{formatMoney(item.amount)}</Td>
-              <Td>
-                <Badge tone={directionTone(item.direction)} dot>
-                  {t.directions[item.direction]}
-                </Badge>
-              </Td>
-              <Td>{item.due_date ? formatDate(item.due_date) : '—'}</Td>
-              <Td>
-                <Badge
-                  tone={item.status === 'pending' ? 'warning' : 'neutral'}
-                  dot
-                >
-                  {t.statuses[item.status]}
-                </Badge>
-              </Td>
-              <Td>
-                <div className="flex justify-end gap-0.5">
-                  {item.status === 'pending' ? (
+        <StatementList>
+          {grouped.map(([day, dayRows]) => (
+            <StatementGroup
+              key={day || 'none'}
+              label={day ? formatDate(day) : t.noDueDate}
+            >
+              {dayRows.map((item) => (
+                <StatementRow
+                  key={item.id}
+                  title={item.description}
+                  ariaLabel={item.description}
+                  onClick={() => setDetail(item)}
+                  meta={
                     <>
-                      <IconButton
-                        label={t.settle}
-                        icon={Check}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setSettling(item)}
-                        disabled={!contextId || settleMutation.isPending}
-                      />
-                      <IconButton
-                        label={strings.common.edit}
-                        icon={Pencil}
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => openEdit(item)}
-                        disabled={!contextId}
-                      />
+                      <Badge tone={directionTone(item.direction)} dot>
+                        {t.directions[item.direction]}
+                      </Badge>
+                      <Badge
+                        tone={item.status === 'pending' ? 'warning' : 'neutral'}
+                        dot
+                      >
+                        {t.statuses[item.status]}
+                      </Badge>
+                      {item.counterparty ? (
+                        <span>{item.counterparty}</span>
+                      ) : null}
                     </>
-                  ) : null}
-                  <IconButton
-                    label={strings.common.delete}
-                    icon={Trash2}
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDelete(item.id)}
-                    disabled={deleteMutation.isPending || !contextId}
-                  />
-                </div>
-              </Td>
-            </Tr>
+                  }
+                  amount={
+                    <MoneyValue
+                      amount={item.amount}
+                      direction={debtDirectionMoney(item.direction)}
+                      size="sm"
+                    />
+                  }
+                />
+              ))}
+            </StatementGroup>
           ))}
-        </DataTable>
+        </StatementList>
+      ) : null}
+
+      {detail ? (
+        <Modal
+          title={detail.description}
+          size="lg"
+          onClose={() => setDetail(null)}
+          footer={
+            contextId ? (
+              <div className="flex w-full flex-wrap items-center justify-end gap-1">
+                {detail.status === 'pending' ? (
+                  <>
+                    <IconButton
+                      label={t.settle}
+                      icon={Check}
+                      onClick={() => {
+                        setSettling(detail)
+                        setDetail(null)
+                      }}
+                    />
+                    <IconButton
+                      label={strings.common.edit}
+                      icon={Pencil}
+                      onClick={() => {
+                        openEdit(detail)
+                        setDetail(null)
+                      }}
+                    />
+                  </>
+                ) : null}
+                <IconButton
+                  label={strings.common.delete}
+                  icon={Trash2}
+                  variant="danger"
+                  onClick={() => handleDelete(detail.id)}
+                  disabled={deleteMutation.isPending}
+                />
+              </div>
+            ) : undefined
+          }
+        >
+          <DebtDetailBody debt={detail} />
+        </Modal>
       ) : null}
 
       {open && contextId ? (
-        <Modal
-          title={isEdit ? t.edit : t.create}
-          onClose={closeModal}
-        >
+        <Modal title={isEdit ? t.edit : t.create} onClose={closeModal}>
           <DebtForm
             editing={editing}
             isPending={mutation.isPending}
@@ -279,6 +317,60 @@ export function DebtsPage() {
           />
         </Modal>
       ) : null}
+    </div>
+  )
+}
+
+function DebtDetailBody({ debt }: { debt: Debt }) {
+  return (
+    <div className="space-y-6">
+      <div className="text-center">
+        <MoneyValue
+          amount={debt.amount}
+          direction={debtDirectionMoney(debt.direction)}
+          size="lg"
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <Badge tone={directionTone(debt.direction)} dot>
+            {t.directions[debt.direction]}
+          </Badge>
+          <Badge
+            tone={debt.status === 'pending' ? 'warning' : 'neutral'}
+            dot
+          >
+            {t.statuses[debt.status]}
+          </Badge>
+        </div>
+      </div>
+
+      <dl className="grid gap-4 sm:grid-cols-2">
+        <DetailItem label={t.counterparty}>
+          {debt.counterparty ?? '—'}
+        </DetailItem>
+        <DetailItem label={t.dueDate}>
+          {debt.due_date ? formatDate(debt.due_date) : '—'}
+        </DetailItem>
+        {debt.notes ? (
+          <DetailItem label={t.notes}>{debt.notes}</DetailItem>
+        ) : null}
+      </dl>
+    </div>
+  )
+}
+
+function DetailItem({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm text-fg">{children}</dd>
     </div>
   )
 }

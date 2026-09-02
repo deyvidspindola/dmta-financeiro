@@ -1,6 +1,12 @@
 import { useMemo } from 'react'
-import { DashboardListItem } from '@/components/dashboard/DashboardListItem'
-import { Badge, CategoryChip, MoneyValue } from '@/components/ui'
+import {
+  Badge,
+  CategoryChip,
+  MoneyValue,
+  StatementGroup,
+  StatementList,
+  StatementRow,
+} from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate } from '@/lib/format'
 import { transactionDirection } from '@/lib/transactionDisplay'
@@ -27,6 +33,7 @@ type TransactionListProps = {
   categoryMap: Map<string, CategoryInfo>
   accountMap: Map<string, AccountInfo>
   isConsolidated?: boolean
+  onSelect: (tx: StatementEntry) => void
 }
 
 export function TransactionList({
@@ -34,74 +41,60 @@ export function TransactionList({
   categoryMap,
   accountMap,
   isConsolidated = false,
+  onSelect,
 }: TransactionListProps) {
   const grouped = useMemo(() => groupByDay(rows), [rows])
 
   if (rows.length === 0) return null
 
   return (
-    <div className="space-y-4">
+    <StatementList>
       {grouped.map(([day, dayRows]) => (
-        <section key={day}>
-          <h2 className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-            {formatDate(day)}
-          </h2>
-          <ul className="-mx-2 divide-y divide-line rounded-2xl border border-line bg-surface">
-            {dayRows.map((tx) => {
-              const category = tx.category_id
-                ? categoryMap.get(tx.category_id)
-                : undefined
-              const account = accountMap.get(tx.account_id)
-              const typeLabel =
-                tx.type === 'transfer'
-                  ? t.types.transfer
-                  : t.types[tx.type]
+        <StatementGroup key={day} label={formatDate(day)}>
+          {dayRows.map((tx) => {
+            const category = tx.category_id
+              ? categoryMap.get(tx.category_id)
+              : undefined
+            const account = accountMap.get(tx.account_id)
+            const typeLabel =
+              tx.type === 'transfer' ? t.types.transfer : t.types[tx.type]
 
-              return (
-                <li key={`${tx.context_id}-${tx.id}`}>
-                  <DashboardListItem
-                    to={`/transactions/${tx.id}?context=${tx.context_id}`}
-                    ariaLabel={`${tx.description}, ${typeLabel}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-medium text-fg">
-                          {tx.description}
-                        </p>
-                        <div className="mt-0.5 flex flex-wrap items-center gap-2">
-                          {category ? (
-                            <CategoryChip
-                              name={category.name}
-                              colorIndex={category.colorIndex}
-                            />
-                          ) : null}
-                          {account ? (
-                            <span className="text-xs text-fg-muted">
-                              {account.name}
-                            </span>
-                          ) : null}
-                          {isConsolidated && tx.context ? (
-                            <Badge tone="neutral">{tx.context.name}</Badge>
-                          ) : null}
-                          {tx.recurring_transaction_id ? (
-                            <Badge tone="accent">{t.recurringBadge}</Badge>
-                          ) : null}
-                        </div>
-                      </div>
-                      <MoneyValue
-                        amount={tx.amount}
-                        direction={transactionDirection(tx)}
-                        size="sm"
+            return (
+              <StatementRow
+                key={`${tx.context_id}-${tx.id}`}
+                title={tx.description}
+                ariaLabel={`${tx.description}, ${typeLabel}`}
+                onClick={() => onSelect(tx)}
+                meta={
+                  <>
+                    {category ? (
+                      <CategoryChip
+                        name={category.name}
+                        colorIndex={category.colorIndex}
                       />
-                    </div>
-                  </DashboardListItem>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
+                    ) : null}
+                    {account ? <span>{account.name}</span> : null}
+                    {isConsolidated && tx.context ? (
+                      <Badge tone="neutral">{tx.context.name}</Badge>
+                    ) : null}
+                    {tx.recurring_transaction_id ? (
+                      <Badge tone="accent">{t.recurringBadge}</Badge>
+                    ) : null}
+                  </>
+                }
+                amount={
+                  <MoneyValue
+                    amount={tx.amount}
+                    direction={transactionDirection(tx)}
+                    size="sm"
+                  />
+                }
+              />
+            )
+          })}
+        </StatementGroup>
       ))}
-    </div>
+    </StatementList>
   )
 }
 

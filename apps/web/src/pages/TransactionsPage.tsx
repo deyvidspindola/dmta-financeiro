@@ -11,6 +11,7 @@ import {
 } from '@/api'
 import type { TransactionListFilters } from '@/api/transactions'
 import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
+import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import {
   applyClientFilters,
@@ -61,6 +62,7 @@ export function TransactionsPage() {
   const [editing, setEditing] = useState<StatementEntry | null>(null)
   const [transferOpen, setTransferOpen] = useState(false)
   const [moving, setMoving] = useState<StatementEntry | null>(null)
+  const [detail, setDetail] = useState<StatementEntry | null>(null)
 
   const apiFilters = useMemo((): TransactionListFilters | undefined => {
     if (isConsolidated) return undefined
@@ -286,6 +288,18 @@ export function TransactionsPage() {
           categoryMap={categoryMap}
           accountMap={accountMap}
           isConsolidated={isConsolidated}
+          onSelect={setDetail}
+        />
+      ) : null}
+
+      {detail ? (
+        <TransactionDetailModal
+          key={`${detail.context_id}-${detail.id}`}
+          transactionId={detail.id}
+          contextId={detail.context_id}
+          onClose={() => setDetail(null)}
+          onDeleted={() => setDetail(null)}
+          onMoved={(moved) => setDetail(moved)}
         />
       ) : null}
 
