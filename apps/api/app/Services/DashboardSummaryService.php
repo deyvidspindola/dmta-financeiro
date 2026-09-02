@@ -23,21 +23,19 @@ use Illuminate\Support\Carbon;
  * `::consolidated` (todos) — por isso é Service, não lógica solta em cada
  * ação (capítulo 04.3: soma para exibir, nunca mistura para movimentar).
  *
- * Também monta a série de evolução mensal (receita/despesa/saldo) que
- * alimenta os gráficos e relatórios por período do dashboard — mesma
- * regra de "só exibir, nunca decidir saldo" das outras leituras daqui.
- * Dívidas pendentes entram só como indicador de ciência — nunca somadas
- * a `month_income`/`month_expense` (ver docblock de {@see Debt}).
+ * Também monta a série de evolução mensal (receita/despesa/saldo) dos
+ * gráficos. Dívidas pendentes entram só como indicador — nunca somadas a
+ * `month_income`/`month_expense` (ver docblock de {@see Debt}).
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 1.2.0
  *
  * @since   21/08/2026
  *
- * @updated 22/08/2026
+ * @updated 02/09/2026
  */
 final class DashboardSummaryService
 {
@@ -47,9 +45,15 @@ final class DashboardSummaryService
     /** Teto de meses aceito — evita varrer o histórico inteiro por engano. */
     private const MAX_EVOLUTION_MONTHS = 24;
 
-    /** @return array<string, mixed> */
-    public function forContext(Context $context): array
+    /**
+     * `$month` (passador de mês do app) rege `month_income`/`month_expense`;
+     * `null` = mês corrente. Os outros indicadores são estado "agora".
+     *
+     * @return array<string, mixed>
+     */
+    public function forContext(Context $context, ?Carbon $month = null): array
     {
+        $reference = $month ?? Carbon::now();
         $now = Carbon::now();
         $pending = $context->bills()->where('status', BillStatus::Pending->value);
         $overdue = $context->bills()
@@ -58,31 +62,25 @@ final class DashboardSummaryService
 
         return [
             'context_id' => $context->id,
+            'month' => $reference->format('Y-m'),
             'accounts_balance' => (float) $context->accounts()->sum('balance'),
             'pending_bills_count' => $pending->count(),
-            'pending_bills_amount' => (float) $context->bills()
-                ->where('status', BillStatus::Pending->value)
-                ->sum('amount'),
+            'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
-            'overdue_bills_amount' => (float) $context->bills()
-                ->where('status', BillStatus::Pending->value)
-                ->where('due_date', '<', $now->toDateString())
-                ->sum('amount'),
+            'overdue_bills_amount' => (float) $overdue->sum('amount'),
             'month_income' => (float) $context->statementEntries()
                 ->where('type', StatementEntryType::Income->value)
-                ->whereYear('occurred_at', $now->year)
-                ->whereMonth('occurred_at', $now->month)
+                ->whereYear('occurred_at', $reference->year)
+                ->whereMonth('occurred_at', $reference->month)
                 ->sum('amount'),
             'month_expense' => (float) $context->statementEntries()
                 ->where('type', StatementEntryType::Expense->value)
-                ->whereYear('occurred_at', $now->year)
-                ->whereMonth('occurred_at', $now->month)
+                ->whereYear('occurred_at', $reference->year)
+                ->whereMonth('occurred_at', $reference->month)
                 ->sum('amount'),
             'investments_total' => (float) $context->investments()->sum('current_amount'),
             'credit_card_open_invoices_amount' => $this->openCardInvoicesAmount($context),
-            'pending_debts_count' => $context->debts()
-                ->where('status', DebtStatus::Pending->value)
-                ->count(),
+            'pending_debts_count' => $context->debts()->where('status', DebtStatus::Pending->value)->count(),
             'pending_debts_i_owe_amount' => (float) $context->debts()
                 ->where('status', DebtStatus::Pending->value)
                 ->where('direction', DebtDirection::IOwe->value)
@@ -110,9 +108,9 @@ final class DashboardSummaryService
      *
      * @return array{contexts: list<array<string, mixed>>, totals: array<string, float|int>}
      */
-    public function consolidated(User $user): array
+    public function consolidated(User $user, ?Carbon $month = null): array
     {
-        $perContext = $user->contexts()->get()->map(fn (Context $context) => $this->forContext($context));
+        $perContext = $user->contexts()->get()->map(fn (Context $c) => $this->forContext($c, $month));
 
         $totals = [
             'accounts_balance' => (float) $perContext->sum('accounts_balance'),
