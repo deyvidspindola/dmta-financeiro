@@ -23,3 +23,4 @@ export { Badge } from './Badge';
 export type { BadgeTone } from './Badge';
 export { ProgressBar } from './ProgressBar';
 export { ListRow } from './ListRow';
+export { Sheet } from './Sheet';
