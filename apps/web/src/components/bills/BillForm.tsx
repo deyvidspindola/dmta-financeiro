@@ -1,10 +1,12 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
+  MoneyInput,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -89,10 +91,33 @@ export function BillForm({
         <TextInput {...form.register('description')} />
       </Field>
       <Field label={b.amount} error={form.formState.errors.amount?.message}>
-        <TextInput type="number" step="0.01" {...form.register('amount')} />
+        <Controller
+          name="amount"
+          control={form.control}
+          render={({ field }) => (
+            <MoneyInput
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              aria-invalid={Boolean(form.formState.errors.amount)}
+            />
+          )}
+        />
       </Field>
       <Field label={b.dueDate} error={form.formState.errors.due_date?.message}>
-        <TextInput type="date" {...form.register('due_date')} />
+        <Controller
+          name="due_date"
+          control={form.control}
+          render={({ field }) => (
+            <DatePickerField
+              key={editing?.id ?? 'new'}
+              value={field.value}
+              onChange={field.onChange}
+              aria-invalid={Boolean(form.formState.errors.due_date)}
+            />
+          )}
+        />
       </Field>
       {!isEdit ? (
         <>

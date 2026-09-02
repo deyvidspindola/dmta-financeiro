@@ -1,9 +1,11 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
+  MoneyInput,
   TextInput,
 } from '@/components/ui'
 import {
@@ -56,7 +58,19 @@ export function GoalForm({
         label={t.targetAmount}
         error={form.formState.errors.target_amount?.message}
       >
-        <TextInput type="number" step="0.01" {...form.register('target_amount')} />
+        <Controller
+          name="target_amount"
+          control={form.control}
+          render={({ field }) => (
+            <MoneyInput
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              aria-invalid={Boolean(form.formState.errors.target_amount)}
+            />
+          )}
+        />
       </Field>
       {editing ? (
         <p className="text-sm text-fg-muted">
@@ -65,7 +79,17 @@ export function GoalForm({
         </p>
       ) : null}
       <Field label={t.targetDate}>
-        <TextInput type="date" {...form.register('target_date')} />
+        <Controller
+          name="target_date"
+          control={form.control}
+          render={({ field }) => (
+            <DatePickerField
+              key={editing?.id ?? 'new'}
+              value={field.value ?? ''}
+              onChange={field.onChange}
+            />
+          )}
+        />
       </Field>
       <Field label={t.notes}>
         <TextInput {...form.register('notes')} />
