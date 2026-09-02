@@ -2,9 +2,8 @@
  * Design system do apps/web (Preline UI + Tailwind v4) — Fase 1 da reforma
  * visual (D-17 / DT-10). Vitrine viva em `/kit` (só em dev).
  *
- * Os nomes e as props batem com o `ui-legacy.tsx` onde faz sentido, pra
- * migração de tela ser trocar o import de `@/components/ui-legacy` para
- * `@/components/ui`. `ui-legacy.tsx` sai na Fase 4.
+ * Nomes e props compatíveis com o antigo `ui-legacy` (removido na F4) —
+ * migrar era só trocar o import. Vitrine viva em `/kit` (só em dev).
  */
 export { Button, IconButton } from './Button'
 export type { ButtonVariant, ButtonSize } from './Button'

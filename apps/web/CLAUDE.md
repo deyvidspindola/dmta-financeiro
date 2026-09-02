@@ -16,20 +16,18 @@ hardcoded em TSX. Exceção: `src/pages/KitPage.tsx` (ferramenta de dev).
 
 ## Estilo — Tailwind v4 + Preline UI (a partir da Fase 0)
 
-- **Toda UI nova é Tailwind + Preline.** Não escreva CSS novo em
-  `src/styles/global.css` — ele é legado e sai na Fase 4. Estilo pontual que
-  não dá pra fazer com utilitário vai em `@layer components` no
-  `src/styles/theme.css`, com parcimônia.
+- **Toda UI é Tailwind + Preline.** Sem CSS global (o `global.css` legado foi
+  removido na F4). Estilo pontual que não dá com utilitário vai em
+  `@layer components` no `src/styles/theme.css`, com parcimônia.
 - **Cores só por token.** `bg-brand-600`, `text-fg-muted`, `border-line`,
   `bg-surface`, `text-positive/negative`, `cat-1..12`. Nunca hex solto nem
   cor arbitrária `bg-[#...]`. Tokens definidos em `theme.css`.
 - **Classe dinâmica não existe pro Tailwind v4** — ele varre strings
   literais. `` `bg-${x}-500` `` não gera nada. Use um mapa de literais
   (`{ ok: 'bg-brand-600', err: 'bg-negative' }`) ou `style={{ ... var(--...) }}`.
-- **Dark mode:** classe `.dark` no `<html>` (via `themeStore`). Componente
-  novo já nasce funcionando nos dois temas — teste os dois. Cada tela nova
-  embrulha o conteúdo raiz em `bg-canvas text-fg` (o `<body>` não tem tema
-  até a Fase 4).
+- **Dark mode:** classe `.dark` no `<html>` (via `themeStore`); o `<body>`
+  assume `bg-canvas`/`text-fg`. Componente novo já nasce nos dois temas —
+  teste os dois.
 - **Preline:** plugins são importados um a um em `src/lib/preline.ts`
   (adicione o import ao adotar um componente novo — select, datepicker...).
   Markup que aparece após a rota montar (modal por estado, lista async)
@@ -39,10 +37,6 @@ hardcoded em TSX. Exceção: `src/pages/KitPage.tsx` (ferramenta de dev).
   `ProgressBar/Ring`, `Tabs`, `Field/TextInput/TextSelect`, `Alert`,
   `EmptyState`, `Skeleton`...). `/kit` mostra tudo (só em dev). Se faltar
   um, adicione lá — nunca variação solta na tela.
-- **`src/components/ui-legacy.tsx`** é o conjunto antigo (CSS à mão). As
-  telas ainda não migradas importam dele. Migrar uma tela = trocar o import
-  de `@/components/ui-legacy` para `@/components/ui` e ajustar o que mudou.
-  Sai na Fase 4.
 - **Gráficos (ApexCharts, DT-11):** `AreaChart`, `BarChart`, `DonutChart`,
   `Sparkline` de `@/components/ui` — recebem dados tipados simples, já vêm
   themados e reagem a claro/escuro. Carregam sob demanda (o ApexCharts não
@@ -58,5 +52,4 @@ commit. Smoke visual da tela mexida nos dois temas.
 ## Colaboração Claude + Cursor
 
 Branches `claude/*` e `cursor/*`, 1 tarefa por PR pra `main`, cada PR
-revisado pelo outro lado. Uma fase de Cursor por vez pra não conflitar em
-`components/ui/` / `theme.css`. Ver `../../docs/04_WORKFLOW_PAREADO.md`.
+revisado pelo outro lado. Cada PR revisado pelo outro lado. Ver `../../docs/04_WORKFLOW_PAREADO.md`.

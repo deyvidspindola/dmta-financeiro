@@ -1,22 +1,12 @@
 /*
- * Tema do apps/web — Tailwind CSS v4 + Preline UI (Fase 0 da reforma visual).
+ * Tema do apps/web — Tailwind CSS v4 + Preline UI.
  * Ver ~/.claude/plans/reforma-visual-preline-apps-web.md e apps/web/CLAUDE.md.
- *
- * Ordem de camadas: `legacy` (o global.css antigo) fica ENTRE `base` e
- * `components` — as regras antigas ganham do reset do Tailwind (preflight),
- * mas qualquer utilitário Tailwind/Preline ganha das regras antigas. O
- * global.css sai de vez na Fase 4.
  */
-@layer theme, base, legacy, components, utilities;
-
 @import 'tailwindcss';
 
 /* Preline UI (open source) */
 @source '../../node_modules/preline/dist/*.js';
 @import 'preline/variants.css';
-
-/* CSS legado — isolado numa camada de baixa prioridade durante a migração */
-@import './global.css' layer(legacy);
 
 /* Dark mode por classe no <html> (padrão do Preline), não por media query */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -82,7 +72,7 @@
 }
 
 /* -------------------------------------------------------------------------
- * Tokens semânticos — trocam com o tema. Exponho como cores utilitárias
+ * Tokens semânticos — trocam com o tema. Expostos como cores utilitárias
  * (`bg-surface`, `text-fg-muted`, `border-line`) via @theme inline.
  * ---------------------------------------------------------------------- */
 @theme inline {
@@ -125,38 +115,10 @@
   color-scheme: dark;
 }
 
-/*
- * Telas ainda não migradas (Fase 3) usam cores fixas do tema claro. O shell
- * embrulha o <Outlet> nesta classe pra elas NÃO reagirem ao modo escuro —
- * senão fica texto/painel escuro do global.css sobre o `bg-canvas` escuro.
- * Some quando a última tela migrar (Fase 4).
- */
-.legacy-light {
-  color-scheme: light;
-  background-color: var(--paper, #f2f6f3);
-  --canvas: #f6f8f7;
-  --surface: #ffffff;
-  --surface-2: #f1f5f4;
-  --line: #e3e9e7;
-  --fg: #0d1b16;
-  --fg-muted: #48605a;
-  --fg-subtle: #7c918b;
-  --positive: #059669;
-  --negative: #dc2626;
-}
-
-/* -------------------------------------------------------------------------
- * Base — deliberadamente mínima.
- *
- * NÃO setamos `color`/`background` no <body>: as telas legadas ainda usam
- * cores fixas do tema claro (painéis brancos, `var(--paper)`), e herdar
- * `color: var(--fg)` deixaria texto claro sobre fundo claro quando o modo
- * escuro liga. Cada tela nova (a partir da Fase 2) embrulha o conteúdo em
- * `bg-canvas text-fg` explícito. O global.css legado sai na Fase 4 e aí o
- * <body> assume o tema.
- * ---------------------------------------------------------------------- */
 @layer base {
   body {
+    background-color: var(--canvas);
+    color: var(--fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
   }

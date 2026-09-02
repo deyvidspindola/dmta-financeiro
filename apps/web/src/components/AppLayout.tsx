@@ -15,7 +15,7 @@ import {
   Target,
   Wallet,
 } from 'lucide-react'
-import { matchPath, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import type { LucideIcon } from 'lucide-react'
 import { authApi } from '@/api'
 import { ContextSwitcher } from '@/components/ContextSwitcher'
@@ -50,41 +50,6 @@ const MOBILE_TABS: NavItem[] = [
   { to: '/mais', label: strings.nav.more, icon: LayoutGrid },
 ]
 
-/** Rotas já migradas para tokens claros/escuros — sem `.legacy-light` no `<main>`. */
-const MIGRATED_ROUTE_PATTERNS = [
-  '/',
-  '/credit-cards',
-  '/credit-cards/:id',
-  '/transactions',
-  '/transactions/:id',
-  '/novo',
-  '/accounts',
-  '/accounts/:id',
-  '/budgets',
-  '/goals',
-  '/simulator',
-  '/debts',
-  '/bills',
-  '/recurring',
-  '/categories',
-  '/mais',
-  '/bill-captures',
-  '/boleto-passwords',
-  '/import-bills',
-  '/import-statement',
-  '/companies',
-  '/investments',
-  '/security',
-]
-
-function useIsMigratedRoute(): boolean {
-  const { pathname } = useLocation()
-  if (pathname === '/') return true
-  return MIGRATED_ROUTE_PATTERNS.some((pattern) =>
-    matchPath({ path: pattern, end: true }, pathname),
-  )
-}
-
 const THEME_OPTIONS: { value: ThemePref; label: string; icon: LucideIcon }[] = [
   { value: 'light', label: strings.theme.light, icon: Sun },
   { value: 'dark', label: strings.theme.dark, icon: Moon },
@@ -96,7 +61,6 @@ export function AppLayout() {
   const { user, clearSession } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
   const { pref, setPref } = useThemeStore()
-  const isMigratedRoute = useIsMigratedRoute()
 
   usePrelineInit()
 
@@ -268,8 +232,7 @@ export function AppLayout() {
           </div>
         </header>
 
-        {/* legacy-light: opt-in por rota — telas migradas usam tokens em bg-canvas/text-fg. */}
-        <main className={cn('flex-1', !isMigratedRoute && 'legacy-light')}>
+        <main className="flex-1">
           <div className="mx-auto w-full max-w-6xl px-4 py-5 pb-24 lg:px-8 lg:py-6 lg:pb-8">
             <Outlet />
           </div>
