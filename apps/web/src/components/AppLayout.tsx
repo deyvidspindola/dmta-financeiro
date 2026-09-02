@@ -64,6 +64,9 @@ const MIGRATED_ROUTE_PATTERNS = [
   '/goals',
   '/simulator',
   '/debts',
+  '/bills',
+  '/recurring',
+  '/categories',
 ]
 
 function useIsMigratedRoute(): boolean {

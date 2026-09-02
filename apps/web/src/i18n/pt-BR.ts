@@ -289,6 +289,28 @@ export const strings = {
       overdue: 'Vencido',
       cancelled: 'Cancelado',
     },
+    beneficiary: 'Beneficiário',
+    dueSoon: 'Vence em breve',
+    filters: {
+      title: 'Filtros',
+      from: 'Vencimento de',
+      to: 'Vencimento até',
+      status: 'Status',
+      statusAll: 'Todos os status',
+      direction: 'Direção',
+      directionAll: 'Todas as direções',
+      category: 'Categoria',
+      allCategories: 'Todas as categorias',
+      search: 'Buscar',
+      searchPlaceholder: 'Descrição…',
+      clear: 'Limpar filtros',
+    },
+    summary: {
+      payablePending: 'Total a pagar',
+      overdue: 'Vencido',
+      receivablePending: 'A receber',
+    },
+    emptyFiltered: 'Nenhum boleto com os filtros atuais.',
   },
 
   transactions: {
@@ -379,6 +401,9 @@ export const strings = {
       monthly: 'Mensal',
       yearly: 'Anual',
     },
+    account: 'Conta',
+    active: 'Ativa',
+    inactive: 'Inativa',
   },
 
   companies: {
@@ -631,6 +656,10 @@ export const strings = {
       income: 'Receita',
       expense: 'Despesa',
     },
+    color: 'Cor',
+    groupIncome: 'Receitas',
+    groupExpense: 'Despesas',
+    needContext: 'Selecione um contexto para gerenciar categorias.',
   },
 
   common: {

@@ -512,9 +512,46 @@ export const mockApi = {
     )
   },
 
-  async listBills(contextId: string): Promise<Bill[]> {
+  async listBills(
+    contextId: string,
+    filters?: {
+      from?: string
+      to?: string
+      status?: 'pending' | 'paid' | 'overdue' | 'cancelled'
+      direction?: 'payable' | 'receivable'
+      category_id?: string
+      q?: string
+    },
+  ): Promise<Bill[]> {
     await delay()
-    return byContext(bills, contextId)
+    const today = new Date().toISOString().slice(0, 10)
+    let rows = byContext(bills, contextId)
+    if (filters?.from) {
+      rows = rows.filter((row) => row.due_date >= filters.from!)
+    }
+    if (filters?.to) {
+      rows = rows.filter((row) => row.due_date <= filters.to!)
+    }
+    if (filters?.status === 'overdue') {
+      rows = rows.filter(
+        (row) => row.status === 'pending' && row.due_date < today,
+      )
+    } else if (filters?.status) {
+      rows = rows.filter((row) => row.status === filters.status)
+    }
+    if (filters?.direction) {
+      rows = rows.filter((row) => row.kind === filters.direction)
+    }
+    if (filters?.category_id) {
+      rows = rows.filter((row) => row.category_id === filters.category_id)
+    }
+    if (filters?.q?.trim()) {
+      const needle = filters.q.trim().toLowerCase()
+      rows = rows.filter((row) =>
+        row.description.toLowerCase().includes(needle),
+      )
+    }
+    return rows
   },
 
   async createBill(
