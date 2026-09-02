@@ -105,6 +105,8 @@ export interface TransferDetails {
   to: TransferLeg;
 }
 
+export type EntryStatus = 'pending' | 'settled';
+
 export interface StatementEntry {
   id: string;
   context_id: string;
@@ -113,6 +115,9 @@ export interface StatementEntry {
   description: string;
   amount: number;
   type: EntryType;
+  /** `pending` = previsto (não entrou no saldo); `settled` = efetivado. */
+  status: EntryStatus;
+  settled_at: string | null;
   date: string;
   origin: CaptureOrigin;
   bill_id: string | null;
@@ -189,6 +194,8 @@ export interface DashboardSummary {
   scope: string;
   label: string;
   balance_total: number;
+  /** Real + os lançamentos previstos (pending). Igual a `balance_total` em mês passado. */
+  provisioned_balance_total: number;
   income_month: number;
   expense_month: number;
   projected_income_month: number;

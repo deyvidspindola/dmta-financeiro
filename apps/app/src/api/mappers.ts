@@ -317,6 +317,8 @@ export function mapTransaction(
     description: string;
     amount: number;
     type: EntryType;
+    status?: 'pending' | 'settled';
+    settled_at?: string | null;
     occurred_at?: string;
     date?: string;
     origin?: CaptureOrigin;
@@ -348,6 +350,8 @@ export function mapTransaction(
     description: raw.description,
     amount: Number(raw.amount),
     type: raw.type,
+    status: raw.status ?? 'settled',
+    settled_at: raw.settled_at ?? null,
     date: raw.occurred_at ?? raw.date ?? '',
     origin: mapOrigin(raw.origin),
     bill_id: raw.bill_id === null || raw.bill_id === undefined ? null : asId(raw.bill_id),
@@ -765,6 +769,7 @@ export function toUpdateInvestmentBody(payload: {
 type ApiDashboardSlice = {
   context_id?: string | number;
   accounts_balance: number;
+  accounts_balance_provisioned?: number;
   pending_bills_count?: number;
   pending_bills_amount: number;
   overdue_bills_count: number;
@@ -862,6 +867,9 @@ export function mapDashboard(
     scope,
     label,
     balance_total: Number(raw.accounts_balance),
+    provisioned_balance_total: Number(
+      raw.accounts_balance_provisioned ?? raw.accounts_balance,
+    ),
     income_month: Number(raw.month_income),
     expense_month: Number(raw.month_expense),
     projected_income_month: Number(raw.month_projected_income ?? raw.month_income),

@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { accountsApi, categoriesApi, consolidatedApi, transactionsApi } from '@/api';
 import { TabShell } from '@/components/TabShell';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
-import { Card, ListRow, Money, MoneyValue, Skeleton, Text } from '@/components/ui';
+import { Badge, Card, ListRow, Money, MoneyValue, Skeleton, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { formatDateShort, isInMonth, monthDateRange } from '@/lib/dates';
@@ -175,13 +175,24 @@ export default function TransactionsTab() {
                     const categoryName = tx.category_id
                       ? categoryMap.get(tx.category_id)
                       : undefined;
+                    const pending = tx.status === 'pending';
                     return (
                       <ListRow key={`${tx.context_id}-${tx.id}`} onPress={() => setSelected(tx)}>
-                        <View className="flex-row items-center justify-between gap-3">
+                        <View
+                          className={cn(
+                            'flex-row items-center justify-between gap-3',
+                            pending && 'opacity-60',
+                          )}
+                        >
                           <View className="min-w-0 flex-1 gap-0.5">
-                            <Text className="font-medium" numberOfLines={1}>
-                              {tx.description}
-                            </Text>
+                            <View className="flex-row items-center gap-2">
+                              <Text className="font-medium" numberOfLines={1}>
+                                {tx.description}
+                              </Text>
+                              {pending ? (
+                                <Badge tone="accent">{t.transactions.pendingBadge}</Badge>
+                              ) : null}
+                            </View>
                             <Text variant="muted" className="text-xs" numberOfLines={1}>
                               {categoryName ?? accountMap.get(tx.account_id) ?? ''}
                             </Text>
@@ -204,6 +215,7 @@ export default function TransactionsTab() {
 
       <TransactionDetailSheet
         entry={selected}
+        contextId={contextId}
         accountName={selected ? accountMap.get(selected.account_id) : undefined}
         categoryName={
           selected?.category_id ? categoryMap.get(selected.category_id) : undefined
