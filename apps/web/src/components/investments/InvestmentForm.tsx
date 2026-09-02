@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   emptyInvestmentValues,
@@ -9,6 +9,7 @@ import {
   Button,
   ErrorBanner,
   Field,
+  MoneyInput,
   TextInput,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
@@ -62,21 +63,37 @@ export function InvestmentForm({
           hint={t.contributionHint}
           error={form.formState.errors.invested_amount?.message}
         >
-          <TextInput
-            type="number"
-            step="0.01"
-            {...form.register('invested_amount')}
+          <Controller
+            name="invested_amount"
+            control={form.control}
+            render={({ field }) => (
+              <MoneyInput
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                aria-invalid={Boolean(form.formState.errors.invested_amount)}
+              />
+            )}
           />
         </Field>
       ) : null}
       <Field
-        label={isEdit ? t.currentPosition : t.currentPosition}
+        label={t.currentPosition}
         error={form.formState.errors.current_position?.message}
       >
-        <TextInput
-          type="number"
-          step="0.01"
-          {...form.register('current_position')}
+        <Controller
+          name="current_position"
+          control={form.control}
+          render={({ field }) => (
+            <MoneyInput
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              aria-invalid={Boolean(form.formState.errors.current_position)}
+            />
+          )}
         />
       </Field>
       {error ? <ErrorBanner message={error} /> : null}

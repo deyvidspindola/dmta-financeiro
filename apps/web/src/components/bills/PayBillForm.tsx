@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
-  TextInput,
   TextSelect,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
@@ -62,10 +62,10 @@ export function PayBillForm({
         </TextSelect>
       </Field>
       <Field label={b.payDate}>
-        <TextInput
-          type="date"
+        <DatePickerField
+          key={bill.id}
           value={payDate}
-          onChange={(event) => setPayDate(event.target.value)}
+          onChange={setPayDate}
         />
       </Field>
       {error ? <ErrorBanner message={error} /> : null}

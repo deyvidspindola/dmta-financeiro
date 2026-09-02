@@ -1,10 +1,13 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
+  MoneyInput,
+  SwitchField,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -77,7 +80,19 @@ export function RecurringForm({
         <TextInput {...form.register('description')} />
       </Field>
       <Field label={r.amount} error={form.formState.errors.amount?.message}>
-        <TextInput type="number" step="0.01" {...form.register('amount')} />
+        <Controller
+          name="amount"
+          control={form.control}
+          render={({ field }) => (
+            <MoneyInput
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              aria-invalid={Boolean(form.formState.errors.amount)}
+            />
+          )}
+        />
       </Field>
       <Field label={r.type}>
         <TextSelect {...form.register('type')}>
@@ -96,19 +111,41 @@ export function RecurringForm({
         label={r.start}
         error={form.formState.errors.start_date?.message}
       >
-        <TextInput type="date" {...form.register('start_date')} />
-      </Field>
-      <label className="flex items-center gap-2 text-sm text-fg">
-        <input
-          type="checkbox"
-          className="size-4 rounded border-line"
-          {...form.register('no_end')}
+        <Controller
+          name="start_date"
+          control={form.control}
+          render={({ field }) => (
+            <DatePickerField
+              value={field.value}
+              onChange={field.onChange}
+              aria-invalid={Boolean(form.formState.errors.start_date)}
+            />
+          )}
         />
-        {r.noEnd}
-      </label>
+      </Field>
+      <Controller
+        name="no_end"
+        control={form.control}
+        render={({ field }) => (
+          <SwitchField
+            label={r.noEnd}
+            checked={field.value}
+            onChange={field.onChange}
+          />
+        )}
+      />
       {!noEnd ? (
         <Field label={r.end}>
-          <TextInput type="date" {...form.register('end_date')} />
+          <Controller
+            name="end_date"
+            control={form.control}
+            render={({ field }) => (
+              <DatePickerField
+                value={field.value ?? ''}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </Field>
       ) : null}
       <Field label={strings.bills.category}>

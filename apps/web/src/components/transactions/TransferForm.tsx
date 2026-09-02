@@ -1,13 +1,15 @@
 import { useEffect } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { ArrowLeftRight } from 'lucide-react'
 import { accountsApi } from '@/api'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
+  MoneyInput,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -111,11 +113,18 @@ export function TransferForm({
       </Field>
 
       <Field label={tx.amount} error={form.formState.errors.amount?.message}>
-        <TextInput
-          type="number"
-          step="0.01"
-          inputMode="decimal"
-          {...form.register('amount')}
+        <Controller
+          name="amount"
+          control={form.control}
+          render={({ field }) => (
+            <MoneyInput
+              value={field.value}
+              onChange={field.onChange}
+              onBlur={field.onBlur}
+              name={field.name}
+              aria-invalid={Boolean(form.formState.errors.amount)}
+            />
+          )}
         />
       </Field>
 
@@ -130,7 +139,17 @@ export function TransferForm({
         label={tx.date}
         error={form.formState.errors.occurred_at?.message}
       >
-        <TextInput type="date" {...form.register('occurred_at')} />
+        <Controller
+          name="occurred_at"
+          control={form.control}
+          render={({ field }) => (
+            <DatePickerField
+              value={field.value}
+              onChange={field.onChange}
+              aria-invalid={Boolean(form.formState.errors.occurred_at)}
+            />
+          )}
+        />
       </Field>
 
       {error ? <ErrorBanner message={error} /> : null}
