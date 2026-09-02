@@ -13,7 +13,6 @@ use App\Enums\StatementEntryType;
 use App\Models\CardInvoice;
 use App\Models\Context;
 use App\Models\Debt;
-use App\Models\StatementEntry;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 
@@ -23,15 +22,18 @@ use Illuminate\Support\Carbon;
  * `::consolidated` (todos) — por isso é Service, não lógica solta em cada
  * ação (capítulo 04.3: soma para exibir, nunca mistura para movimentar).
  *
- * Também monta a série de evolução mensal (receita/despesa/saldo) dos
- * gráficos. Dívidas pendentes entram só como indicador — nunca somadas a
- * `month_income`/`month_expense` (ver docblock de {@see Debt}).
+ * `month_income`/`month_expense` são o que já foi efetivado no mês;
+ * `month_projected_*` somam a isso o que ainda vai cair (boletos, fatura
+ * de cartão, recorrência) via {@see MonthlyFlowProjector} — sem duplo,
+ * porque o cursor de cada regra recorrente já avançou além das ocorrências
+ * materializadas. Dívidas pendentes entram só como indicador — nunca
+ * somadas a nenhum dos dois (ver docblock de {@see Debt}).
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.2.0
+ * @version 2.0.0
  *
  * @since   21/08/2026
  *
@@ -39,15 +41,11 @@ use Illuminate\Support\Carbon;
  */
 final class DashboardSummaryService
 {
-    /** Meses cobertos por padrão quando `months` não vem na query string. */
-    private const DEFAULT_EVOLUTION_MONTHS = 6;
-
-    /** Teto de meses aceito — evita varrer o histórico inteiro por engano. */
-    private const MAX_EVOLUTION_MONTHS = 24;
+    public function __construct(private readonly MonthlyFlowProjector $projector) {}
 
     /**
-     * `$month` (passador de mês do app) rege `month_income`/`month_expense`;
-     * `null` = mês corrente. Os outros indicadores são estado "agora".
+     * `$month` (passador de mês do app) rege as métricas do mês; `null` =
+     * mês corrente. Os outros indicadores são estado "agora".
      *
      * @return array<string, mixed>
      */
@@ -55,10 +53,17 @@ final class DashboardSummaryService
     {
         $reference = $month ?? Carbon::now();
         $now = Carbon::now();
+        $monthStart = $reference->copy()->startOfMonth();
+        $monthEnd = $reference->copy()->endOfMonth();
+
         $pending = $context->bills()->where('status', BillStatus::Pending->value);
         $overdue = $context->bills()
             ->where('status', BillStatus::Pending->value)
             ->where('due_date', '<', $now->toDateString());
+
+        $incomeEffective = (float) $this->monthEntries($context, StatementEntryType::Income, $reference);
+        $expenseEffective = (float) $this->monthEntries($context, StatementEntryType::Expense, $reference);
+        $projected = $this->projector->between($context, $monthStart, $monthEnd);
 
         return [
             'context_id' => $context->id,
@@ -68,16 +73,10 @@ final class DashboardSummaryService
             'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
             'overdue_bills_amount' => (float) $overdue->sum('amount'),
-            'month_income' => (float) $context->statementEntries()
-                ->where('type', StatementEntryType::Income->value)
-                ->whereYear('occurred_at', $reference->year)
-                ->whereMonth('occurred_at', $reference->month)
-                ->sum('amount'),
-            'month_expense' => (float) $context->statementEntries()
-                ->where('type', StatementEntryType::Expense->value)
-                ->whereYear('occurred_at', $reference->year)
-                ->whereMonth('occurred_at', $reference->month)
-                ->sum('amount'),
+            'month_income' => $incomeEffective,
+            'month_expense' => $expenseEffective,
+            'month_projected_income' => round($incomeEffective + $projected['income'], 2),
+            'month_projected_expense' => round($expenseEffective + $projected['expense'], 2),
             'investments_total' => (float) $context->investments()->sum('current_amount'),
             'credit_card_open_invoices_amount' => $this->openCardInvoicesAmount($context),
             'pending_debts_count' => $context->debts()->where('status', DebtStatus::Pending->value)->count(),
@@ -91,6 +90,15 @@ final class DashboardSummaryService
                 ->sum('amount'),
             'active_goals_count' => $context->goals()->where('status', GoalStatus::Active->value)->count(),
         ];
+    }
+
+    private function monthEntries(Context $context, StatementEntryType $type, Carbon $reference): float
+    {
+        return (float) $context->statementEntries()
+            ->where('type', $type->value)
+            ->whereYear('occurred_at', $reference->year)
+            ->whereMonth('occurred_at', $reference->month)
+            ->sum('amount');
     }
 
     /** Total das faturas de cartão ainda não pagas (aberta + fechadas) do contexto. */
@@ -112,87 +120,27 @@ final class DashboardSummaryService
     {
         $perContext = $user->contexts()->get()->map(fn (Context $c) => $this->forContext($c, $month));
 
+        $sum = fn (string $key): float => (float) $perContext->sum($key);
+        $count = fn (string $key): int => (int) $perContext->sum($key);
+
         $totals = [
-            'accounts_balance' => (float) $perContext->sum('accounts_balance'),
-            'pending_bills_count' => (int) $perContext->sum('pending_bills_count'),
-            'pending_bills_amount' => (float) $perContext->sum('pending_bills_amount'),
-            'overdue_bills_count' => (int) $perContext->sum('overdue_bills_count'),
-            'overdue_bills_amount' => (float) $perContext->sum('overdue_bills_amount'),
-            'month_income' => (float) $perContext->sum('month_income'),
-            'month_expense' => (float) $perContext->sum('month_expense'),
-            'investments_total' => (float) $perContext->sum('investments_total'),
-            'credit_card_open_invoices_amount' => (float) $perContext->sum('credit_card_open_invoices_amount'),
-            'pending_debts_count' => (int) $perContext->sum('pending_debts_count'),
-            'pending_debts_i_owe_amount' => (float) $perContext->sum('pending_debts_i_owe_amount'),
-            'pending_debts_owed_to_me_amount' => (float) $perContext->sum('pending_debts_owed_to_me_amount'),
-            'active_goals_count' => (int) $perContext->sum('active_goals_count'),
+            'accounts_balance' => $sum('accounts_balance'),
+            'pending_bills_count' => $count('pending_bills_count'),
+            'pending_bills_amount' => $sum('pending_bills_amount'),
+            'overdue_bills_count' => $count('overdue_bills_count'),
+            'overdue_bills_amount' => $sum('overdue_bills_amount'),
+            'month_income' => $sum('month_income'),
+            'month_expense' => $sum('month_expense'),
+            'month_projected_income' => $sum('month_projected_income'),
+            'month_projected_expense' => $sum('month_projected_expense'),
+            'investments_total' => $sum('investments_total'),
+            'credit_card_open_invoices_amount' => $sum('credit_card_open_invoices_amount'),
+            'pending_debts_count' => $count('pending_debts_count'),
+            'pending_debts_i_owe_amount' => $sum('pending_debts_i_owe_amount'),
+            'pending_debts_owed_to_me_amount' => $sum('pending_debts_owed_to_me_amount'),
+            'active_goals_count' => $count('active_goals_count'),
         ];
 
         return ['contexts' => $perContext->values()->all(), 'totals' => $totals];
-    }
-
-    /**
-     * Evolução mensal (receita, despesa, saldo do período) de um único
-     * contexto — base do gráfico de "saúde financeira ao longo do tempo".
-     *
-     * @return list<array{month: string, income: float, expense: float, balance: float}>
-     */
-    public function evolutionForContext(Context $context, ?int $months = null): array
-    {
-        return $this->evolution([$context->id], $months);
-    }
-
-    /**
-     * Mesma série, somando todos os contextos do usuário — versão
-     * consolidada do gráfico de evolução.
-     *
-     * @return list<array{month: string, income: float, expense: float, balance: float}>
-     */
-    public function evolutionConsolidated(User $user, ?int $months = null): array
-    {
-        return $this->evolution($user->contexts()->pluck('id')->all(), $months);
-    }
-
-    /**
-     * Agrega `statement_entries` por mês numa única query (evita 1
-     * consulta por mês do período) e preenche os meses sem lançamento
-     * com zero — o gráfico sempre recebe uma série contínua.
-     *
-     * @param  list<int>  $contextIds
-     * @return list<array{month: string, income: float, expense: float, balance: float}>
-     */
-    private function evolution(array $contextIds, ?int $months): array
-    {
-        $months = max(1, min($months ?? self::DEFAULT_EVOLUTION_MONTHS, self::MAX_EVOLUTION_MONTHS));
-        $start = Carbon::now()->startOfMonth()->subMonths($months - 1);
-
-        $rowsByMonth = StatementEntry::query()
-            ->whereIn('context_id', $contextIds)
-            ->whereIn('type', [StatementEntryType::Income->value, StatementEntryType::Expense->value])
-            ->where('occurred_at', '>=', $start->toDateString())
-            ->selectRaw("DATE_FORMAT(occurred_at, '%Y-%m') as month")
-            ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")
-            ->selectRaw("SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) as expense")
-            ->groupBy('month')
-            ->get()
-            ->keyBy('month');
-
-        $series = [];
-
-        for ($i = 0; $i < $months; $i++) {
-            $key = $start->copy()->addMonths($i)->format('Y-m');
-            $row = $rowsByMonth->get($key);
-            $income = (float) ($row->income ?? 0);
-            $expense = (float) ($row->expense ?? 0);
-
-            $series[] = [
-                'month' => $key,
-                'income' => $income,
-                'expense' => $expense,
-                'balance' => $income - $expense,
-            ];
-        }
-
-        return $series;
     }
 }

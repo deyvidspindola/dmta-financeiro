@@ -6,6 +6,7 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\Context;
+use App\Services\DashboardEvolutionService;
 use App\Services\DashboardSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -46,18 +47,18 @@ final class DashboardController extends Controller
     }
 
     /** Série mensal (receita/despesa/saldo) de um contexto — `?months=` entre 1 e 24, padrão 6. */
-    public function evolution(Request $request, Context $context, DashboardSummaryService $service): JsonResponse
+    public function evolution(Request $request, Context $context, DashboardEvolutionService $service): JsonResponse
     {
         return response()->json([
-            'series' => $service->evolutionForContext($context, $request->integer('months') ?: null),
+            'series' => $service->forContext($context, $request->integer('months') ?: null),
         ]);
     }
 
     /** Mesma série, consolidada entre todos os contextos do usuário. */
-    public function consolidatedEvolution(Request $request, DashboardSummaryService $service): JsonResponse
+    public function consolidatedEvolution(Request $request, DashboardEvolutionService $service): JsonResponse
     {
         return response()->json([
-            'series' => $service->evolutionConsolidated($request->user(), $request->integer('months') ?: null),
+            'series' => $service->forConsolidated($request->user(), $request->integer('months') ?: null),
         ]);
     }
 }
