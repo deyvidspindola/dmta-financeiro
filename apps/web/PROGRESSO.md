@@ -76,6 +76,15 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   `DataTable` e modal de quitação com conta opcional. Componentes em
   `components/budgets|goals|simulator|debts/`. Rotas `/budgets`, `/goals`,
   `/simulator`, `/debts` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
+- **F3e — Boletos, recorrências e categorias (esta rodada, Cursor):**
+  `BillsPage` com filtros server-side (`status`/`direction`/`from`/`to`/
+  `category_id`/`q`), resumo no topo, `BillList` com `Badge` de status e
+  destaque de vencimento, modais pagar/criar/editar. `RecurringTransactionsPage`
+  com `Badge` ativo/inativo e formulário no design system. `CategoriesPage`
+  agrupada por tipo com `CategoryChip` e subcategorias aninhadas.
+  Componentes em `components/bills|recurring|categories/`. `CategoryModal`
+  migrado para `@/components/ui`. Rotas `/bills`, `/recurring`, `/categories`
+  em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
 
 ## Feito
 
@@ -100,7 +109,6 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
 ## Falta / pendências
 
 - IMAP real (caixa de e-mail)
-- Consumir filtros server-side em `GET /bills` (a API já aceita — PR #51)
 - `GET /accounts/{id}` dedicado (hoje resolve via listagem no cliente)
 - Dashboard API não recebe mês — métricas do topo são do mês corrente da API;
   seções novas (lançamentos, orçamentos) respeitam `monthStore`

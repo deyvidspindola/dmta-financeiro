@@ -19,12 +19,37 @@ export type UpdateBillInput = {
   barcode: string | null
 }
 
-export async function listBills(contextId: string): Promise<Bill[]> {
-  if (useMocks) return mockApi.listBills(contextId)
+export type BillListFilters = {
+  from?: string
+  to?: string
+  status?: 'pending' | 'paid' | 'overdue' | 'cancelled'
+  direction?: 'payable' | 'receivable'
+  category_id?: string
+  q?: string
+}
+
+function buildFilterQuery(filters?: BillListFilters): string {
+  if (!filters) return ''
+  const params = new URLSearchParams()
+  if (filters.from) params.set('from', filters.from)
+  if (filters.to) params.set('to', filters.to)
+  if (filters.status) params.set('status', filters.status)
+  if (filters.direction) params.set('direction', filters.direction)
+  if (filters.category_id) params.set('category_id', filters.category_id)
+  if (filters.q?.trim()) params.set('q', filters.q.trim())
+  const qs = params.toString()
+  return qs ? `?${qs}` : ''
+}
+
+export async function listBills(
+  contextId: string,
+  filters?: BillListFilters,
+): Promise<Bill[]> {
+  if (useMocks) return mockApi.listBills(contextId, filters)
   const payload = await http.get<
     | Array<Parameters<typeof mapBill>[1]>
     | { data: Array<Parameters<typeof mapBill>[1]> }
-  >(`/contexts/${contextId}/bills`)
+  >(`/contexts/${contextId}/bills${buildFilterQuery(filters)}`)
   return unwrapData(payload).map((row) => mapBill(contextId, row))
 }
 

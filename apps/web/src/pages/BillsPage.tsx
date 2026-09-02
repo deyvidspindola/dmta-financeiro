@@ -1,124 +1,80 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2, Banknote } from 'lucide-react'
-import { z } from 'zod'
+import { Plus } from 'lucide-react'
 import { billsApi, accountsApi, categoriesApi, consolidatedApi } from '@/api'
-import { strings } from '@/i18n/pt-BR'
-import { formatDate } from '@/lib/format'
-import { currentMonthKey, isInMonth } from '@/lib/dates'
-import { getErrorMessage } from '@/lib/errors'
-import { useWritableContextId } from '@/hooks/useWritableContextId'
-import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastError, toastSuccess } from '@/store/toastStore'
 import { CategoryModal } from '@/components/CategoryModal'
-import { OriginBadge } from '@/components/OriginBadge'
+import { BillFiltersBar } from '@/components/bills/BillFilters'
+import { applyClientBillFilters, toApiBillFilters } from '@/components/bills/billFilterState'
+import { useBillFilters } from '@/components/bills/useBillFilters'
+import { BillForm } from '@/components/bills/BillForm'
+import { BillList } from '@/components/bills/BillList'
+import { PayBillForm } from '@/components/bills/PayBillForm'
+import { categoryTypeForBillKind } from '@/components/bills/billDisplay'
+import { summarizeBills } from '@/components/bills/billSummary'
+import type { BillFormValues } from '@/components/bills/schemas'
 import {
   Button,
-  DataTable,
   EmptyState,
   ErrorBanner,
-  Field,
-  IconButton,
   LoadingBlock,
   Modal,
-  MoneyValue,
+  Money,
   PageHeader,
-  TextInput,
-  TextSelect,
-} from '@/components/ui-legacy'
-import type { Bill, MoneyDirection } from '@/types/models'
+  Stat,
+} from '@/components/ui'
+import { useWritableContextId } from '@/hooks/useWritableContextId'
+import { strings } from '@/i18n/pt-BR'
+import { getErrorMessage } from '@/lib/errors'
+import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
+import type { Bill } from '@/types/models'
 
-const ALL_PERIODS = 'all'
-
-const schema = z.object({
-  description: z.string().min(1, strings.common.required),
-  amount: z.coerce.number().positive(),
-  due_date: z.string().min(1, strings.common.required),
-  kind: z.enum(['payable', 'receivable']),
-  status: z.enum(['pending', 'paid', 'overdue', 'cancelled']),
-  category_id: z.string().nullable(),
-  barcode: z.string().optional(),
-})
-
-type FormValues = z.infer<typeof schema>
-
-function categoryTypeForBillKind(
-  kind: FormValues['kind'],
-): MoneyDirection {
-  return kind === 'receivable' ? 'income' : 'expense'
-}
-
-/** A receber entra (crédito); a pagar sai (débito) — mesma convenção do extrato. */
-function billDirection(kind: Bill['kind']): 'credit' | 'debit' {
-  return kind === 'receivable' ? 'credit' : 'debit'
-}
-
-const emptyValues: FormValues = {
-  description: '',
-  amount: 0,
-  due_date: '',
-  kind: 'payable',
-  status: 'pending',
-  category_id: null,
-  barcode: '',
-}
+const b = strings.bills
 
 export function BillsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const isConsolidated = activeScope === CONSOLIDATED
+
+  const { state: filterState, debouncedSearch, patch, clear } = useBillFilters()
+
   const [editing, setEditing] = useState<Bill | null>(null)
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
-  const [period, setPeriod] = useState(currentMonthKey)
   const [paying, setPaying] = useState<Bill | null>(null)
-  const [payAccountId, setPayAccountId] = useState('')
-  const [payDate, setPayDate] = useState('')
-  const isConsolidated = activeScope === CONSOLIDATED
-  const isEdit = editing !== null
+  const [formCategoryType, setFormCategoryType] = useState<'income' | 'expense'>('expense')
 
-  const { data = [], isLoading, isError, error } = useQuery({
-    queryKey: ['bills', activeScope],
+  const apiFilters = useMemo(() => {
+    if (isConsolidated) return undefined
+    return toApiBillFilters(filterState, debouncedSearch)
+  }, [filterState, debouncedSearch, isConsolidated])
+
+  const listQuery = useQuery({
+    queryKey: ['bills', activeScope, apiFilters],
     queryFn: () =>
       isConsolidated
         ? consolidatedApi.listConsolidatedBills()
-        : billsApi.listBills(activeScope),
+        : billsApi.listBills(activeScope, apiFilters),
     enabled: isConsolidated || Boolean(activeScope),
   })
 
-  const periodOptions = useMemo(() => {
-    const months = new Set<string>([currentMonthKey()])
-    for (const bill of data) {
-      if (bill.due_date.length >= 7) months.add(bill.due_date.slice(0, 7))
-    }
-    return [...months].sort((a, b) => b.localeCompare(a))
-  }, [data])
-
-  const filtered = useMemo(() => {
-    if (period === ALL_PERIODS) return data
-    return data.filter((bill) => isInMonth(bill.due_date, period))
-  }, [data, period])
-
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: emptyValues,
-  })
-
-  const watchedKind = form.watch('kind')
-  const categoryType = categoryTypeForBillKind(watchedKind)
-
-  useEffect(() => {
-    if (!isEdit) {
-      form.setValue('category_id', null)
-    }
-  }, [watchedKind, form, isEdit])
+  const data = useMemo(() => {
+    const rows = listQuery.data ?? []
+    if (!isConsolidated) return rows
+    return applyClientBillFilters(rows, filterState, debouncedSearch)
+  }, [listQuery.data, isConsolidated, filterState, debouncedSearch])
 
   const categoriesQuery = useQuery({
-    queryKey: ['categories', contextId, categoryType],
+    queryKey: ['categories', contextId],
+    queryFn: () => categoriesApi.listCategories(contextId!),
+    enabled: Boolean(contextId),
+  })
+
+  const formCategoriesQuery = useQuery({
+    queryKey: ['categories', contextId, formCategoryType],
     queryFn: () =>
-      categoriesApi.listCategories(contextId!, { type: categoryType }),
+      categoriesApi.listCategories(contextId!, { type: formCategoryType }),
     enabled: Boolean(contextId) && open,
   })
 
@@ -128,35 +84,43 @@ export function BillsPage() {
     enabled: Boolean(contextId) && Boolean(paying),
   })
 
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, { name: string; colorIndex: number }>()
+    for (const cat of categoriesQuery.data ?? []) {
+      map.set(cat.id, {
+        name: cat.name,
+        colorIndex: Number(cat.id) % 12 || 1,
+      })
+    }
+    return map
+  }, [categoriesQuery.data])
+
+  const summary = useMemo(() => summarizeBills(data), [data])
+  const hasSummary =
+    summary.payablePending > 0 ||
+    summary.overdue > 0 ||
+    summary.receivablePending > 0
+
   function openCreate() {
     setEditing(null)
-    form.reset(emptyValues)
+    setFormCategoryType('expense')
     setOpen(true)
   }
 
   function openEdit(bill: Bill) {
     setEditing(bill)
-    form.reset({
-      description: bill.description,
-      amount: bill.amount,
-      due_date: bill.due_date,
-      kind: bill.kind,
-      status: bill.status,
-      category_id: bill.category_id,
-      barcode: bill.barcode ?? '',
-    })
+    setFormCategoryType(categoryTypeForBillKind(bill.kind))
     setOpen(true)
   }
 
   function closeModal() {
     setOpen(false)
     setEditing(null)
-    form.reset(emptyValues)
   }
 
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      if (isEdit && editing) {
+  const saveMutation = useMutation({
+    mutationFn: (values: BillFormValues) => {
+      if (editing) {
         return billsApi.updateBill(contextId!, editing.id, {
           description: values.description,
           amount: values.amount,
@@ -178,9 +142,10 @@ export function BillsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(isEdit ? strings.bills.updated : strings.bills.created)
+      toastSuccess(editing ? b.updated : b.created)
       closeModal()
     },
+    onError: (err) => toastError(getErrorMessage(err)),
   })
 
   const deleteMutation = useMutation({
@@ -188,302 +153,136 @@ export function BillsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.bills.deleted)
+      toastSuccess(b.deleted)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete(billId: string) {
-    if (!window.confirm(strings.bills.confirmDelete)) return
-    deleteMutation.mutate(billId)
-  }
-
   const payMutation = useMutation({
-    mutationFn: () =>
-      billsApi.payBill(contextId!, paying!.id, {
-        account_id: payAccountId,
-        occurred_at: payDate || null,
-      }),
+    mutationFn: (values: { account_id: string; occurred_at: string | null }) =>
+      billsApi.payBill(contextId!, paying!.id, values),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
       await queryClient.invalidateQueries({ queryKey: ['transactions'] })
       await queryClient.invalidateQueries({ queryKey: ['accounts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.bills.paid)
+      toastSuccess(b.paid)
       setPaying(null)
-      setPayAccountId('')
-      setPayDate('')
     },
+    onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  const categories = categoriesQuery.data ?? []
-  const payAccounts = payAccountsQuery.data ?? []
+  function handleDelete(billId: string) {
+    if (!window.confirm(b.confirmDelete)) return
+    deleteMutation.mutate(billId)
+  }
+
+  const canMutate = Boolean(contextId) && !isConsolidated
 
   return (
-    <div className="stack">
+    <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
-        title={strings.bills.title}
+        title={b.title}
         actions={
-          <Button
-            onClick={openCreate}
-            disabled={!contextId || activeScope === CONSOLIDATED}
-          >
-            {strings.bills.create}
+          <Button onClick={openCreate} disabled={!canMutate}>
+            <Plus size={16} aria-hidden />
+            {b.create}
           </Button>
         }
       />
 
       {isConsolidated ? (
-        <p className="muted small">{strings.common.consolidatedHint}</p>
+        <p className="text-sm text-fg-muted">{strings.common.consolidatedHint}</p>
       ) : null}
 
-      <div className="filter-bar">
-        <Field label={strings.bills.period}>
-          <TextSelect
-            value={period}
-            onChange={(event) => setPeriod(event.target.value)}
-          >
-            <option value={ALL_PERIODS}>{strings.bills.periodAll}</option>
-            {periodOptions.map((month) => (
-              <option key={month} value={month}>
-                {month}
-              </option>
-            ))}
-          </TextSelect>
-        </Field>
-      </div>
+      <BillFiltersBar
+        state={filterState}
+        onChange={patch}
+        onClear={clear}
+        contextId={isConsolidated ? null : activeScope}
+        debouncedSearch={debouncedSearch}
+      />
 
-      {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
-      {isError ? (
-        <ErrorBanner message={getErrorMessage(error)} />
+      {listQuery.isLoading ? (
+        <LoadingBlock label={strings.common.loading} />
+      ) : null}
+      {listQuery.isError ? (
+        <ErrorBanner message={getErrorMessage(listQuery.error)} />
       ) : null}
 
-      {!isLoading && data.length === 0 ? (
-        <EmptyState message={strings.bills.empty} />
+      {!listQuery.isLoading && hasSummary ? (
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Stat
+            label={b.summary.payablePending}
+            value={<Money amount={summary.payablePending} size="lg" />}
+            tone="negative"
+          />
+          <Stat
+            label={b.summary.overdue}
+            value={<Money amount={summary.overdue} size="lg" />}
+            tone="negative"
+          />
+          <Stat
+            label={b.summary.receivablePending}
+            value={<Money amount={summary.receivablePending} size="lg" />}
+            tone="positive"
+          />
+        </div>
       ) : null}
 
-      {!isLoading && data.length > 0 && filtered.length === 0 ? (
-        <EmptyState message={strings.bills.emptyMonth} />
+      {!listQuery.isLoading && (listQuery.data?.length ?? 0) === 0 ? (
+        <EmptyState message={b.empty} />
       ) : null}
 
-      {filtered.length > 0 ? (
-        <DataTable
-          headers={[
-            ...(isConsolidated ? [strings.common.context] : []),
-            strings.bills.description,
-            strings.bills.amount,
-            strings.bills.dueDate,
-            strings.bills.kind,
-            strings.bills.status,
-            strings.billCaptures.origin,
-            ...(isConsolidated ? [] : [strings.common.actions]),
-          ]}
-        >
-          {filtered.map((bill) => (
-            <tr key={`${bill.context_id}-${bill.id}`}>
-              {isConsolidated ? (
-                <td>{bill.context?.name ?? '—'}</td>
-              ) : null}
-              <td>{bill.description}</td>
-              <td>
-                <MoneyValue
-                  amount={bill.amount}
-                  direction={billDirection(bill.kind)}
-                />
-              </td>
-              <td>{formatDate(bill.due_date)}</td>
-              <td>{strings.bills.kinds[bill.kind]}</td>
-              <td>{strings.bills.statuses[bill.status]}</td>
-              <td>
-                <OriginBadge origin={bill.origin} />
-              </td>
-              {!isConsolidated ? (
-                <td className="actions-cell">
-                  {bill.status === 'pending' || bill.status === 'overdue' ? (
-                    <IconButton
-                      label={strings.bills.pay}
-                      icon={Banknote}
-                      onClick={() => {
-                        setPaying(bill)
-                        setPayAccountId('')
-                        setPayDate('')
-                      }}
-                      disabled={!contextId}
-                    />
-                  ) : null}
-                  <IconButton
-                    label={strings.common.edit}
-                    icon={Pencil}
-                    onClick={() => openEdit(bill)}
-                    disabled={!contextId}
-                  />
-                  <IconButton
-                    label={strings.common.delete}
-                    icon={Trash2}
-                    variant="danger"
-                    onClick={() => handleDelete(bill.id)}
-                    disabled={deleteMutation.isPending || !contextId}
-                  />
-                </td>
-              ) : null}
-            </tr>
-          ))}
-        </DataTable>
+      {!listQuery.isLoading &&
+      (listQuery.data?.length ?? 0) > 0 &&
+      data.length === 0 ? (
+        <EmptyState message={b.emptyFiltered} />
       ) : null}
+
+      <BillList
+        rows={data}
+        categoryMap={categoryMap}
+        isConsolidated={isConsolidated}
+        canMutate={canMutate}
+        onPay={setPaying}
+        onEdit={openEdit}
+        onDelete={handleDelete}
+        deletePending={deleteMutation.isPending}
+      />
 
       {open && contextId ? (
         <Modal
-          title={isEdit ? strings.bills.edit : strings.bills.create}
+          title={editing ? b.edit : b.create}
           onClose={closeModal}
         >
-          <form
-            className="form-grid"
-            onSubmit={form.handleSubmit((values) =>
-              mutation.mutateAsync(values),
-            )}
-          >
-            <Field
-              label={strings.bills.description}
-              error={form.formState.errors.description?.message}
-            >
-              <TextInput {...form.register('description')} />
-            </Field>
-            <Field
-              label={strings.bills.amount}
-              error={form.formState.errors.amount?.message}
-            >
-              <TextInput type="number" step="0.01" {...form.register('amount')} />
-            </Field>
-            <Field
-              label={strings.bills.dueDate}
-              error={form.formState.errors.due_date?.message}
-            >
-              <TextInput type="date" {...form.register('due_date')} />
-            </Field>
-            {!isEdit ? (
-              <>
-                <Field label={strings.bills.kind}>
-                  <TextSelect {...form.register('kind')}>
-                    <option value="payable">{strings.bills.kinds.payable}</option>
-                    <option value="receivable">
-                      {strings.bills.kinds.receivable}
-                    </option>
-                  </TextSelect>
-                </Field>
-                <Field label={strings.bills.status}>
-                  <TextSelect {...form.register('status')}>
-                    {(
-                      Object.keys(strings.bills.statuses) as Array<
-                        keyof typeof strings.bills.statuses
-                      >
-                    ).map((key) => (
-                      <option key={key} value={key}>
-                        {strings.bills.statuses[key]}
-                      </option>
-                    ))}
-                  </TextSelect>
-                </Field>
-              </>
-            ) : (
-              <p className="muted small">
-                {strings.bills.kinds[editing.kind]} ·{' '}
-                {strings.bills.statuses[editing.status]}
-              </p>
-            )}
-            <Field label={strings.bills.category}>
-              <div className="field-row">
-                <TextSelect
-                  {...form.register('category_id', {
-                    setValueAs: (v: string) => (v === '' ? null : v),
-                  })}
-                >
-                  <option value="">{strings.common.select}</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                    </option>
-                  ))}
-                </TextSelect>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setCategoryOpen(true)}
-                >
-                  {strings.categories.quickAdd}
-                </Button>
-              </div>
-            </Field>
-            <Field label={strings.bills.barcode}>
-              <TextInput {...form.register('barcode')} />
-            </Field>
-            {mutation.isError ? (
-              <ErrorBanner message={getErrorMessage(mutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={closeModal}>
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {strings.common.save}
-              </Button>
-            </div>
-          </form>
+          <BillForm
+            editing={editing}
+            categories={formCategoriesQuery.data ?? []}
+            isPending={saveMutation.isPending}
+            error={saveMutation.isError ? getErrorMessage(saveMutation.error) : null}
+            onSubmit={(values) => saveMutation.mutate(values)}
+            onCancel={closeModal}
+            onQuickAddCategory={() => setCategoryOpen(true)}
+            onKindChange={(kind) =>
+              setFormCategoryType(categoryTypeForBillKind(kind))
+            }
+          />
         </Modal>
       ) : null}
 
       {paying && contextId ? (
-        <Modal
-          title={strings.bills.payTitle}
-          onClose={() => setPaying(null)}
-        >
-          <form
-            className="form-grid"
-            onSubmit={(event) => {
-              event.preventDefault()
-              if (!payAccountId) return
-              payMutation.mutate()
-            }}
-          >
-            <p className="muted small">
-              {paying.description} · {formatDate(paying.due_date)}
-            </p>
-            <Field label={strings.bills.payAccount}>
-              <TextSelect
-                value={payAccountId}
-                onChange={(event) => setPayAccountId(event.target.value)}
-                required
-              >
-                <option value="">{strings.common.select}</option>
-                {payAccounts.map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            <Field label={strings.bills.payDate}>
-              <TextInput
-                type="date"
-                value={payDate}
-                onChange={(event) => setPayDate(event.target.value)}
-              />
-            </Field>
-            {payMutation.isError ? (
-              <ErrorBanner message={getErrorMessage(payMutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setPaying(null)}
-              >
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={payMutation.isPending || !payAccountId}>
-                {strings.bills.pay}
-              </Button>
-            </div>
-          </form>
+        <Modal title={b.payTitle} onClose={() => setPaying(null)}>
+          <PayBillForm
+            bill={paying}
+            accounts={payAccountsQuery.data ?? []}
+            isPending={payMutation.isPending}
+            error={
+              payMutation.isError ? getErrorMessage(payMutation.error) : null
+            }
+            onSubmit={(values) => payMutation.mutate(values)}
+            onCancel={() => setPaying(null)}
+          />
         </Modal>
       ) : null}
 
@@ -492,8 +291,12 @@ export function BillsPage() {
           contextId={contextId}
           open={categoryOpen}
           onClose={() => setCategoryOpen(false)}
-          defaultType={categoryType}
-          onCreated={(categoryId) => form.setValue('category_id', categoryId)}
+          defaultType={formCategoryType}
+          onCreated={() => {
+            void queryClient.invalidateQueries({
+              queryKey: ['categories', contextId, formCategoryType],
+            })
+          }}
         />
       ) : null}
     </div>

@@ -5,18 +5,20 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { categoriesApi } from '@/api'
-import { strings } from '@/i18n/pt-BR'
-import { getErrorMessage } from '@/lib/errors'
-import { toastError, toastSuccess } from '@/store/toastStore'
+import { categoryColorIndex } from '@/components/categories/categoryDisplay'
 import {
   Button,
+  CategoryChip,
   ErrorBanner,
   Field,
   IconButton,
   Modal,
   TextInput,
   TextSelect,
-} from '@/components/ui-legacy'
+} from '@/components/ui'
+import { strings } from '@/i18n/pt-BR'
+import { getErrorMessage } from '@/lib/errors'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import type { Category, MoneyDirection } from '@/types/models'
 
 const createSchema = z.object({
@@ -37,11 +39,8 @@ interface CategoryModalProps {
   open: boolean
   onClose: () => void
   onCreated?: (categoryId: string) => void
-  /** Inherited from the form that opened the modal (locked in the UI). */
   defaultType?: MoneyDirection
-  /** Open directly in edit mode (name only — type/parent are not PATCH-able). */
   editingCategory?: Category | null
-  /** Hide the inline manage list (use when a dedicated categories page exists). */
   hideManageList?: boolean
 }
 
@@ -176,7 +175,7 @@ export function CategoryModal({
     >
       {isEdit ? (
         <form
-          className="form-grid"
+          className="grid gap-4"
           onSubmit={editForm.handleSubmit((values) =>
             updateMutation.mutateAsync(values),
           )}
@@ -187,16 +186,22 @@ export function CategoryModal({
           >
             <TextInput {...editForm.register('name')} autoFocus />
           </Field>
-          <p className="muted small">
-            {strings.categories.types[editing.type]}
-            {editing.parent_id
-              ? ` — ${categories.find((c) => c.id === editing.parent_id)?.name ?? ''}`
-              : ''}
-          </p>
+          <div className="flex items-center gap-2">
+            <CategoryChip
+              name={editing.name}
+              colorIndex={categoryColorIndex(editing.id)}
+            />
+            <span className="text-sm text-fg-muted">
+              {strings.categories.types[editing.type]}
+              {editing.parent_id
+                ? ` — ${categories.find((c) => c.id === editing.parent_id)?.name ?? ''}`
+                : ''}
+            </span>
+          </div>
           {activeError ? (
             <ErrorBanner message={getErrorMessage(activeError)} />
           ) : null}
-          <div className="form-actions">
+          <div className="flex justify-end gap-2 pt-2">
             <Button
               type="button"
               variant="ghost"
@@ -218,7 +223,7 @@ export function CategoryModal({
         </form>
       ) : (
         <form
-          className="form-grid"
+          className="grid gap-4"
           onSubmit={createForm.handleSubmit((values) =>
             createMutation.mutateAsync(values),
           )}
@@ -231,7 +236,7 @@ export function CategoryModal({
           </Field>
           <Field label={strings.categories.type}>
             <input type="hidden" {...createForm.register('type')} />
-            <p className="muted small">
+            <p className="text-sm text-fg-muted">
               {strings.categories.types[defaultType]}
             </p>
           </Field>
@@ -252,7 +257,7 @@ export function CategoryModal({
           {activeError ? (
             <ErrorBanner message={getErrorMessage(activeError)} />
           ) : null}
-          <div className="form-actions">
+          <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="ghost" onClick={handleClose}>
               {strings.common.cancel}
             </Button>
@@ -264,15 +269,21 @@ export function CategoryModal({
       )}
 
       {!isEdit && !hideManageList && categories.length > 0 ? (
-        <div className="category-manage">
-          <h3 className="section-title">{strings.categories.existing}</h3>
-          <ul className="category-manage-list">
+        <div className="mt-6 border-t border-line pt-4">
+          <h3 className="mb-3 text-sm font-semibold text-fg">
+            {strings.categories.existing}
+          </h3>
+          <ul className="divide-y divide-line rounded-xl border border-line">
             {categories.map((cat) => (
-              <li key={cat.id}>
-                <span>
-                  {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                </span>
-                <span className="actions-cell">
+              <li
+                key={cat.id}
+                className="flex items-center justify-between gap-2 px-3 py-2"
+              >
+                <CategoryChip
+                  name={cat.parent_id ? `↳ ${cat.name}` : cat.name}
+                  colorIndex={categoryColorIndex(cat.id)}
+                />
+                <div className="flex items-center gap-1">
                   <IconButton
                     label={strings.common.edit}
                     icon={Pencil}
@@ -285,7 +296,7 @@ export function CategoryModal({
                     onClick={() => handleDelete(cat.id)}
                     disabled={deleteMutation.isPending}
                   />
-                </span>
+                </div>
               </li>
             ))}
           </ul>
