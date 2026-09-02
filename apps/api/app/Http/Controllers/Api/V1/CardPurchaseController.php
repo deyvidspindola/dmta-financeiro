@@ -5,8 +5,10 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterCardPurchaseData;
+use App\DTOs\UpdateCardPurchaseData;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCardPurchaseRequest;
+use App\Http\Requests\Api\UpdateCardPurchaseRequest;
 use App\Http\Resources\CardPurchaseResource;
 use App\Models\CardInvoice;
 use App\Models\CardPurchase;
@@ -14,6 +16,7 @@ use App\Models\Context;
 use App\Models\CreditCard;
 use App\UseCases\CreditCard\DeleteCardPurchase;
 use App\UseCases\CreditCard\RegisterCardPurchase;
+use App\UseCases\CreditCard\UpdateCardPurchase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -63,6 +66,24 @@ final class CardPurchaseController extends Controller
         ));
 
         return new CardPurchaseResource($purchase);
+    }
+
+    /** Edita uma compra simples (não parcelada, fatura não paga) — ver {@see UpdateCardPurchase}. */
+    public function update(
+        UpdateCardPurchaseRequest $request,
+        Context $context,
+        CreditCard $creditCard,
+        CardPurchase $purchase,
+        UpdateCardPurchase $useCase,
+    ): CardPurchaseResource {
+        $updated = $useCase->execute($purchase, new UpdateCardPurchaseData(
+            description: $request->string('description')->toString(),
+            amount: (float) $request->input('amount'),
+            occurredAt: $request->string('occurred_at')->toString(),
+            categoryId: $request->integer('category_id') ?: null,
+        ));
+
+        return new CardPurchaseResource($updated);
     }
 
     /** `?scope=group` apaga a compra parcelada inteira, não só esta parcela. */
