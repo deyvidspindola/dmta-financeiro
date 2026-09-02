@@ -1,48 +1,82 @@
-name: Build mobile (Expo)
+name: App (Expo) — build & update
 
-# Gatilho manual apenas — build EAS consome cota, não deve rodar a cada
-# push. apps/mobile só é criado na F3 (ver docs/fases/F3_app_expo.md); até
-# lá este workflow existe mas não tem o que buildar.
+# apps/app (Expo, D-18). Duas coisas:
+#
+#  • push em main que toca apps/app/**  → `eas update` (OTA): publica só o
+#    bundle JS no canal `preview`. Os APKs `preview` já instalados puxam a
+#    mudança ao abrir — sem reinstalar. Rápido e ~grátis.
+#  • workflow_dispatch                  → `eas build` Android (APK): gera um
+#    binário novo. Necessário no 1º install e sempre que muda código nativo /
+#    o SDK do Expo / config nativa (o runtimeVersion `fingerprint` avisa).
+#
+# `--no-wait`: não segura o job esperando a fila da EAS (pode passar de 1h no
+# plano free). Acompanhe em https://expo.dev/accounts/drspindola/projects/dmta-financeiro-app.
+#
+# Pré-requisito (uma vez): secret `EXPO_TOKEN` no repo + rodar, de apps/app/,
+#   `eas init` e `eas update:configure` (preenchem extra.eas.projectId e
+#   updates.url no app.json) e commitar. Ver apps/app/README.md.
 
 on:
+  push:
+    branches: [main]
+    paths: ['apps/app/**', '.github/workflows/build-mobile.yml']
   workflow_dispatch:
     inputs:
       profile:
-        description: 'Perfil do EAS Build'
+        description: 'Perfil do eas.json (eas build Android)'
         required: true
-        default: 'preview'
+        default: preview
         type: choice
-        options: [preview, production]
+        options: [development, preview, production]
+
+concurrency:
+  group: app-expo-${{ github.ref }}
+  cancel-in-progress: false
 
 permissions:
   contents: read
 
 defaults:
   run:
-    working-directory: apps/mobile
+    working-directory: apps/app
 
 jobs:
-  build:
-    name: EAS Build (Android)
+  ota-update:
+    name: EAS Update (OTA, canal preview)
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-
-      - name: Preparar Node
-        uses: actions/setup-node@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
-          cache-dependency-path: apps/mobile/package-lock.json
-
-      - name: Preparar EAS
-        uses: expo/expo-github-action@v8
+          cache-dependency-path: apps/app/package-lock.json
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
+      - name: Publicar update
+        run: eas update --branch preview --auto --non-interactive
 
-      - name: Instalar dependências
-        run: npm ci
-
-      - name: Build
-        run: eas build --platform android --profile ${{ inputs.profile }} --non-interactive
+  android-build:
+    name: EAS Build Android (${{ github.event.inputs.profile }})
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: apps/app/package-lock.json
+      - run: npm ci
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - name: Disparar build
+        run: eas build --platform android --profile "${{ github.event.inputs.profile }}" --non-interactive --no-wait
