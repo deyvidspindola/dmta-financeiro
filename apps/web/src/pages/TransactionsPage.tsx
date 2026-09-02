@@ -20,6 +20,7 @@ import {
   toApiFilters,
   TransactionFiltersBar,
   useTransactionFilters,
+  countActiveFilters,
 } from '@/components/transactions/TransactionFilters'
 import { TransferForm } from '@/components/transactions/TransferForm'
 import {
@@ -37,6 +38,7 @@ import {
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
+import { monthDateRange } from '@/lib/dates'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { useMonthStore } from '@/store/monthStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
@@ -53,7 +55,7 @@ export function TransactionsPage() {
   const isConsolidated = activeScope === CONSOLIDATED
 
   const { state: filterState, debouncedSearch, patch, clear } =
-    useTransactionFilters(month)
+    useTransactionFilters()
 
   const [entryOpen, setEntryOpen] = useState(false)
   const [editing, setEditing] = useState<StatementEntry | null>(null)
@@ -62,11 +64,11 @@ export function TransactionsPage() {
 
   const apiFilters = useMemo((): TransactionListFilters | undefined => {
     if (isConsolidated) return undefined
-    return toApiFilters(filterState, debouncedSearch)
-  }, [filterState, debouncedSearch, isConsolidated])
+    return toApiFilters(filterState, debouncedSearch, month)
+  }, [filterState, debouncedSearch, isConsolidated, month])
 
   const listQuery = useQuery({
-    queryKey: ['transactions', activeScope, apiFilters],
+    queryKey: ['transactions', activeScope, month, apiFilters],
     queryFn: () =>
       isConsolidated
         ? consolidatedApi.listConsolidatedTransactions()
@@ -92,11 +94,14 @@ export function TransactionsPage() {
   const data = useMemo(() => {
     const rows = listQuery.data ?? []
     if (!isConsolidated) return rows
+    const { from, to } = monthDateRange(month)
     return applyClientFilters(rows, {
       ...filterState,
       search: debouncedSearch,
+      from,
+      to,
     })
-  }, [listQuery.data, isConsolidated, filterState, debouncedSearch])
+  }, [listQuery.data, isConsolidated, filterState, debouncedSearch, month])
 
   const categoryMap = useMemo(() => {
     const map = new Map<string, { name: string; colorIndex: number }>()
@@ -268,7 +273,7 @@ export function TransactionsPage() {
       {!listQuery.isLoading && data.length === 0 ? (
         <EmptyState
           message={
-            filterState.from || filterState.to || filterState.search
+            countActiveFilters({ ...filterState, search: debouncedSearch })
               ? t.emptyMonth
               : t.empty
           }

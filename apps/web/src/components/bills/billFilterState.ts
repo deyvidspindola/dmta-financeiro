@@ -1,8 +1,7 @@
 import type { BillListFilters } from '@/api/bills'
+import { monthDateRange } from '@/lib/dates'
 
 export type BillFilterState = {
-  from: string
-  to: string
   status: '' | 'pending' | 'paid' | 'overdue' | 'cancelled'
   direction: '' | 'payable' | 'receivable'
   categoryId: string
@@ -12,21 +11,19 @@ export type BillFilterState = {
 export function toApiBillFilters(
   state: BillFilterState,
   debouncedSearch: string,
-): BillListFilters | undefined {
-  const filters: BillListFilters = {}
-  if (state.from) filters.from = state.from
-  if (state.to) filters.to = state.to
+  month: string,
+): BillListFilters {
+  const { from, to } = monthDateRange(month)
+  const filters: BillListFilters = { from, to }
   if (state.status) filters.status = state.status
   if (state.direction) filters.direction = state.direction
   if (state.categoryId) filters.category_id = state.categoryId
   if (debouncedSearch.trim()) filters.q = debouncedSearch.trim()
-  return Object.keys(filters).length > 0 ? filters : undefined
+  return filters
 }
 
 export function countActiveBillFilters(state: BillFilterState): number {
   let count = 0
-  if (state.from) count++
-  if (state.to) count++
   if (state.status) count++
   if (state.direction) count++
   if (state.categoryId) count++
@@ -36,8 +33,6 @@ export function countActiveBillFilters(state: BillFilterState): number {
 
 export function defaultBillFilterState(): BillFilterState {
   return {
-    from: '',
-    to: '',
     status: '',
     direction: '',
     categoryId: '',
@@ -56,11 +51,13 @@ export function applyClientBillFilters<T extends {
   rows: T[],
   state: BillFilterState,
   debouncedSearch: string,
+  month: string,
 ): T[] {
+  const { from, to } = monthDateRange(month)
   const today = new Date().toISOString().slice(0, 10)
   return rows.filter((row) => {
-    if (state.from && row.due_date < state.from) return false
-    if (state.to && row.due_date > state.to) return false
+    if (row.due_date < from) return false
+    if (row.due_date > to) return false
     if (state.status === 'overdue') {
       if (!(row.status === 'pending' && row.due_date < today)) return false
     } else if (state.status && row.status !== state.status) return false

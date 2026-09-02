@@ -408,7 +408,10 @@ export const mockApi = {
     return row
   },
 
-  async getDashboard(contextId: string | 'consolidated'): Promise<DashboardSummary> {
+  async getDashboard(
+    contextId: string | 'consolidated',
+    _month?: string,
+  ): Promise<DashboardSummary> {
     await delay()
     if (contextId === 'consolidated') {
       return buildDashboard(

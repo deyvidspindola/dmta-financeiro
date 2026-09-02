@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { SlidersHorizontal } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import { accountsApi, categoriesApi } from '@/api'
@@ -13,14 +13,12 @@ import {
 import type { TransactionListFilters } from '@/api/transactions'
 import { strings } from '@/i18n/pt-BR'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
-import { useState } from 'react'
+import { monthDateRange } from '@/lib/dates'
 
 const t = strings.transactions.filters
 const tx = strings.transactions
 
 export type TransactionFilterState = {
-  from: string
-  to: string
   accountId: string
   categoryId: string
   type: '' | 'income' | 'expense' | 'transfer'
@@ -30,22 +28,19 @@ export type TransactionFilterState = {
 export function toApiFilters(
   state: TransactionFilterState,
   debouncedSearch: string,
-): TransactionListFilters | undefined {
-  const filters: TransactionListFilters = {}
-  if (state.from) filters.from = state.from
-  if (state.to) filters.to = state.to
+  month: string,
+): TransactionListFilters {
+  const { from, to } = monthDateRange(month)
+  const filters: TransactionListFilters = { from, to }
   if (state.accountId) filters.account_id = state.accountId
   if (state.categoryId) filters.category_id = state.categoryId
   if (state.type) filters.type = state.type
   if (debouncedSearch.trim()) filters.q = debouncedSearch.trim()
-
-  return Object.keys(filters).length > 0 ? filters : undefined
+  return filters
 }
 
 export function countActiveFilters(state: TransactionFilterState): number {
   let count = 0
-  if (state.from) count++
-  if (state.to) count++
   if (state.accountId) count++
   if (state.categoryId) count++
   if (state.type) count++
@@ -53,17 +48,8 @@ export function countActiveFilters(state: TransactionFilterState): number {
   return count
 }
 
-function lastDayOfMonth(monthKey: string): string {
-  const [year, month] = monthKey.split('-').map(Number)
-  if (!year || !month) return monthKey
-  const last = new Date(year, month, 0).getDate()
-  return `${monthKey}-${String(last).padStart(2, '0')}`
-}
-
-export function defaultFilterState(monthKey: string): TransactionFilterState {
+export function defaultFilterState(): TransactionFilterState {
   return {
-    from: `${monthKey}-01`,
-    to: lastDayOfMonth(monthKey),
     accountId: '',
     categoryId: '',
     type: '',
@@ -95,20 +81,6 @@ function FilterFields({ state, onChange, contextId }: FilterFieldsProps) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <Field label={t.from}>
-        <TextInput
-          type="date"
-          value={state.from}
-          onChange={(e) => onChange({ from: e.target.value })}
-        />
-      </Field>
-      <Field label={t.to}>
-        <TextInput
-          type="date"
-          value={state.to}
-          onChange={(e) => onChange({ to: e.target.value })}
-        />
-      </Field>
       <Field label={t.account}>
         <TextSelect
           value={state.accountId}
@@ -251,8 +223,8 @@ export function TransactionFiltersBar({
 }
 
 /** Hook auxiliar para estado + debounce de busca. */
-export function useTransactionFilters(monthKey: string) {
-  const [state, setState] = useState(() => defaultFilterState(monthKey))
+export function useTransactionFilters() {
+  const [state, setState] = useState(() => defaultFilterState())
   const debouncedSearch = useDebouncedValue(state.search, 300)
 
   function patch(patch: Partial<TransactionFilterState>) {
@@ -260,14 +232,7 @@ export function useTransactionFilters(monthKey: string) {
   }
 
   function clear() {
-    setState({
-      from: '',
-      to: '',
-      accountId: '',
-      categoryId: '',
-      type: '',
-      search: '',
-    })
+    setState(defaultFilterState())
   }
 
   return { state, debouncedSearch, patch, clear, setState }
