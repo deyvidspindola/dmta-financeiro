@@ -33,3 +33,38 @@ export async function listTransactions(
   >(`/contexts/${contextId}/transactions${buildFilterQuery(filters)}`);
   return unwrapData(payload).map((row) => mapTransaction(contextId, row));
 }
+
+export type CreateTransactionInput = {
+  account_id: string;
+  category_id: string | null;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  occurred_at: string;
+  /** `false` = lançamento previsto (não entra no saldo até ser efetivado). */
+  settled: boolean;
+};
+
+export async function createTransaction(
+  contextId: string,
+  input: CreateTransactionInput,
+): Promise<StatementEntry> {
+  const payload = await http.post<
+    Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
+  >(`/contexts/${contextId}/transactions`, {
+    ...input,
+    category_id: input.category_id ?? undefined,
+  });
+  return mapTransaction(contextId, unwrapData(payload));
+}
+
+/** Efetiva um lançamento previsto — move o saldo agora. */
+export async function settleTransaction(
+  contextId: string,
+  transactionId: string,
+): Promise<StatementEntry> {
+  const payload = await http.post<
+    Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
+  >(`/contexts/${contextId}/transactions/${transactionId}/settle`);
+  return mapTransaction(contextId, unwrapData(payload));
+}
