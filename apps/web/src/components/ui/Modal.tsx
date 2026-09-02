@@ -4,11 +4,12 @@ import { X } from 'lucide-react'
 import { strings } from '@/i18n/pt-BR'
 import { cn } from '@/lib/cn'
 
-type Size = 'sm' | 'md' | 'lg'
+type Size = 'sm' | 'md' | 'lg' | 'xl'
 const WIDTH: Record<Size, string> = {
   sm: 'max-w-sm',
   md: 'max-w-lg',
   lg: 'max-w-2xl',
+  xl: 'max-w-4xl',
 }
 
 /**

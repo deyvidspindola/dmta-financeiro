@@ -19,25 +19,30 @@ import {
   CardHeader,
   CategoryChip,
   DataTable,
+  DatePickerField,
+  DateRangeField,
   DonutChart,
   EmptyState,
   Field,
   IconButton,
   LoadingBlock,
   Modal,
+  MoneyInput,
   MoneyValue,
   ProgressBar,
   ProgressRing,
   Skeleton,
   Sparkline,
   Stat,
+  SwitchField,
   Tabs,
   Td,
   TextInput,
-  TextSelect,
   Tr,
   useChartPalette,
+  useConfirm,
 } from '@/components/ui'
+import { toastSuccess } from '@/store/toastStore'
 import { useThemeStore } from '@/store/themeStore'
 
 /*
@@ -47,8 +52,13 @@ import { useThemeStore } from '@/store/themeStore'
 export function KitPage() {
   const { pref, setPref } = useThemeStore()
   const chartPalette = useChartPalette()
+  const confirm = useConfirm()
   const [modalOpen, setModalOpen] = useState(false)
   const [tab, setTab] = useState<'todos' | 'pendentes' | 'pagos'>('todos')
+  const [money, setMoney] = useState(1234.56)
+  const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
+  const [recurring, setRecurring] = useState(false)
+  const [range, setRange] = useState({ from: '', to: '' })
 
   return (
     <div className="min-h-screen bg-canvas px-6 py-10 font-sans text-fg">
@@ -198,22 +208,44 @@ export function KitPage() {
         </Section>
 
         <Section title="Formulário">
-          <div className="grid max-w-md gap-4">
-            <Field label="Descrição" required>
-              <TextInput placeholder="Ex.: Mercado do mês" />
+          <div className="grid max-w-lg gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Field label="Descrição" required>
+                <TextInput placeholder="Ex.: Mercado do mês" />
+              </Field>
+            </div>
+            <Field label="Valor">
+              <MoneyInput value={money} onChange={setMoney} />
             </Field>
-            <Field label="Conta" hint="De onde sai o dinheiro">
-              <TextSelect defaultValue="">
-                <option value="" disabled>
-                  Selecione
-                </option>
-                <option>Conta corrente</option>
-                <option>Poupança</option>
-              </TextSelect>
+            <Field label="Data">
+              <DatePickerField value={date} onChange={setDate} />
             </Field>
-            <Field label="Valor" error="Informe um valor maior que zero">
-              <TextInput type="number" aria-invalid defaultValue={0} />
-            </Field>
+            <div className="sm:col-span-2">
+              <SwitchField
+                label="É recorrente?"
+                checked={recurring}
+                onChange={setRecurring}
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Field label="Período (filtro)">
+                <DateRangeField value={range} onChange={setRange} />
+              </Field>
+            </div>
+            <div className="sm:col-span-2">
+              <Button
+                variant="danger"
+                onClick={async () => {
+                  const ok = await confirm({
+                    message: 'Excluir este item de exemplo?',
+                    tone: 'danger',
+                  })
+                  if (ok) toastSuccess('Confirmado (só no kit)')
+                }}
+              >
+                Testar ConfirmDialog
+              </Button>
+            </div>
           </div>
         </Section>
 

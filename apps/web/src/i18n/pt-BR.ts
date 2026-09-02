@@ -719,6 +719,8 @@ export const strings = {
   common: {
     save: 'Salvar',
     cancel: 'Cancelar',
+    confirm: 'Confirmar',
+    confirmTitle: 'Confirmação',
     edit: 'Editar',
     actions: 'Ações',
     context: 'Contexto',
@@ -731,6 +733,10 @@ export const strings = {
     currency: 'R$',
     close: 'Fechar',
     delete: 'Excluir',
+    datePlaceholder: 'DD/MM/AAAA',
+    dateFrom: 'De',
+    dateTo: 'Até',
+    dateRangePlaceholder: 'Selecione o período…',
   },
 } as const
 

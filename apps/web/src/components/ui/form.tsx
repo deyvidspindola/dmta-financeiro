@@ -6,7 +6,8 @@ import type {
 } from 'react'
 import { cn } from '@/lib/cn'
 
-const CONTROL = cn(
+/** Classes base de input/select — reutilizadas por MoneyInput e DatePicker. */
+export const CONTROL = cn(
   'w-full rounded-xl border border-line bg-surface px-3.5 text-sm text-fg',
   'placeholder:text-fg-subtle transition',
   'focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15',
