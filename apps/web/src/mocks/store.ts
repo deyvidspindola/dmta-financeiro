@@ -284,16 +284,21 @@ function buildDashboard(scope: string, label: string, contextIds: string[]): Das
     (g) => contextIds.includes(g.context_id) && g.status === 'active',
   )
 
+  const incomeMonth = scopedTx
+    .filter((t) => t.type === 'income')
+    .reduce((s, t) => s + t.amount, 0)
+  const expenseMonth = scopedTx
+    .filter((t) => t.type === 'expense')
+    .reduce((s, t) => s + t.amount, 0)
+
   return {
     scope,
     label,
     balance_total: scopedAccounts.reduce((s, a) => s + a.balance, 0),
-    income_month: scopedTx
-      .filter((t) => t.type === 'income')
-      .reduce((s, t) => s + t.amount, 0),
-    expense_month: scopedTx
-      .filter((t) => t.type === 'expense')
-      .reduce((s, t) => s + t.amount, 0),
+    income_month: incomeMonth,
+    expense_month: expenseMonth,
+    projected_income_month: incomeMonth,
+    projected_expense_month: expenseMonth + scopedBills.reduce((s, b) => s + b.amount, 0),
     pending_bills_amount: scopedBills.reduce((s, b) => s + b.amount, 0),
     pending_bills_count: scopedBills.length,
     overdue_bills_count: overdueBills.length,

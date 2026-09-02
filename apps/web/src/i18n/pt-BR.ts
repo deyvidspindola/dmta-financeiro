@@ -95,6 +95,8 @@ export const strings = {
     overCount: (count: number) =>
       count === 1 ? '1 categoria estourou' : `${count} categorias estouraram`,
     pickContext: 'Selecione um contexto para ver os orçamentos.',
+    effectiveVsProjected: (effective: string, projected: string) =>
+      `${effective} já gastos · ${projected} previsto`,
   },
 
   auth: {
@@ -156,6 +158,8 @@ export const strings = {
     balance: 'Saldo em contas',
     income: 'Receitas do mês',
     expense: 'Despesas do mês',
+    projectedLabel: '(previsto)',
+    effectiveHint: (amount: string) => `${amount} já efetivado`,
     billsPending: 'Boletos em aberto',
     billsOverdue: 'Boletos em atraso',
     debtsPending: 'Dívidas pendentes',

@@ -178,17 +178,43 @@ export function DashboardPage() {
       ) : data ? (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat
-            label={t.income}
+            label={
+              data.projected_income_month !== data.income_month
+                ? `${t.income} ${t.projectedLabel}`
+                : t.income
+            }
             tone="positive"
             value={
-              <MoneyValue amount={data.income_month} direction="credit" size="lg" />
+              <MoneyValue
+                amount={data.projected_income_month}
+                direction="credit"
+                size="lg"
+              />
+            }
+            hint={
+              data.projected_income_month !== data.income_month
+                ? t.effectiveHint(formatMoney(data.income_month))
+                : undefined
             }
           />
           <Stat
-            label={t.expense}
+            label={
+              data.projected_expense_month !== data.expense_month
+                ? `${t.expense} ${t.projectedLabel}`
+                : t.expense
+            }
             tone="negative"
             value={
-              <MoneyValue amount={data.expense_month} direction="debit" size="lg" />
+              <MoneyValue
+                amount={data.projected_expense_month}
+                direction="debit"
+                size="lg"
+              />
+            }
+            hint={
+              data.projected_expense_month !== data.expense_month
+                ? t.effectiveHint(formatMoney(data.expense_month))
+                : undefined
             }
           />
           <Stat

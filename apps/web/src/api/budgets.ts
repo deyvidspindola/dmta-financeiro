@@ -7,6 +7,7 @@ export type BudgetProgress = {
   is_override: boolean
   limit: number
   spent: number
+  spent_effective: number
   remaining: number
   percent: number
   over: boolean
