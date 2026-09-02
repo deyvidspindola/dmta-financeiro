@@ -648,6 +648,29 @@ export const strings = {
 
   newTransaction: {
     title: 'Novo lançamento',
+    typeIncome: 'Receita',
+    typeExpense: 'Despesa',
+    amount: 'Valor',
+    description: 'Descrição',
+    descriptionPlaceholder: 'Ex.: Salário, Mercado…',
+    account: 'Conta',
+    accountPlaceholder: 'Escolha a conta',
+    category: 'Categoria',
+    categoryPlaceholder: 'Sem categoria',
+    categoryNone: 'Sem categoria',
+    date: 'Data',
+    settled: 'Já caiu na conta?',
+    settledHint: 'Desligue para lançar como previsto (não entra no saldo até efetivar).',
+    submit: 'Salvar lançamento',
+    created: 'Lançamento salvo.',
+    needContext: 'Selecione um contexto para lançar.',
+    errors: {
+      amount: 'Informe um valor maior que zero.',
+      description: 'Descreva o lançamento.',
+      account: 'Escolha a conta.',
+      date: 'Data inválida (use AAAA-MM-DD).',
+      generic: 'Não deu para salvar. Tente de novo.',
+    },
   },
 } as const;
 

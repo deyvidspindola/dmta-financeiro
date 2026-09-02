@@ -24,3 +24,7 @@ export type { BadgeTone } from './Badge';
 export { ProgressBar } from './ProgressBar';
 export { ListRow } from './ListRow';
 export { Sheet } from './Sheet';
+export { MoneyField } from './MoneyField';
+export { SelectField } from './SelectField';
+export type { SelectOption } from './SelectField';
+export { SwitchField } from './SwitchField';
