@@ -97,6 +97,17 @@ export default function HomeTab() {
           ) : data ? (
             <>
               <Money amount={data.balance_total} size="xl" />
+              {data.provisioned_balance_total !== data.balance_total ? (
+                <View className="flex-row items-baseline gap-1.5">
+                  <Text variant="muted" className="text-xs">
+                    {t.dashboard.balanceProvisioned}
+                  </Text>
+                  <Money amount={data.provisioned_balance_total} size="sm" />
+                  <Text variant="muted" className="text-xs text-fg-subtle">
+                    {t.dashboard.balanceProvisionedHint}
+                  </Text>
+                </View>
+              ) : null}
               {isConsolidated ? <Text variant="muted">{t.dashboard.hint}</Text> : null}
               <Text variant="muted" className="text-fg-subtle">
                 {formatMonthLabel(month)}
