@@ -189,6 +189,7 @@ export const strings = {
     updated: 'Conta atualizada.',
     deleted: 'Conta excluída.',
     confirmDelete: 'Excluir esta conta?',
+    totalBalance: 'Saldo total',
     types: {
       checking: 'Corrente',
       savings: 'Poupança',
