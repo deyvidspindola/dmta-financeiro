@@ -97,6 +97,10 @@ export function VisualCreditCard({
           <Money amount={card.current_invoice_total} size="sm" className="text-white" />
         </p>
       ) : null}
+
+      <p className="mt-3 text-xs text-white/70">
+        {t.cardCycleFooter(card.closing_day, card.due_day)}
+      </p>
     </article>
   )
 }

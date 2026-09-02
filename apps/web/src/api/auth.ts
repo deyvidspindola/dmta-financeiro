@@ -124,3 +124,8 @@ export async function disableMfa(): Promise<void> {
   if (useMocks) return mockApi.disableMfa()
   await http.delete('/auth/mfa')
 }
+
+export async function resetAccountData(password: string): Promise<void> {
+  if (useMocks) return mockApi.resetAccountData(password)
+  await http.post('/account/reset', { password })
+}
