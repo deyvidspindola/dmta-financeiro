@@ -26,6 +26,7 @@ use App\Http\Controllers\Api\V1\PayCardInvoiceController;
 use App\Http\Controllers\Api\V1\PollBillCapturesController;
 use App\Http\Controllers\Api\V1\RecurringBillController;
 use App\Http\Controllers\Api\V1\RecurringTransactionController;
+use App\Http\Controllers\Api\V1\ResetAccountDataController;
 use App\Http\Controllers\Api\V1\SimulationController;
 use App\Http\Controllers\Api\V1\StatementImportController;
 use App\Http\Controllers\Api\V1\TelegramWebhookController;
@@ -66,6 +67,11 @@ Route::prefix('v1')->group(function () {
     Route::middleware(['auth:sanctum', 'ability:api'])->group(function () {
         Route::post('auth/logout', [AuthController::class, 'logout']);
         Route::get('auth/me', [AuthController::class, 'me']);
+
+        // Apaga todo o dado financeiro do usuário e recria um contexto PF
+        // limpo — "começar do zero" da tela de segurança. Exige a senha
+        // atual (ResetAccountDataRequest). Ver App\UseCases\User\ResetUserData.
+        Route::post('account/reset', ResetAccountDataController::class);
 
         Route::post('auth/mfa/enroll', [MfaController::class, 'enroll']);
         Route::post('auth/mfa/confirm', [MfaController::class, 'confirm']);

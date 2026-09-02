@@ -12,6 +12,7 @@ declare(strict_types=1);
  */
 return [
     'required' => 'O campo :attribute é obrigatório.',
+    'current_password' => 'A senha informada está incorreta.',
     'email' => 'Informe um e-mail válido.',
     'unique' => 'Este :attribute já está cadastrado.',
     'confirmed' => 'A confirmação de :attribute não corresponde.',

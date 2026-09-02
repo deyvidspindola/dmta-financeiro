@@ -12,7 +12,7 @@ use App\Models\Bill;
 use App\Models\RecurringBill;
 use App\Models\RecurringTransaction;
 use App\Models\StatementEntry;
-use App\UseCases\Transaction\RegisterTransaction;
+use App\Services\RecurringTransactionMaterializer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
 use Tests\Feature\Support\FinanceScenario;
@@ -33,7 +33,7 @@ afterEach(function () {
 
 function runTransactionJob(): void
 {
-    (new GenerateRecurringTransactionEntries)->handle(app(RecurrenceWindow::class), app(RegisterTransaction::class));
+    (new GenerateRecurringTransactionEntries)->handle(app(RecurringTransactionMaterializer::class));
 }
 
 function runBillJob(): void
