@@ -68,9 +68,9 @@ function BudgetItemRow({
           'mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-lg',
           item.effective ? 'bg-surface-2 text-fg-muted' : 'bg-surface-2/60 text-fg-subtle',
         )}
-        aria-hidden
+        title={t.kinds[item.kind]}
       >
-        <Icon size={16} />
+        <Icon size={16} aria-label={t.kinds[item.kind]} />
       </span>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
