@@ -57,8 +57,39 @@ final class RecurrenceWindow
     }
 
     /**
+     * Datas de ocorrência que caem em `[$rangeStart, $rangeEnd]` — para
+     * listar/projetar fluxo e orçamento, sem tocar banco.
+     *
+     * @return list<Carbon>
+     */
+    public function occurrencesInRange(
+        Carbon $cursor,
+        RecurrenceInterval $interval,
+        ?Carbon $endDate,
+        Carbon $rangeStart,
+        Carbon $rangeEnd,
+    ): array {
+        $current = $cursor->copy();
+        $dates = [];
+
+        for ($i = 0; $i < self::MAX_ITERATIONS && $current->lte($rangeEnd); $i++) {
+            if ($endDate !== null && $current->gt($endDate)) {
+                break;
+            }
+
+            if ($current->gte($rangeStart)) {
+                $dates[] = $current->copy();
+            }
+
+            $current = $interval->nextAfter($current);
+        }
+
+        return $dates;
+    }
+
+    /**
      * Soma do `$amount` por cada ocorrência que cai em `[$rangeStart,
-     * $rangeEnd]` — para projeção de fluxo/orçamento, sem tocar banco.
+     * $rangeEnd]`.
      */
     public function sumInRange(
         Carbon $cursor,
@@ -68,21 +99,6 @@ final class RecurrenceWindow
         Carbon $rangeStart,
         Carbon $rangeEnd,
     ): float {
-        $current = $cursor->copy();
-        $total = 0.0;
-
-        for ($i = 0; $i < self::MAX_ITERATIONS && $current->lte($rangeEnd); $i++) {
-            if ($endDate !== null && $current->gt($endDate)) {
-                break;
-            }
-
-            if ($current->gte($rangeStart)) {
-                $total += $amount;
-            }
-
-            $current = $interval->nextAfter($current);
-        }
-
-        return $total;
+        return $amount * count($this->occurrencesInRange($cursor, $interval, $endDate, $rangeStart, $rangeEnd));
     }
 }

@@ -140,6 +140,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('goals/{goal}', [GoalController::class, 'destroy']);
 
             Route::get('budgets', [BudgetController::class, 'index']);
+            Route::get('budgets/{budget}', [BudgetController::class, 'show']);
             Route::post('budgets', [BudgetController::class, 'store']);
             Route::patch('budgets/{budget}', [BudgetController::class, 'update']);
             Route::delete('budgets/{budget}', [BudgetController::class, 'destroy']);

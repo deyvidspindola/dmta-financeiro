@@ -11,6 +11,7 @@ use App\Http\Requests\Api\UpdateBudgetRequest;
 use App\Http\Resources\BudgetResource;
 use App\Models\Budget;
 use App\Models\Context;
+use App\Services\BudgetConsumptionService;
 use App\Services\BudgetProgressService;
 use App\UseCases\Budget\CreateBudget;
 use App\UseCases\Budget\UpdateBudget;
@@ -43,6 +44,16 @@ final class BudgetController extends Controller
             : Carbon::now();
 
         return response()->json(['data' => $service->forMonth($context, $month)]);
+    }
+
+    /** `?month=YYYY-MM` — o que está consumindo o teto (efetivado + previsto). */
+    public function show(Request $request, Context $context, Budget $budget, BudgetConsumptionService $service): JsonResponse
+    {
+        $month = $request->filled('month')
+            ? Carbon::parse($request->string('month')->toString())
+            : Carbon::now();
+
+        return response()->json(['data' => $service->forBudget($context, $budget, $month)]);
     }
 
     public function store(StoreBudgetRequest $request, Context $context, CreateBudget $useCase): BudgetResource
