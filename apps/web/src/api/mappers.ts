@@ -792,6 +792,8 @@ type ApiDashboardSlice = {
   overdue_bills_amount?: number
   month_income: number
   month_expense: number
+  month_projected_income?: number
+  month_projected_expense?: number
   investments_total: number
   pending_debts_count?: number
   pending_debts_i_owe_amount?: number
@@ -884,6 +886,12 @@ export function mapDashboard(
     balance_total: Number(raw.accounts_balance),
     income_month: Number(raw.month_income),
     expense_month: Number(raw.month_expense),
+    projected_income_month: Number(
+      raw.month_projected_income ?? raw.month_income,
+    ),
+    projected_expense_month: Number(
+      raw.month_projected_expense ?? raw.month_expense,
+    ),
     pending_bills_amount: Number(raw.pending_bills_amount),
     pending_bills_count: Number(raw.pending_bills_count ?? 0),
     overdue_bills_count: Number(raw.overdue_bills_count),

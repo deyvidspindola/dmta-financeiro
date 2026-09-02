@@ -61,13 +61,24 @@ export function BudgetCard({
       />
 
       <div className="flex flex-wrap items-end justify-between gap-2 text-sm">
-        <p className="text-fg">
-          <Money amount={row.spent} size="sm" />
-          <span className="text-fg-muted">
-            {' '}
-            {t.ofLimit} <Money amount={row.limit} size="sm" className="inline" />
-          </span>
-        </p>
+        <div>
+          <p className="text-fg">
+            <Money amount={row.spent} size="sm" />
+            <span className="text-fg-muted">
+              {' '}
+              {t.ofLimit}{' '}
+              <Money amount={row.limit} size="sm" className="inline" />
+            </span>
+          </p>
+          {row.spent_effective !== row.spent ? (
+            <p className="mt-0.5 text-xs text-fg-subtle">
+              {t.effectiveVsProjected(
+                formatMoney(row.spent_effective),
+                formatMoney(row.spent),
+              )}
+            </p>
+          ) : null}
+        </div>
         <p className={row.over ? 'font-medium text-negative' : 'text-fg-muted'}>
           {row.over
             ? `${t.over} ${formatMoney(row.spent - row.limit)}`

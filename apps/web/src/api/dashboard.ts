@@ -15,6 +15,8 @@ type ApiDashboardSlice = {
   overdue_bills_count: number
   month_income: number
   month_expense: number
+  month_projected_income?: number
+  month_projected_expense?: number
   investments_total: number
 }
 
