@@ -3,7 +3,7 @@ import {
   Button,
   ErrorBanner,
   Field,
-  TextInput,
+  MoneyInput,
   TextSelect,
 } from '@/components/ui'
 import type { Category } from '@/types/models'
@@ -27,14 +27,14 @@ export function BudgetCreateForm({
   onCancel,
 }: BudgetCreateFormProps) {
   const [categoryId, setCategoryId] = useState('')
-  const [limit, setLimit] = useState('')
+  const [limit, setLimit] = useState(0)
 
   return (
     <form
       className="grid gap-4"
       onSubmit={(event) => {
         event.preventDefault()
-        onSubmit({ categoryId, limit: Number(limit) })
+        onSubmit({ categoryId, limit })
       }}
     >
       <Field label={t.category}>
@@ -51,14 +51,7 @@ export function BudgetCreateForm({
         </TextSelect>
       </Field>
       <Field label={t.limit}>
-        <TextInput
-          type="number"
-          step="0.01"
-          min="0.01"
-          inputMode="decimal"
-          value={limit}
-          onChange={(event) => setLimit(event.target.value)}
-        />
+        <MoneyInput value={limit} onChange={setLimit} />
       </Field>
       {error ? <ErrorBanner message={error} /> : null}
       <div className="flex justify-end gap-2 pt-2">
@@ -67,7 +60,7 @@ export function BudgetCreateForm({
         </Button>
         <Button
           type="submit"
-          disabled={!categoryId || Number(limit) <= 0 || isPending}
+          disabled={!categoryId || limit <= 0 || isPending}
         >
           {strings.common.save}
         </Button>
