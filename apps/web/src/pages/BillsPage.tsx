@@ -7,7 +7,7 @@ import { BillFiltersBar } from '@/components/bills/BillFilters'
 import { applyClientBillFilters, toApiBillFilters } from '@/components/bills/billFilterState'
 import { useBillFilters } from '@/components/bills/useBillFilters'
 import { BillForm } from '@/components/bills/BillForm'
-import { BillList } from '@/components/bills/BillList'
+import { BillList, BillDetailModal } from '@/components/bills/BillList'
 import { PayBillForm } from '@/components/bills/PayBillForm'
 import { categoryTypeForBillKind } from '@/components/bills/billDisplay'
 import { summarizeBills } from '@/components/bills/billSummary'
@@ -47,6 +47,7 @@ export function BillsPage() {
   const [open, setOpen] = useState(false)
   const [categoryOpen, setCategoryOpen] = useState(false)
   const [paying, setPaying] = useState<Bill | null>(null)
+  const [detail, setDetail] = useState<Bill | null>(null)
   const [formCategoryType, setFormCategoryType] = useState<'income' | 'expense'>('expense')
 
   const apiFilters = useMemo(() => {
@@ -186,9 +187,14 @@ export function BillsPage() {
       return
     }
     deleteMutation.mutate(billId)
+    setDetail(null)
   }
 
   const canMutate = Boolean(contextId) && !isConsolidated
+  const detailCategory =
+    detail?.category_id != null
+      ? categoryMap.get(detail.category_id)
+      : undefined
 
   return (
     <div className="space-y-6 bg-canvas text-fg">
@@ -255,13 +261,27 @@ export function BillsPage() {
         rows={data}
         categoryMap={categoryMap}
         isConsolidated={isConsolidated}
-        canMutate={canMutate}
-        onPay={setPaying}
-        onEdit={openEdit}
-        onDelete={handleDelete}
-        deletePending={deleteMutation.isPending}
+        onSelect={setDetail}
       />
 
+      {detail ? (
+        <BillDetailModal
+          bill={detail}
+          category={detailCategory}
+          canMutate={canMutate}
+          deletePending={deleteMutation.isPending}
+          onClose={() => setDetail(null)}
+          onPay={() => {
+            setPaying(detail)
+            setDetail(null)
+          }}
+          onEdit={() => {
+            openEdit(detail)
+            setDetail(null)
+          }}
+          onDelete={() => handleDelete(detail.id)}
+        />
+      ) : null}
       {open && contextId ? (
         <Modal
           title={editing ? b.edit : b.create}

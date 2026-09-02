@@ -34,6 +34,8 @@ export type { BadgeTone } from './Badge'
 
 export { DataTable, Tr, Td } from './Table'
 
+export { StatementList, StatementGroup, StatementRow } from './StatementList'
+
 export { Stat } from './Stat'
 
 export { ProgressBar, ProgressRing } from './Progress'

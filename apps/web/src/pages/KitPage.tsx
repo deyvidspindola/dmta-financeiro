@@ -33,6 +33,9 @@ import {
   ProgressRing,
   Skeleton,
   Sparkline,
+  StatementGroup,
+  StatementList,
+  StatementRow,
   Stat,
   SwitchField,
   Tabs,
@@ -272,6 +275,38 @@ export function KitPage() {
               </Td>
             </Tr>
           </DataTable>
+        </Section>
+
+        <Section title="Extrato (StatementList)">
+          <StatementList>
+            <StatementGroup label="02/09/2026">
+              <StatementRow
+                title="Mercado Extra"
+                meta={
+                  <>
+                    <CategoryChip name="Mercado" colorIndex={1} />
+                    <span>Nubank</span>
+                  </>
+                }
+                amount={<MoneyValue amount={186.4} direction="debit" size="sm" />}
+                onClick={() => toastSuccess('Clique na linha (abre modal na app)')}
+              />
+              <StatementRow
+                title="Uber"
+                meta={<CategoryChip name="Transporte" colorIndex={4} />}
+                amount={<MoneyValue amount={32.9} direction="debit" size="sm" />}
+                onClick={() => toastSuccess('Clique na linha (abre modal na app)')}
+              />
+            </StatementGroup>
+            <StatementGroup label="01/09/2026">
+              <StatementRow
+                title="Salário"
+                meta={<CategoryChip name="Salário" colorIndex={7} />}
+                amount={<MoneyValue amount={8200} direction="credit" size="sm" />}
+                onClick={() => toastSuccess('Clique na linha (abre modal na app)')}
+              />
+            </StatementGroup>
+          </StatementList>
         </Section>
 
         <Section title="Feedback">

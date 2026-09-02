@@ -1,60 +1,76 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, FolderInput, Pencil, Trash2 } from 'lucide-react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { FolderInput, Pencil, Trash2 } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { accountsApi, categoriesApi, goalsApi, transactionsApi } from '@/api'
 import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
-import { TransactionDetailBody } from '@/components/transactions/TransactionDetailModal'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
+import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
 import {
+  Badge,
+  CategoryChip,
   ErrorBanner,
   IconButton,
   LoadingBlock,
   Modal,
-  PageHeader,
+  MoneyValue,
   useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
+import { formatDate } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
-import { canMutateEntry } from '@/lib/transactionDisplay'
+import {
+  canMutateEntry,
+  transactionDirection,
+} from '@/lib/transactionDisplay'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import type { EntryFormValues } from '@/components/transactions/schemas'
+import type { StatementEntry } from '@/types/models'
 
 const t = strings.transactionDetail
 const tx = strings.transactions
 
+type TransactionDetailModalProps = {
+  transactionId: string
+  contextId: string
+  onClose: () => void
+  /** Após excluir (lista deve limpar seleção). */
+  onDeleted?: () => void
+  /** Após mover — id/contexto novos. */
+  onMoved?: (moved: StatementEntry) => void
+}
+
 /**
- * Deep-link / fallback de detalhe (`/transactions/:id`).
- * Na lista, o detalhe abre em modal (`TransactionDetailModal`).
+ * Detalhe do lançamento em modal — editar / mover / excluir.
+ * A rota `/transactions/:id` continua como deep-link.
  */
-export function TransactionDetailPage() {
+export function TransactionDetailModal({
+  transactionId,
+  contextId,
+  onClose,
+  onDeleted,
+  onMoved,
+}: TransactionDetailModalProps) {
   const confirm = useConfirm()
-  const { id } = useParams<{ id: string }>()
-  const [searchParams] = useSearchParams()
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contexts = useAuthStore((s) => s.contexts)
-
-  const contextId =
-    searchParams.get('context') ??
-    (activeScope !== CONSOLIDATED ? activeScope : null)
 
   const [entryOpen, setEntryOpen] = useState(false)
   const [moving, setMoving] = useState(false)
 
   const txQuery = useQuery({
-    queryKey: ['transaction', contextId, id],
-    queryFn: () => transactionsApi.getTransaction(contextId!, id!),
-    enabled: Boolean(contextId && id),
+    queryKey: ['transaction', contextId, transactionId],
+    queryFn: () => transactionsApi.getTransaction(contextId, transactionId),
+    enabled: Boolean(contextId && transactionId),
   })
 
   const transaction = txQuery.data
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', contextId],
-    queryFn: () => accountsApi.listAccounts(contextId!),
+    queryFn: () => accountsApi.listAccounts(contextId),
     enabled: Boolean(contextId),
   })
 
@@ -65,7 +81,7 @@ export function TransactionDetailPage() {
       transaction?.type === 'income' ? 'income' : 'expense',
     ],
     queryFn: () =>
-      categoriesApi.listCategories(contextId!, {
+      categoriesApi.listCategories(contextId, {
         type: transaction?.type === 'income' ? 'income' : 'expense',
       }),
     enabled:
@@ -76,7 +92,7 @@ export function TransactionDetailPage() {
 
   const goalsQuery = useQuery({
     queryKey: ['goals', contextId],
-    queryFn: () => goalsApi.listGoals(contextId!),
+    queryFn: () => goalsApi.listGoals(contextId),
     enabled: Boolean(contextId) && Boolean(transaction?.goal_id),
   })
 
@@ -141,9 +157,7 @@ export function TransactionDetailPage() {
       await invalidateMoney()
       toastSuccess(tx.moved)
       setMoving(false)
-      void navigate(`/transactions/${moved.id}?context=${moved.context_id}`, {
-        replace: true,
-      })
+      onMoved?.(moved)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -154,7 +168,8 @@ export function TransactionDetailPage() {
     onSuccess: async () => {
       await invalidateMoney()
       toastSuccess(tx.deleted)
-      void navigate('/transactions')
+      onDeleted?.()
+      onClose()
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -171,46 +186,20 @@ export function TransactionDetailPage() {
     deleteMutation.mutate()
   }
 
-  if (!contextId) {
-    return (
-      <PageShell>
-        <PageHeader title={t.title} />
-        <ErrorBanner message={strings.common.consolidatedHint} />
-        <BackLink />
-      </PageShell>
-    )
-  }
-
-  if (txQuery.isLoading) {
-    return <LoadingBlock label={strings.common.loading} />
-  }
-
-  if (txQuery.isError || !transaction) {
-    return (
-      <PageShell>
-        <PageHeader title={t.title} />
-        <ErrorBanner
-          message={
-            txQuery.isError ? getErrorMessage(txQuery.error) : t.notFound
-          }
-        />
-        <BackLink />
-      </PageShell>
-    )
-  }
-
+  const title = transaction?.description ?? t.title
   const isConsolidated = activeScope === CONSOLIDATED
-  const editable = !isConsolidated && canMutateEntry(transaction)
+  const editable =
+    Boolean(transaction) && !isConsolidated && canMutateEntry(transaction!)
 
   return (
-    <PageShell>
-      <BackLink />
-
-      <PageHeader
-        title={transaction.description}
-        actions={
-          !isConsolidated ? (
-            <>
+    <>
+      <Modal
+        title={title}
+        size="lg"
+        onClose={onClose}
+        footer={
+          transaction && !isConsolidated ? (
+            <div className="flex w-full flex-wrap items-center justify-end gap-1">
               {editable ? (
                 <IconButton
                   label={strings.common.edit}
@@ -232,21 +221,31 @@ export function TransactionDetailPage() {
                 onClick={handleDelete}
                 disabled={deleteMutation.isPending}
               />
-            </>
-          ) : null
+            </div>
+          ) : undefined
         }
-      />
+      >
+        {txQuery.isLoading ? (
+          <LoadingBlock label={strings.common.loading} />
+        ) : null}
+        {txQuery.isError || (!txQuery.isLoading && !transaction) ? (
+          <ErrorBanner
+            message={
+              txQuery.isError ? getErrorMessage(txQuery.error) : t.notFound
+            }
+          />
+        ) : null}
+        {transaction ? (
+          <TransactionDetailBody
+            transaction={transaction}
+            accountName={accountName}
+            category={category}
+            goalName={goalName}
+          />
+        ) : null}
+      </Modal>
 
-      <div className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
-        <TransactionDetailBody
-          transaction={transaction}
-          accountName={accountName}
-          category={category}
-          goalName={goalName}
-        />
-      </div>
-
-      {entryOpen ? (
+      {entryOpen && transaction ? (
         <Modal title={tx.edit} size="xl" onClose={() => setEntryOpen(false)}>
           <TransactionForm
             key={transaction.id}
@@ -279,7 +278,7 @@ export function TransactionDetailPage() {
         </Modal>
       ) : null}
 
-      {moving ? (
+      {moving && transaction ? (
         <Modal title={tx.moveTitle} onClose={() => setMoving(false)}>
           <MoveTransactionForm
             transaction={transaction}
@@ -294,22 +293,136 @@ export function TransactionDetailPage() {
           />
         </Modal>
       ) : null}
-    </PageShell>
+    </>
   )
 }
 
-function PageShell({ children }: { children: ReactNode }) {
-  return <div className="space-y-6 bg-canvas text-fg">{children}</div>
+type DetailBodyProps = {
+  transaction: StatementEntry
+  accountName: string
+  category: { name: string; colorIndex: number } | null
+  goalName: string | null
 }
 
-function BackLink() {
+export function TransactionDetailBody({
+  transaction,
+  accountName,
+  category,
+  goalName,
+}: DetailBodyProps) {
+  const typeLabel =
+    transaction.type === 'transfer'
+      ? tx.types.transfer
+      : tx.types[transaction.type]
+
   return (
-    <Link
-      to="/transactions"
-      className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
-    >
-      <ArrowLeft size={16} aria-hidden />
-      {t.back}
-    </Link>
+    <div className="space-y-6">
+      <div className="text-center">
+        <MoneyValue
+          amount={transaction.amount}
+          direction={transactionDirection(transaction)}
+          size="lg"
+        />
+        <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+          <Badge tone="neutral">{typeLabel}</Badge>
+          <TransactionOriginBadge origin={transaction.origin} />
+        </div>
+      </div>
+
+      <dl className="grid gap-4 sm:grid-cols-2">
+        <DetailItem label={tx.date}>{formatDate(transaction.date)}</DetailItem>
+        <DetailItem label={tx.account}>
+          <Link
+            to={`/accounts/${transaction.account_id}?context=${transaction.context_id}`}
+            className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+          >
+            {accountName}
+          </Link>
+        </DetailItem>
+        <DetailItem label={tx.category}>
+          {category ? (
+            <CategoryChip
+              name={category.name}
+              colorIndex={category.colorIndex}
+            />
+          ) : (
+            '—'
+          )}
+        </DetailItem>
+        {transaction.bill_id ? (
+          <DetailItem label={t.linkedBill}>
+            <Link
+              to="/bills"
+              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              {t.viewBill}
+            </Link>
+            <span className="ml-1 text-xs text-fg-subtle">
+              #{transaction.bill_id}
+            </span>
+          </DetailItem>
+        ) : null}
+        {goalName ? (
+          <DetailItem label={t.linkedGoal}>
+            <Link
+              to="/goals"
+              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              {goalName}
+            </Link>
+          </DetailItem>
+        ) : null}
+        {transaction.card_invoice_id ? (
+          <DetailItem label={t.linkedInvoice}>
+            <Link
+              to="/credit-cards"
+              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              {t.viewInvoice}
+            </Link>
+            <span className="ml-1 text-xs text-fg-subtle">
+              #{transaction.card_invoice_id}
+            </span>
+          </DetailItem>
+        ) : null}
+      </dl>
+
+      {transaction.transfer ? (
+        <div className="rounded-xl border border-line bg-surface-2 p-4">
+          <h3 className="mb-3 text-sm font-semibold text-fg">
+            {t.transferSection}
+          </h3>
+          <div className="space-y-2 text-sm">
+            <p>
+              <span className="text-fg-muted">{t.transferFrom}: </span>
+              {transaction.transfer.from.context.name} →{' '}
+              {transaction.transfer.from.account.name}
+            </p>
+            <p>
+              <span className="text-fg-muted">{t.transferTo}: </span>
+              {transaction.transfer.to.context.name} →{' '}
+              {transaction.transfer.to.account.name}
+            </p>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
+function DetailItem({
+  label,
+  children,
+}: {
+  label: string
+  children: ReactNode
+}) {
+  return (
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm text-fg">{children}</dd>
+    </div>
   )
 }
