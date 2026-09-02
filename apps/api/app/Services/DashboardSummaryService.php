@@ -41,7 +41,10 @@ use Illuminate\Support\Carbon;
  */
 final class DashboardSummaryService
 {
-    public function __construct(private readonly MonthlyFlowProjector $projector) {}
+    public function __construct(
+        private readonly MonthlyFlowProjector $projector,
+        private readonly HistoricalBalanceService $history,
+    ) {}
 
     /**
      * `$month` (passador de mês do app) rege as métricas do mês; `null` =
@@ -67,15 +70,22 @@ final class DashboardSummaryService
         $pendingExpenseMonth = (float) $this->monthEntries($context, StatementEntryType::Expense, $reference, settled: false);
         $projected = $this->projector->between($context, $monthStart, $monthEnd);
 
-        $accountsBalance = (float) $context->accounts()->sum('balance');
+        // Mês já fechado → saldo "como o mês fechou" (replay do histórico).
+        // Mês corrente ou futuro → saldo real de agora.
+        $isPastMonth = $monthEnd->lt($now->copy()->startOfMonth());
+        $accountsBalance = $isPastMonth
+            ? $this->history->asOf($context, $monthEnd)
+            : (float) $context->accounts()->sum('balance');
 
         return [
             'context_id' => $context->id,
             'month' => $reference->format('Y-m'),
             'accounts_balance' => $accountsBalance,
-            // Saldo provisionado: o real + tudo que está previsto (pending)
-            // mas ainda não caiu na conta. Ver StatementEntryStatus.
-            'accounts_balance_provisioned' => round($accountsBalance + $this->pendingBalanceDelta($context), 2),
+            // Provisionado: real + o previsto (pending). Mês passado não tem
+            // previsto — é história, mostra o real. Ver StatementEntryStatus.
+            'accounts_balance_provisioned' => $isPastMonth
+                ? $accountsBalance
+                : round($accountsBalance + $this->pendingBalanceDelta($context), 2),
             'pending_bills_count' => $pending->count(),
             'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
