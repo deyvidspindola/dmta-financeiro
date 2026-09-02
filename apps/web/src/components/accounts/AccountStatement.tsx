@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { EmptyState, Money, MoneyValue, StatementGroup, StatementList, StatementRow } from '@/components/ui'
+import { Badge, EmptyState, Money, MoneyValue, StatementGroup, StatementList, StatementRow } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate } from '@/lib/format'
 import {
@@ -69,10 +69,18 @@ export function AccountStatement({
               title={tx.description}
               ariaLabel={tx.description}
               onClick={() => onSelect(tx)}
+              className={tx.status === 'pending' ? 'opacity-70' : undefined}
               meta={
-                <span>
-                  {t.runningBalance}{' '}
-                  <Money amount={runningBalance} size="sm" />
+                <span className="inline-flex flex-wrap items-center gap-2">
+                  <span>
+                    {t.runningBalance}{' '}
+                    <Money amount={runningBalance} size="sm" />
+                  </span>
+                  {tx.status === 'pending' ? (
+                    <Badge tone="warning">
+                      {strings.transactions.pendingBadge}
+                    </Badge>
+                  ) : null}
                 </span>
               }
               amount={

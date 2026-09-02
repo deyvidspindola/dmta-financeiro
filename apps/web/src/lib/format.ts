@@ -6,7 +6,8 @@ export function formatMoney(value: number): string {
 }
 
 export function formatDate(iso: string): string {
-  const [year, month, day] = iso.split('-').map(Number)
+  const datePart = iso.includes('T') ? iso.slice(0, 10) : iso
+  const [year, month, day] = datePart.split('-').map(Number)
   if (!year || !month || !day) return iso
   return new Intl.DateTimeFormat('pt-BR').format(
     new Date(year, month - 1, day),

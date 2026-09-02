@@ -11,6 +11,7 @@ import type { DashboardSummary, EvolutionPoint } from '@/types/models'
 type ApiDashboardSlice = {
   context_id?: string | number
   accounts_balance: number
+  accounts_balance_provisioned?: number
   pending_bills_amount: number
   overdue_bills_count: number
   month_income: number

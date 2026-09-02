@@ -37,6 +37,7 @@ export function QuickAddPage() {
         type: values.type,
         date: values.date,
         goal_id: values.goal_id || null,
+        settled: values.settled,
       }
       if (values.is_recurring) {
         await recurringTransactionsApi.createRecurringTransaction(contextId!, {

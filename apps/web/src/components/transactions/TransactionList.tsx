@@ -65,6 +65,7 @@ export function TransactionList({
                 title={tx.description}
                 ariaLabel={`${tx.description}, ${typeLabel}`}
                 onClick={() => onSelect(tx)}
+                className={tx.status === 'pending' ? 'opacity-70' : undefined}
                 meta={
                   <>
                     {category ? (
@@ -76,6 +77,9 @@ export function TransactionList({
                     {account ? <span>{account.name}</span> : null}
                     {isConsolidated && tx.context ? (
                       <Badge tone="neutral">{tx.context.name}</Badge>
+                    ) : null}
+                    {tx.status === 'pending' ? (
+                      <Badge tone="warning">{t.pendingBadge}</Badge>
                     ) : null}
                     {tx.recurring_transaction_id ? (
                       <Badge tone="accent">{t.recurringBadge}</Badge>

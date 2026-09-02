@@ -110,6 +110,7 @@ export function TransactionDetailPage() {
     await queryClient.invalidateQueries({ queryKey: ['transaction'] })
     await queryClient.invalidateQueries({ queryKey: ['accounts'] })
     await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    await queryClient.invalidateQueries({ queryKey: ['budgets'] })
   }
 
   const saveMutation = useMutation({
@@ -144,6 +145,19 @@ export function TransactionDetailPage() {
       void navigate(`/transactions/${moved.id}?context=${moved.context_id}`, {
         replace: true,
       })
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  const settleMutation = useMutation({
+    mutationFn: () =>
+      transactionsApi.settleTransaction(
+        transaction!.context_id,
+        transaction!.id,
+      ),
+    onSuccess: async () => {
+      await invalidateMoney()
+      toastSuccess(t.settledToast)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -243,6 +257,12 @@ export function TransactionDetailPage() {
           accountName={accountName}
           category={category}
           goalName={goalName}
+          onSettle={
+            !isConsolidated && transaction.status === 'pending'
+              ? () => settleMutation.mutate()
+              : undefined
+          }
+          settlePending={settleMutation.isPending}
         />
       </div>
 
@@ -261,6 +281,7 @@ export function TransactionDetailPage() {
               account_id: transaction.account_id,
               category_id: transaction.category_id,
               goal_id: transaction.goal_id,
+              settled: transaction.status === 'settled',
               is_recurring: false,
               interval: 'monthly',
               start_date: transaction.date,

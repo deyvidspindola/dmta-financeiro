@@ -8,6 +8,7 @@ import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
 import {
   Badge,
+  Button,
   CategoryChip,
   ErrorBanner,
   IconButton,
@@ -42,7 +43,7 @@ type TransactionDetailModalProps = {
 }
 
 /**
- * Detalhe do lançamento em modal — editar / mover / excluir.
+ * Detalhe do lançamento em modal — editar / mover / excluir / efetivar.
  * A rota `/transactions/:id` continua como deep-link.
  */
 export function TransactionDetailModal({
@@ -126,6 +127,7 @@ export function TransactionDetailModal({
     await queryClient.invalidateQueries({ queryKey: ['transaction'] })
     await queryClient.invalidateQueries({ queryKey: ['accounts'] })
     await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    await queryClient.invalidateQueries({ queryKey: ['budgets'] })
   }
 
   const saveMutation = useMutation({
@@ -158,6 +160,19 @@ export function TransactionDetailModal({
       toastSuccess(tx.moved)
       setMoving(false)
       onMoved?.(moved)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  const settleMutation = useMutation({
+    mutationFn: () =>
+      transactionsApi.settleTransaction(
+        transaction!.context_id,
+        transaction!.id,
+      ),
+    onSuccess: async () => {
+      await invalidateMoney()
+      toastSuccess(t.settledToast)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -241,6 +256,12 @@ export function TransactionDetailModal({
             accountName={accountName}
             category={category}
             goalName={goalName}
+            onSettle={
+              !isConsolidated && transaction.status === 'pending'
+                ? () => settleMutation.mutate()
+                : undefined
+            }
+            settlePending={settleMutation.isPending}
           />
         ) : null}
       </Modal>
@@ -260,6 +281,7 @@ export function TransactionDetailModal({
               account_id: transaction.account_id,
               category_id: transaction.category_id,
               goal_id: transaction.goal_id,
+              settled: transaction.status === 'settled',
               is_recurring: false,
               interval: 'monthly',
               start_date: transaction.date,
@@ -302,6 +324,8 @@ type DetailBodyProps = {
   accountName: string
   category: { name: string; colorIndex: number } | null
   goalName: string | null
+  onSettle?: () => void
+  settlePending?: boolean
 }
 
 export function TransactionDetailBody({
@@ -309,6 +333,8 @@ export function TransactionDetailBody({
   accountName,
   category,
   goalName,
+  onSettle,
+  settlePending = false,
 }: DetailBodyProps) {
   const typeLabel =
     transaction.type === 'transfer'
@@ -325,8 +351,16 @@ export function TransactionDetailBody({
         />
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <Badge tone="neutral">{typeLabel}</Badge>
+          {transaction.status === 'pending' ? (
+            <Badge tone="warning">{tx.pendingBadge}</Badge>
+          ) : null}
           <TransactionOriginBadge origin={transaction.origin} />
         </div>
+        {transaction.status === 'settled' && transaction.settled_at ? (
+          <p className="mt-2 text-sm text-fg-muted">
+            {t.settledAt(formatDate(transaction.settled_at))}
+          </p>
+        ) : null}
       </div>
 
       <dl className="grid gap-4 sm:grid-cols-2">
@@ -386,6 +420,18 @@ export function TransactionDetailBody({
           </DetailItem>
         ) : null}
       </dl>
+
+      {onSettle ? (
+        <Button
+          type="button"
+          onClick={onSettle}
+          loading={settlePending}
+          disabled={settlePending}
+          block
+        >
+          {t.settle}
+        </Button>
+      ) : null}
 
       {transaction.transfer ? (
         <div className="rounded-xl border border-line bg-surface-2 p-4">

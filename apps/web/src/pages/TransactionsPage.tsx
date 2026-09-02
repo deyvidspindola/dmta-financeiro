@@ -137,6 +137,7 @@ export function TransactionsPage() {
         type: values.type,
         date: values.date,
         goal_id: values.goal_id || null,
+        settled: values.settled,
       }
       if (editing) {
         await transactionsApi.updateTransaction(
