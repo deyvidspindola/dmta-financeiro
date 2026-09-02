@@ -1,45 +1,25 @@
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Pencil, Trash2 } from 'lucide-react'
-import { z } from 'zod'
 import { goalsApi } from '@/api'
+import { GoalCard } from '@/components/goals/GoalCard'
+import { GoalForm } from '@/components/goals/GoalForm'
+import type { GoalFormValues } from '@/components/goals/schemas'
+import {
+  Button,
+  EmptyState,
+  ErrorBanner,
+  LoadingBlock,
+  Modal,
+  PageHeader,
+} from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import {
-  Button,
-  DataTable,
-  EmptyState,
-  ErrorBanner,
-  Field,
-  IconButton,
-  LoadingBlock,
-  Modal,
-  PageHeader,
-  TextInput,
-} from '@/components/ui-legacy'
 import type { Goal } from '@/types/models'
 
-const schema = z.object({
-  name: z.string().min(1, strings.common.required),
-  target_amount: z.coerce.number().positive(),
-  target_date: z.string().optional(),
-  notes: z.string().optional(),
-})
-
-type FormValues = z.infer<typeof schema>
-
-const emptyValues: FormValues = {
-  name: '',
-  target_amount: 0,
-  target_date: '',
-  notes: '',
-}
+const t = strings.goals
 
 export function GoalsPage() {
   const queryClient = useQueryClient()
@@ -56,36 +36,23 @@ export function GoalsPage() {
     enabled: Boolean(listContextId),
   })
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: emptyValues,
-  })
-
   function openCreate() {
     setEditing(null)
-    form.reset(emptyValues)
     setOpen(true)
   }
 
   function openEdit(item: Goal) {
     setEditing(item)
-    form.reset({
-      name: item.name,
-      target_amount: item.target_amount,
-      target_date: item.target_date ?? '',
-      notes: item.notes ?? '',
-    })
     setOpen(true)
   }
 
   function closeModal() {
     setOpen(false)
     setEditing(null)
-    form.reset(emptyValues)
   }
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
+    mutationFn: (values: GoalFormValues) => {
       const payload = {
         name: values.name,
         target_amount: values.target_amount,
@@ -100,9 +67,10 @@ export function GoalsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['goals'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(isEdit ? strings.goals.updated : strings.goals.created)
+      toastSuccess(isEdit ? t.updated : t.created)
       closeModal()
     },
+    onError: (err) => toastError(getErrorMessage(err)),
   })
 
   const deleteMutation = useMutation({
@@ -110,153 +78,67 @@ export function GoalsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['goals'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.goals.deleted)
+      toastSuccess(t.deleted)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
   function handleDelete(goalId: string) {
-    if (!window.confirm(strings.goals.confirmDelete)) return
+    if (!window.confirm(t.confirmDelete)) return
     deleteMutation.mutate(goalId)
   }
 
   return (
-    <div className="stack">
+    <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
-        title={strings.goals.title}
-        description={strings.goals.hint}
+        title={t.title}
+        description={t.hint}
         actions={
           <Button
             onClick={openCreate}
             disabled={!contextId || activeScope === CONSOLIDATED}
           >
-            {strings.goals.create}
+            {t.create}
           </Button>
         }
       />
 
       {activeScope === CONSOLIDATED ? (
-        <ErrorBanner message={strings.goals.needContext} />
+        <ErrorBanner message={t.needContext} />
       ) : null}
 
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
       {isError ? <ErrorBanner message={strings.common.error} /> : null}
 
       {!isLoading && listContextId && data.length === 0 ? (
-        <EmptyState message={strings.goals.empty} />
+        <EmptyState message={t.empty} />
       ) : null}
 
-      {data.length > 0 ? (
-        <DataTable
-          headers={[
-            strings.goals.name,
-            strings.goals.targetAmount,
-            strings.goals.currentAmount,
-            strings.goals.percent,
-            strings.goals.targetDate,
-            strings.goals.status,
-            strings.common.actions,
-          ]}
-        >
-          {data.map((item) => (
-            <tr key={item.id}>
-              <td>{item.name}</td>
-              <td className="mono">{formatMoney(item.target_amount)}</td>
-              <td className="mono">{formatMoney(item.current_amount)}</td>
-              <td>
-                <div className="progress">
-                  <div
-                    className="progress__bar"
-                    style={{
-                      width: `${Math.min(100, Math.max(0, item.percent_complete))}%`,
-                    }}
-                  />
-                </div>
-                <span className="muted small">{item.percent_complete}%</span>
-              </td>
-              <td>
-                {item.target_date ? formatDate(item.target_date) : '—'}
-              </td>
-              <td>
-                <span className={`status-badge status-badge--${item.status}`}>
-                  {strings.goals.statuses[item.status]}
-                </span>
-              </td>
-              <td className="actions-cell">
-                <IconButton
-                  label={strings.common.edit}
-                  icon={Pencil}
-                  onClick={() => openEdit(item)}
-                  disabled={!contextId}
-                />
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => handleDelete(item.id)}
-                  disabled={deleteMutation.isPending || !contextId}
-                />
-              </td>
-            </tr>
-          ))}
-        </DataTable>
-      ) : null}
+      <div className="grid gap-4">
+        {data.map((item) => (
+          <GoalCard
+            key={item.id}
+            goal={item}
+            onEdit={() => openEdit(item)}
+            onDelete={() => handleDelete(item.id)}
+            canMutate={Boolean(contextId)}
+            deletePending={deleteMutation.isPending}
+          />
+        ))}
+      </div>
 
       {open && contextId ? (
         <Modal
-          title={isEdit ? strings.goals.edit : strings.goals.create}
+          title={isEdit ? t.edit : t.create}
           onClose={closeModal}
         >
-          <form
-            className="form-grid"
-            onSubmit={form.handleSubmit((values) =>
-              mutation.mutateAsync(values),
-            )}
-          >
-            <Field
-              label={strings.goals.name}
-              error={form.formState.errors.name?.message}
-            >
-              <TextInput {...form.register('name')} />
-            </Field>
-            <Field
-              label={strings.goals.targetAmount}
-              error={form.formState.errors.target_amount?.message}
-            >
-              <TextInput
-                type="number"
-                step="0.01"
-                {...form.register('target_amount')}
-              />
-            </Field>
-            {isEdit && editing ? (
-              <>
-                <p className="muted small">
-                  {strings.goals.currentAmount}:{' '}
-                  {formatMoney(editing.current_amount)} ·{' '}
-                  {editing.percent_complete}% ·{' '}
-                  {strings.goals.statuses[editing.status]}
-                </p>
-              </>
-            ) : null}
-            <Field label={strings.goals.targetDate}>
-              <TextInput type="date" {...form.register('target_date')} />
-            </Field>
-            <Field label={strings.goals.notes}>
-              <TextInput {...form.register('notes')} />
-            </Field>
-            {mutation.isError ? (
-              <ErrorBanner message={getErrorMessage(mutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={closeModal}>
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {strings.common.save}
-              </Button>
-            </div>
-          </form>
+          <GoalForm
+            editing={editing}
+            isPending={mutation.isPending}
+            error={mutation.isError ? getErrorMessage(mutation.error) : null}
+            onSubmit={(values) => mutation.mutate(values)}
+            onCancel={closeModal}
+          />
         </Modal>
       ) : null}
     </div>

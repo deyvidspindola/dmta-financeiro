@@ -67,6 +67,15 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   agrupado por dia com saldo corrente (`AccountStatement`, filtro `account_id`
   server-side). Componentes em `components/accounts/`. Rotas `/accounts` e
   `/accounts/:id` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
+- **F3d — Planejamento (esta rodada, Cursor):** `BudgetsPage`, `GoalsPage`,
+  `SimulatorPage` e `DebtsPage` migradas para o design system. Orçamentos com
+  cards (`CategoryChip` + `ProgressBar`), resumo do mês e edição de teto.
+  Metas com `ProgressRing` e projeção estimada. Simulador com semáforo visual,
+  `Stat`s, `ProgressBar` de comprometimento e `BarChart` de impacto mensal
+  (série montada no cliente). Dívidas com resumo, `Badge` de direção/status,
+  `DataTable` e modal de quitação com conta opcional. Componentes em
+  `components/budgets|goals|simulator|debts/`. Rotas `/budgets`, `/goals`,
+  `/simulator`, `/debts` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
 
 ## Feito
 

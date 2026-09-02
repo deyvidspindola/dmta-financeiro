@@ -60,6 +60,10 @@ const MIGRATED_ROUTE_PATTERNS = [
   '/novo',
   '/accounts',
   '/accounts/:id',
+  '/budgets',
+  '/goals',
+  '/simulator',
+  '/debts',
 ]
 
 function useIsMigratedRoute(): boolean {

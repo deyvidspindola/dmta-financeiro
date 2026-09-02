@@ -1,50 +1,38 @@
-import { useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Check, Pencil, Trash2 } from 'lucide-react'
-import { z } from 'zod'
-import { debtsApi } from '@/api'
+import { accountsApi, debtsApi } from '@/api'
+import { DebtForm } from '@/components/debts/DebtForm'
+import { SettleDebtForm } from '@/components/debts/SettleDebtForm'
+import type { DebtFormValues } from '@/components/debts/schemas'
+import {
+  directionTone,
+  summarizeDebts,
+} from '@/components/debts/schemas'
+import {
+  Badge,
+  Button,
+  DataTable,
+  EmptyState,
+  ErrorBanner,
+  IconButton,
+  LoadingBlock,
+  Modal,
+  Money,
+  PageHeader,
+  Stat,
+  Td,
+  Tr,
+} from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import {
-  Button,
-  DataTable,
-  EmptyState,
-  ErrorBanner,
-  Field,
-  IconButton,
-  LoadingBlock,
-  Modal,
-  PageHeader,
-  TextInput,
-  TextSelect,
-} from '@/components/ui-legacy'
 import type { Debt } from '@/types/models'
 
-const schema = z.object({
-  description: z.string().min(1, strings.common.required),
-  amount: z.coerce.number().positive(),
-  direction: z.enum(['i_owe', 'owed_to_me']),
-  counterparty: z.string().optional(),
-  due_date: z.string().optional(),
-  notes: z.string().optional(),
-})
-
-type FormValues = z.infer<typeof schema>
-
-const emptyValues: FormValues = {
-  description: '',
-  amount: 0,
-  direction: 'i_owe',
-  counterparty: '',
-  due_date: '',
-  notes: '',
-}
+const t = strings.debts
 
 export function DebtsPage() {
   const queryClient = useQueryClient()
@@ -53,6 +41,7 @@ export function DebtsPage() {
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
   const [editing, setEditing] = useState<Debt | null>(null)
   const [open, setOpen] = useState(false)
+  const [settling, setSettling] = useState<Debt | null>(null)
   const isEdit = editing !== null
 
   const { data = [], isLoading, isError } = useQuery({
@@ -61,38 +50,31 @@ export function DebtsPage() {
     enabled: Boolean(listContextId),
   })
 
-  const form = useForm<FormValues>({
-    resolver: zodResolver(schema),
-    defaultValues: emptyValues,
+  const accountsQuery = useQuery({
+    queryKey: ['accounts', listContextId],
+    queryFn: () => accountsApi.listAccounts(listContextId!),
+    enabled: Boolean(listContextId) && settling !== null,
   })
+
+  const summary = useMemo(() => summarizeDebts(data), [data])
 
   function openCreate() {
     setEditing(null)
-    form.reset(emptyValues)
     setOpen(true)
   }
 
   function openEdit(item: Debt) {
     setEditing(item)
-    form.reset({
-      description: item.description,
-      amount: item.amount,
-      direction: item.direction,
-      counterparty: item.counterparty ?? '',
-      due_date: item.due_date ?? '',
-      notes: item.notes ?? '',
-    })
     setOpen(true)
   }
 
   function closeModal() {
     setOpen(false)
     setEditing(null)
-    form.reset(emptyValues)
   }
 
   const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
+    mutationFn: (values: DebtFormValues) => {
       if (isEdit && editing) {
         return debtsApi.updateDebt(contextId!, editing.id, {
           description: values.description,
@@ -114,17 +96,22 @@ export function DebtsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['debts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(isEdit ? strings.debts.updated : strings.debts.created)
+      toastSuccess(isEdit ? t.updated : t.created)
       closeModal()
     },
+    onError: (err) => toastError(getErrorMessage(err)),
   })
 
   const settleMutation = useMutation({
-    mutationFn: (debtId: string) => debtsApi.settleDebt(contextId!, debtId),
+    mutationFn: (values: { debtId: string; accountId: string | null }) =>
+      debtsApi.settleDebt(contextId!, values.debtId, {
+        account_id: values.accountId,
+      }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['debts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.debts.settled)
+      toastSuccess(t.settled)
+      setSettling(null)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -134,161 +121,153 @@ export function DebtsPage() {
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['debts'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(strings.debts.deleted)
+      toastSuccess(t.deleted)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleSettle(debtId: string) {
-    if (!window.confirm(strings.debts.confirmSettle)) return
-    settleMutation.mutate(debtId)
-  }
-
   function handleDelete(debtId: string) {
-    if (!window.confirm(strings.debts.confirmDelete)) return
+    if (!window.confirm(t.confirmDelete)) return
     deleteMutation.mutate(debtId)
   }
 
   return (
-    <div className="stack">
+    <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
-        title={strings.debts.title}
-        description={strings.debts.hint}
+        title={t.title}
+        description={t.hint}
         actions={
           <Button
             onClick={openCreate}
             disabled={!contextId || activeScope === CONSOLIDATED}
           >
-            {strings.debts.create}
+            {t.create}
           </Button>
         }
       />
 
       {activeScope === CONSOLIDATED ? (
-        <ErrorBanner message={strings.debts.needContext} />
+        <ErrorBanner message={t.needContext} />
       ) : null}
 
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
       {isError ? <ErrorBanner message={strings.common.error} /> : null}
 
+      {!isLoading && data.some((d) => d.status === 'pending') ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Stat
+            label={t.totalOwe}
+            value={<Money amount={summary.oweTotal} size="lg" />}
+            tone="negative"
+          />
+          <Stat
+            label={t.totalOwed}
+            value={<Money amount={summary.owedTotal} size="lg" />}
+            tone="positive"
+          />
+        </div>
+      ) : null}
+
       {!isLoading && listContextId && data.length === 0 ? (
-        <EmptyState message={strings.debts.empty} />
+        <EmptyState message={t.empty} />
       ) : null}
 
       {data.length > 0 ? (
         <DataTable
           headers={[
-            strings.debts.description,
-            strings.debts.counterparty,
-            strings.debts.amount,
-            strings.debts.direction,
-            strings.debts.dueDate,
-            strings.debts.status,
+            t.description,
+            t.counterparty,
+            { label: t.amount, right: true },
+            t.direction,
+            t.dueDate,
+            t.status,
             strings.common.actions,
           ]}
         >
           {data.map((item) => (
-            <tr key={item.id}>
-              <td>{item.description}</td>
-              <td>{item.counterparty ?? '—'}</td>
-              <td className="mono">{formatMoney(item.amount)}</td>
-              <td>{strings.debts.directions[item.direction]}</td>
-              <td>{item.due_date ? formatDate(item.due_date) : '—'}</td>
-              <td>{strings.debts.statuses[item.status]}</td>
-              <td className="actions-cell">
-                {item.status === 'pending' ? (
-                  <>
-                    <IconButton
-                      label={strings.debts.settle}
-                      icon={Check}
-                      onClick={() => handleSettle(item.id)}
-                      disabled={!contextId || settleMutation.isPending}
-                    />
-                    <IconButton
-                      label={strings.common.edit}
-                      icon={Pencil}
-                      onClick={() => openEdit(item)}
-                      disabled={!contextId}
-                    />
-                  </>
-                ) : null}
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => handleDelete(item.id)}
-                  disabled={deleteMutation.isPending || !contextId}
-                />
-              </td>
-            </tr>
+            <Tr key={item.id}>
+              <Td>{item.description}</Td>
+              <Td>{item.counterparty ?? '—'}</Td>
+              <Td right>{formatMoney(item.amount)}</Td>
+              <Td>
+                <Badge tone={directionTone(item.direction)} dot>
+                  {t.directions[item.direction]}
+                </Badge>
+              </Td>
+              <Td>{item.due_date ? formatDate(item.due_date) : '—'}</Td>
+              <Td>
+                <Badge
+                  tone={item.status === 'pending' ? 'warning' : 'neutral'}
+                  dot
+                >
+                  {t.statuses[item.status]}
+                </Badge>
+              </Td>
+              <Td>
+                <div className="flex justify-end gap-0.5">
+                  {item.status === 'pending' ? (
+                    <>
+                      <IconButton
+                        label={t.settle}
+                        icon={Check}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setSettling(item)}
+                        disabled={!contextId || settleMutation.isPending}
+                      />
+                      <IconButton
+                        label={strings.common.edit}
+                        icon={Pencil}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => openEdit(item)}
+                        disabled={!contextId}
+                      />
+                    </>
+                  ) : null}
+                  <IconButton
+                    label={strings.common.delete}
+                    icon={Trash2}
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDelete(item.id)}
+                    disabled={deleteMutation.isPending || !contextId}
+                  />
+                </div>
+              </Td>
+            </Tr>
           ))}
         </DataTable>
       ) : null}
 
       {open && contextId ? (
         <Modal
-          title={isEdit ? strings.debts.edit : strings.debts.create}
+          title={isEdit ? t.edit : t.create}
           onClose={closeModal}
         >
-          <form
-            className="form-grid"
-            onSubmit={form.handleSubmit((values) =>
-              mutation.mutateAsync(values),
-            )}
-          >
-            <Field
-              label={strings.debts.description}
-              error={form.formState.errors.description?.message}
-            >
-              <TextInput {...form.register('description')} />
-            </Field>
-            <Field
-              label={strings.debts.amount}
-              error={form.formState.errors.amount?.message}
-            >
-              <TextInput
-                type="number"
-                step="0.01"
-                {...form.register('amount')}
-              />
-            </Field>
-            {!isEdit ? (
-              <Field label={strings.debts.direction}>
-                <TextSelect {...form.register('direction')}>
-                  <option value="i_owe">
-                    {strings.debts.directions.i_owe}
-                  </option>
-                  <option value="owed_to_me">
-                    {strings.debts.directions.owed_to_me}
-                  </option>
-                </TextSelect>
-              </Field>
-            ) : (
-              <p className="muted small">
-                {strings.debts.directions[editing.direction]}
-              </p>
-            )}
-            <Field label={strings.debts.counterparty}>
-              <TextInput {...form.register('counterparty')} />
-            </Field>
-            <Field label={strings.debts.dueDate}>
-              <TextInput type="date" {...form.register('due_date')} />
-            </Field>
-            <Field label={strings.debts.notes}>
-              <TextInput {...form.register('notes')} />
-            </Field>
-            {mutation.isError ? (
-              <ErrorBanner message={getErrorMessage(mutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button type="button" variant="ghost" onClick={closeModal}>
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={mutation.isPending}>
-                {strings.common.save}
-              </Button>
-            </div>
-          </form>
+          <DebtForm
+            editing={editing}
+            isPending={mutation.isPending}
+            error={mutation.isError ? getErrorMessage(mutation.error) : null}
+            onSubmit={(values) => mutation.mutate(values)}
+            onCancel={closeModal}
+          />
+        </Modal>
+      ) : null}
+
+      {settling && contextId ? (
+        <Modal title={t.settle} onClose={() => setSettling(null)}>
+          <SettleDebtForm
+            accounts={accountsQuery.data ?? []}
+            isPending={settleMutation.isPending}
+            onSubmit={(accountId) =>
+              settleMutation.mutate({
+                debtId: settling.id,
+                accountId,
+              })
+            }
+            onCancel={() => setSettling(null)}
+          />
         </Modal>
       ) : null}
     </div>
