@@ -1,0 +1,21 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="coin" x1="96" y1="72" x2="416" y2="440" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#34d399"/>
+      <stop offset="0.55" stop-color="#10b981"/>
+      <stop offset="1" stop-color="#047857"/>
+    </linearGradient>
+  </defs>
+  <!-- moeda -->
+  <circle cx="256" cy="256" r="216" fill="url(#coin)"/>
+  <circle cx="256" cy="256" r="216" fill="none" stroke="#ffffff" stroke-opacity="0.22" stroke-width="14"/>
+  <!-- seta para cima (crescimento) -->
+  <path
+    d="M256 132
+       L372 268
+       a20 20 0 0 1 -15.2 33 H302 v96
+       a24 24 0 0 1 -24 24 h-44
+       a24 24 0 0 1 -24 -24 v-96 H155.2
+       a20 20 0 0 1 -15.2 -33 Z"
+    fill="#ffffff"/>
+</svg>
