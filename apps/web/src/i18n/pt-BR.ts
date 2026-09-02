@@ -267,7 +267,11 @@ export const strings = {
     usedLabel: 'usado',
     currentInvoice: 'Fatura atual',
     newPurchase: 'Nova compra',
+    editPurchase: 'Editar compra',
     purchaseSaved: 'Compra lançada.',
+    purchaseUpdated: 'Compra atualizada.',
+    editPurchaseBlocked:
+      'Compra parcelada ou em fatura paga não pode ser editada.',
     purchaseDate: 'Data da compra',
     installments: 'Parcelas',
     pay: 'Pagar',

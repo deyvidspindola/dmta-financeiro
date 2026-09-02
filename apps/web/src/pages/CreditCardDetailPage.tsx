@@ -16,6 +16,7 @@ import {
   DataTable,
   EmptyState,
   ErrorBanner,
+  IconButton,
   LoadingBlock,
   Money,
   ProgressBar,
@@ -33,6 +34,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { formatDate, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/cn'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import type { CardPurchase } from '@/types/models'
 
 const t = strings.creditCards
 
@@ -40,6 +42,13 @@ const STATUS_LABEL: Record<string, string> = {
   open: t.open,
   closed: t.closed,
   paid: t.paid,
+}
+
+function isPurchaseEditable(
+  purchase: CardPurchase,
+  invoiceStatus: string | undefined,
+): boolean {
+  return purchase.installment_number == null && invoiceStatus !== 'paid'
 }
 
 export function CreditCardDetailPage() {
@@ -55,6 +64,7 @@ export function CreditCardDetailPage() {
   )
   const [editModal, setEditModal] = useState(false)
   const [purchaseModal, setPurchaseModal] = useState(false)
+  const [editingPurchase, setEditingPurchase] = useState<CardPurchase | null>(null)
   const [payInvoiceId, setPayInvoiceId] = useState<string | null>(null)
 
   const urlContextId =
@@ -123,6 +133,7 @@ export function CreditCardDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ['card-purchases'] })
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     void queryClient.invalidateQueries({ queryKey: ['accounts'] })
+    void queryClient.invalidateQueries({ queryKey: ['budgets'] })
   }
 
   const selectedIdx = timeline.findIndex(
@@ -326,26 +337,60 @@ export function CreditCardDetailPage() {
                     strings.quickAdd.date,
                     strings.quickAdd.description,
                     { label: strings.quickAdd.amount, right: true },
+                    ...(canMutate
+                      ? [{ label: strings.common.actions, right: true }]
+                      : []),
                   ]}
                 >
-                  {(purchases.data ?? []).map((purchase) => (
-                    <Tr key={purchase.id}>
-                      <Td className="whitespace-nowrap text-fg-muted">
-                        {formatDate(purchase.occurred_at)}
-                      </Td>
-                      <Td>
-                        {purchase.description}
-                        {purchase.installment_total && purchase.installment_total > 1
-                          ? ` (${purchase.installment_number}/${purchase.installment_total})`
-                          : ''}
-                      </Td>
-                      <Td right>
-                        <span className="font-semibold tabular-nums">
-                          {formatMoney(purchase.amount)}
-                        </span>
-                      </Td>
-                    </Tr>
-                  ))}
+                  {(purchases.data ?? []).map((purchase) => {
+                    const editable = isPurchaseEditable(
+                      purchase,
+                      realInvoice?.status,
+                    )
+                    return (
+                      <Tr key={purchase.id}>
+                        <Td className="whitespace-nowrap text-fg-muted">
+                          {formatDate(purchase.occurred_at)}
+                        </Td>
+                        <Td>
+                          {purchase.description}
+                          {purchase.installment_total &&
+                          purchase.installment_total > 1
+                            ? ` (${purchase.installment_number}/${purchase.installment_total})`
+                            : ''}
+                        </Td>
+                        <Td right>
+                          <span className="font-semibold tabular-nums">
+                            {formatMoney(purchase.amount)}
+                          </span>
+                        </Td>
+                        {canMutate ? (
+                          <Td right>
+                            {editable ? (
+                              <IconButton
+                                label={strings.common.edit}
+                                icon={Pencil}
+                                size="sm"
+                                onClick={() => setEditingPurchase(purchase)}
+                              />
+                            ) : (
+                              <span
+                                className="inline-flex"
+                                title={t.editPurchaseBlocked}
+                              >
+                                <IconButton
+                                  label={t.editPurchaseBlocked}
+                                  icon={Pencil}
+                                  size="sm"
+                                  disabled
+                                />
+                              </span>
+                            )}
+                          </Td>
+                        ) : null}
+                      </Tr>
+                    )
+                  })}
                 </DataTable>
               )
             ) : (
@@ -376,6 +421,20 @@ export function CreditCardDetailPage() {
           onSaved={() => {
             invalidate()
             setPurchaseModal(false)
+          }}
+        />
+      ) : null}
+
+      {editingPurchase && writableContextId ? (
+        <PurchaseModal
+          contextId={writableContextId}
+          cards={[card]}
+          defaultCardId={card.id}
+          editing={editingPurchase}
+          onClose={() => setEditingPurchase(null)}
+          onSaved={() => {
+            invalidate()
+            setEditingPurchase(null)
           }}
         />
       ) : null}

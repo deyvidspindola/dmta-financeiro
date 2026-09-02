@@ -177,6 +177,36 @@ export async function createCardPurchase(
   )
 }
 
+export type UpdateCardPurchaseInput = {
+  description: string
+  amount: number
+  occurred_at: string
+  category_id?: string | null
+}
+
+export async function updateCardPurchase(
+  contextId: string,
+  creditCardId: string,
+  purchaseId: string,
+  input: UpdateCardPurchaseInput,
+): Promise<CardPurchase> {
+  const updated = unwrapData(
+    await http.patch<
+      | Parameters<typeof mapCardPurchase>[1]
+      | { data: Parameters<typeof mapCardPurchase>[1] }
+    >(
+      `/contexts/${contextId}/credit-cards/${creditCardId}/purchases/${asApiId(purchaseId)}`,
+      {
+        description: input.description,
+        amount: input.amount,
+        occurred_at: input.occurred_at,
+        category_id: input.category_id ? asApiId(input.category_id) : null,
+      },
+    ),
+  )
+  return mapCardPurchase(creditCardId, updated)
+}
+
 export async function deleteCardPurchase(
   contextId: string,
   creditCardId: string,
