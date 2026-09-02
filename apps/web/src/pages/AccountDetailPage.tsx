@@ -1,36 +1,39 @@
-import { useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Pencil } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { accountsApi, consolidatedApi, transactionsApi } from '@/api'
+import { AccountForm } from '@/components/accounts/AccountForm'
+import { AccountStatement } from '@/components/accounts/AccountStatement'
+import type { AccountFormValues } from '@/components/accounts/schemas'
 import {
-  accountsApi,
-  consolidatedApi,
-  transactionsApi,
-} from '@/api'
-import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
-import { getErrorMessage } from '@/lib/errors'
-import {
-  transactionBalanceEffect,
-  transactionDirection,
-} from '@/lib/transactionDisplay'
-import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import {
-  EmptyState,
+  Badge,
+  Button,
   ErrorBanner,
   LoadingBlock,
-  MoneyValue,
-  PageHeader,
+  Modal,
+  Money,
   Panel,
-} from '@/components/ui-legacy'
+} from '@/components/ui'
+import { useWritableContextId } from '@/hooks/useWritableContextId'
+import { strings } from '@/i18n/pt-BR'
+import { getErrorMessage } from '@/lib/errors'
+import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
+
+const t = strings.accountDetail
+const ta = strings.accounts
 
 export function AccountDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
+  const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
+  const contextId = useWritableContextId()
   const isConsolidated = activeScope === CONSOLIDATED
+  const [editOpen, setEditOpen] = useState(false)
 
-  const contextId =
+  const urlContextId =
     searchParams.get('context') ??
     (activeScope !== CONSOLIDATED ? activeScope : null)
 
@@ -45,35 +48,36 @@ export function AccountDetailPage() {
 
   const account = useMemo(() => {
     const rows = accountsQuery.data ?? []
-    if (contextId) {
-      return rows.find((a) => a.id === id && a.context_id === contextId)
+    if (urlContextId) {
+      return rows.find((a) => a.id === id && a.context_id === urlContextId)
     }
     return rows.find((a) => a.id === id)
-  }, [accountsQuery.data, contextId, id])
+  }, [accountsQuery.data, urlContextId, id])
 
-  const txContextId = account?.context_id ?? contextId
+  const txContextId = account?.context_id ?? urlContextId
 
   const transactionsQuery = useQuery({
-    queryKey: ['transactions', txContextId],
-    queryFn: () => transactionsApi.listTransactions(txContextId!),
-    enabled: Boolean(txContextId && account),
+    queryKey: ['transactions', txContextId, id],
+    queryFn: () =>
+      transactionsApi.listTransactions(txContextId!, { account_id: id }),
+    enabled: Boolean(txContextId && account && id),
   })
 
-  const statement = useMemo(() => {
-    if (!account) return []
-    const rows = (transactionsQuery.data ?? []).filter(
-      (tx) => tx.account_id === account.id,
-    )
-    const sorted = [...rows].sort(
-      (a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id),
-    )
-    let running = account.balance
-    return sorted.map((tx) => {
-      const row = { tx, runningBalance: running }
-      running -= transactionBalanceEffect(tx)
-      return row
-    })
-  }, [account, transactionsQuery.data])
+  const mutation = useMutation({
+    mutationFn: (values: AccountFormValues) =>
+      accountsApi.updateAccount(contextId!, account!.id, {
+        name: values.name,
+        bank_name: values.bank_name || null,
+        type: values.type,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(ta.updated)
+      setEditOpen(false)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
 
   if (accountsQuery.isLoading) {
     return <LoadingBlock label={strings.common.loading} />
@@ -81,11 +85,14 @@ export function AccountDetailPage() {
 
   if (accountsQuery.isError) {
     return (
-      <div className="stack">
-        <PageHeader title={strings.accountDetail.title} />
+      <div className="space-y-4 bg-canvas text-fg">
         <ErrorBanner message={getErrorMessage(accountsQuery.error)} />
-        <Link to="/accounts" className="back-link">
-          <ArrowLeft size={16} aria-hidden /> {strings.accountDetail.back}
+        <Link
+          to="/accounts"
+          className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          {t.back}
         </Link>
       </div>
     )
@@ -93,89 +100,98 @@ export function AccountDetailPage() {
 
   if (!account) {
     return (
-      <div className="stack">
-        <PageHeader title={strings.accountDetail.title} />
-        <ErrorBanner message={strings.accountDetail.notFound} />
-        <Link to="/accounts" className="back-link">
-          <ArrowLeft size={16} aria-hidden /> {strings.accountDetail.back}
+      <div className="space-y-4 bg-canvas text-fg">
+        <ErrorBanner message={t.notFound} />
+        <Link
+          to="/accounts"
+          className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          {t.back}
         </Link>
       </div>
     )
   }
 
+  const subtitle = [
+    account.bank_name,
+    ta.types[account.type],
+  ]
+    .filter(Boolean)
+    .join(' · ')
+
   return (
-    <div className="stack">
-      <PageHeader title={account.name} description={strings.accountDetail.title} />
-
-      <Link to="/accounts" className="back-link">
-        <ArrowLeft size={16} aria-hidden /> {strings.accountDetail.back}
-      </Link>
-
-      <Panel>
-        <div className="detail-grid">
-          <div className="detail-field">
-            <span className="detail-field__label muted">
-              {strings.accounts.bankName}
-            </span>
-            <div className="detail-field__value">
-              {account.bank_name ?? '—'}
-            </div>
-          </div>
-          <div className="detail-field">
-            <span className="detail-field__label muted">
-              {strings.accounts.type}
-            </span>
-            <div className="detail-field__value">
-              {strings.accounts.types[account.type]}
-            </div>
-          </div>
-          <div className="detail-field">
-            <span className="detail-field__label muted">
-              {strings.accountDetail.currentBalance}
-            </span>
-            <div className="detail-field__value mono">
-              {formatMoney(account.balance)}
-            </div>
-          </div>
+    <div className="space-y-6 bg-canvas text-fg">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          to="/accounts"
+          className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          {t.back}
+        </Link>
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-0.5 px-2 text-center">
+          <h1 className="truncate font-display text-lg font-bold sm:text-xl">
+            {account.name}
+          </h1>
+          {subtitle ? (
+            <p className="truncate text-sm text-fg-muted">{subtitle}</p>
+          ) : null}
         </div>
-      </Panel>
+        {!isConsolidated && contextId ? (
+          <Button variant="ghost" size="sm" onClick={() => setEditOpen(true)}>
+            <Pencil size={16} />
+            <span className="hidden sm:inline">{strings.common.edit}</span>
+          </Button>
+        ) : (
+          <div className="w-10" aria-hidden />
+        )}
+      </div>
 
-      <Panel title={strings.accountDetail.statement}>
+      <div className="flex flex-col items-center gap-1 border-y border-line py-6">
+        <span className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
+          {t.currentBalance}
+        </span>
+        <Money amount={account.balance} size="xl" />
+        {isConsolidated && account.context ? (
+          <Badge tone="accent" className="mt-2">
+            {account.context.name}
+          </Badge>
+        ) : null}
+      </div>
+
+      <Panel title={t.statement}>
         {transactionsQuery.isLoading ? (
           <LoadingBlock label={strings.common.loading} />
         ) : null}
         {transactionsQuery.isError ? (
           <ErrorBanner message={getErrorMessage(transactionsQuery.error)} />
         ) : null}
-        {statement.length === 0 ? (
-          <EmptyState message={strings.accountDetail.emptyStatement} />
-        ) : (
-          <ul className="dash-list">
-            {statement.map(({ tx, runningBalance }) => (
-              <li key={tx.id}>
-                <Link
-                  to={`/transactions/${tx.id}?context=${tx.context_id}`}
-                  className="dash-list__item"
-                >
-                  <span className="dash-list__main">
-                    <strong>{tx.description}</strong>
-                    <span className="muted small">{formatDate(tx.date)}</span>
-                  </span>
-                  <span className="dash-list__meta">
-                    <MoneyValue
-                      amount={tx.amount}
-                      direction={transactionDirection(tx)}
-                    />
-                    <span className="muted small mono">
-                      {formatMoney(runningBalance)}
-                    </span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+        {!transactionsQuery.isLoading && !transactionsQuery.isError ? (
+          <AccountStatement
+            account={account}
+            transactions={transactionsQuery.data ?? []}
+          />
+        ) : null}
       </Panel>
+
+      {editOpen && contextId ? (
+        <Modal title={ta.edit} onClose={() => setEditOpen(false)}>
+          <AccountForm
+            isEdit
+            initialValues={{
+              name: account.name,
+              bank_name: account.bank_name ?? '',
+              type: account.type,
+              balance: account.balance,
+            }}
+            isPending={mutation.isPending}
+            error={mutation.isError ? getErrorMessage(mutation.error) : null}
+            onSubmit={(values) => mutation.mutate(values)}
+            onCancel={() => setEditOpen(false)}
+          />
+        </Modal>
+      ) : null}
     </div>
   )
 }

@@ -58,6 +58,8 @@ const MIGRATED_ROUTE_PATTERNS = [
   '/transactions',
   '/transactions/:id',
   '/novo',
+  '/accounts',
+  '/accounts/:id',
 ]
 
 function useIsMigratedRoute(): boolean {

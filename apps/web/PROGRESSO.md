@@ -60,6 +60,13 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   mobile (modal). Forms extraídos em `components/transactions/` (`TransactionForm`,
   `MoveTransactionForm`, `TransferForm`). Rotas `/transactions`, `/transactions/:id`
   e `/novo` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
+- **F3c — Contas (esta rodada, Cursor):** `AccountsPage` e `AccountDetailPage`
+  migradas para o design system — grade de `AccountCard` clicáveis com saldo em
+  destaque (`Money`), saldo total no topo (`Stat`), modal de criar/editar com
+  `AccountForm`. Detalhe com header voltar/nome/editar, saldo `xl`, extrato
+  agrupado por dia com saldo corrente (`AccountStatement`, filtro `account_id`
+  server-side). Componentes em `components/accounts/`. Rotas `/accounts` e
+  `/accounts/:id` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
 
 ## Feito
 
