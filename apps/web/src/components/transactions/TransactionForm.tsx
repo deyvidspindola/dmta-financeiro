@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useQuery } from '@tanstack/react-query'
 import { accountsApi, categoriesApi, goalsApi } from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
+  MoneyInput,
+  SwitchField,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -17,6 +20,7 @@ import {
   type EntryFormValues,
 } from '@/components/transactions/schemas'
 import { strings } from '@/i18n/pt-BR'
+import { cn } from '@/lib/cn'
 
 const t = strings.transactions
 
@@ -86,62 +90,110 @@ export function TransactionForm({
   return (
     <>
       <form
-        className="grid gap-4"
+        className={cn('grid gap-4', !isQuick && 'sm:grid-cols-2')}
         onSubmit={form.handleSubmit(onSubmit)}
       >
         {isQuick ? (
+          <Field label={t.amount} error={form.formState.errors.amount?.message}>
+            <Controller
+              name="amount"
+              control={form.control}
+              render={({ field }) => (
+                <MoneyInput
+                  value={field.value}
+                  onChange={field.onChange}
+                  onBlur={field.onBlur}
+                  name={field.name}
+                  autoFocus
+                  aria-invalid={Boolean(form.formState.errors.amount)}
+                />
+              )}
+            />
+          </Field>
+        ) : null}
+
+        <div className={cn(!isQuick && 'sm:col-span-2')}>
           <Field
-            label={t.amount}
-            error={form.formState.errors.amount?.message}
+            label={t.description}
+            error={form.formState.errors.description?.message}
+            required
           >
             <TextInput
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              autoFocus
-              {...form.register('amount')}
+              maxLength={150}
+              autoFocus={!isQuick}
+              aria-invalid={Boolean(form.formState.errors.description)}
+              {...form.register('description')}
             />
           </Field>
-        ) : null}
-
-        <Field
-          label={t.description}
-          error={form.formState.errors.description?.message}
-        >
-          <TextInput
-            maxLength={150}
-            autoFocus={!isQuick}
-            {...form.register('description')}
-          />
-        </Field>
+        </div>
 
         {!isQuick ? (
-          <Field label={t.amount} error={form.formState.errors.amount?.message}>
-            <TextInput
-              type="number"
-              step="0.01"
-              inputMode="decimal"
-              {...form.register('amount')}
+          <>
+            <Field
+              label={t.amount}
+              error={form.formState.errors.amount?.message}
+              required
+            >
+              <Controller
+                name="amount"
+                control={form.control}
+                render={({ field }) => (
+                  <MoneyInput
+                    value={field.value}
+                    onChange={field.onChange}
+                    onBlur={field.onBlur}
+                    name={field.name}
+                    aria-invalid={Boolean(form.formState.errors.amount)}
+                  />
+                )}
+              />
+            </Field>
+
+            <Field
+              label={t.date}
+              error={form.formState.errors.date?.message}
+              required
+            >
+              <Controller
+                name="date"
+                control={form.control}
+                render={({ field }) => (
+                  <DatePickerField
+                    value={field.value}
+                    onChange={field.onChange}
+                    aria-invalid={Boolean(form.formState.errors.date)}
+                  />
+                )}
+              />
+            </Field>
+
+            <Field label={t.type}>
+              <TextSelect {...form.register('type')}>
+                <option value="expense">{t.types.expense}</option>
+                <option value="income">{t.types.income}</option>
+              </TextSelect>
+            </Field>
+          </>
+        ) : (
+          <Field label={t.date} error={form.formState.errors.date?.message}>
+            <Controller
+              name="date"
+              control={form.control}
+              render={({ field }) => (
+                <DatePickerField
+                  value={field.value}
+                  onChange={field.onChange}
+                  aria-invalid={Boolean(form.formState.errors.date)}
+                />
+              )}
             />
           </Field>
-        ) : null}
-
-        <Field label={t.date} error={form.formState.errors.date?.message}>
-          <TextInput type="date" {...form.register('date')} />
-        </Field>
-
-        {!isQuick ? (
-          <Field label={t.type}>
-            <TextSelect {...form.register('type')}>
-              <option value="expense">{t.types.expense}</option>
-              <option value="income">{t.types.income}</option>
-            </TextSelect>
-          </Field>
-        ) : null}
+        )}
 
         <Field
           label={t.account}
           error={form.formState.errors.account_id?.message}
+          required
         >
           <TextSelect {...form.register('account_id')}>
             <option value="">{strings.common.select}</option>
@@ -153,62 +205,72 @@ export function TransactionForm({
           </TextSelect>
         </Field>
 
-        <Field label={t.category}>
-          <div className="flex gap-2">
-            <TextSelect
-              className="min-w-0 flex-1"
-              {...form.register('category_id', {
-                setValueAs: (v: string) => (v === '' ? null : v),
-              })}
-            >
-              <option value="">
-                {isQuick ? strings.quickAdd.noCategory : strings.common.select}
-              </option>
-              {categories.map((cat) => (
-                <option key={cat.id} value={cat.id}>
-                  {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                </option>
-              ))}
-            </TextSelect>
-            {!isQuick ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setCategoryOpen(true)}
+        <div className={cn(!isQuick && 'sm:col-span-2')}>
+          <Field label={t.category}>
+            <div className="flex gap-2">
+              <TextSelect
+                className="min-w-0 flex-1"
+                {...form.register('category_id', {
+                  setValueAs: (v: string) => (v === '' ? null : v),
+                })}
               >
-                {strings.categories.quickAdd}
-              </Button>
-            ) : null}
-          </div>
-        </Field>
+                <option value="">
+                  {isQuick ? strings.quickAdd.noCategory : strings.common.select}
+                </option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.parent_id ? `↳ ${cat.name}` : cat.name}
+                  </option>
+                ))}
+              </TextSelect>
+              {!isQuick ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setCategoryOpen(true)}
+                >
+                  {strings.categories.quickAdd}
+                </Button>
+              ) : null}
+            </div>
+          </Field>
+        </div>
 
         {showGoal ? (
-          <Field label={t.goal}>
-            <TextSelect
-              {...form.register('goal_id', {
-                setValueAs: (v: string) => (v === '' ? null : v),
-              })}
-            >
-              <option value="">{t.goalNone}</option>
-              {activeGoals.map((goal) => (
-                <option key={goal.id} value={goal.id}>
-                  {goal.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
+          <div className="sm:col-span-2">
+            <Field label={t.goal}>
+              <TextSelect
+                {...form.register('goal_id', {
+                  setValueAs: (v: string) => (v === '' ? null : v),
+                })}
+              >
+                <option value="">{t.goalNone}</option>
+                {activeGoals.map((goal) => (
+                  <option key={goal.id} value={goal.id}>
+                    {goal.name}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+          </div>
         ) : null}
 
         {showRecurring ? (
-          <>
-            <Field label={t.recurring}>
-              <input
-                type="checkbox"
-                className="size-4 rounded border-line text-brand-600 focus:ring-brand-500"
-                {...form.register('is_recurring')}
+          <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Controller
+                name="is_recurring"
+                control={form.control}
+                render={({ field }) => (
+                  <SwitchField
+                    label={t.recurring}
+                    checked={field.value}
+                    onChange={field.onChange}
+                  />
+                )}
               />
-            </Field>
+            </div>
             {isRecurring ? (
               <>
                 <Field label={t.recurringInterval}>
@@ -225,24 +287,46 @@ export function TransactionForm({
                   </TextSelect>
                 </Field>
                 <Field label={t.recurringStart}>
-                  <TextInput type="date" {...form.register('start_date')} />
+                  <Controller
+                    name="start_date"
+                    control={form.control}
+                    render={({ field }) => (
+                      <DatePickerField
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
                 </Field>
                 <Field label={t.recurringEnd}>
-                  <TextInput type="date" {...form.register('end_date')} />
+                  <Controller
+                    name="end_date"
+                    control={form.control}
+                    render={({ field }) => (
+                      <DatePickerField
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    )}
+                  />
                 </Field>
               </>
             ) : null}
-          </>
+          </div>
         ) : null}
 
-        {error ? <ErrorBanner message={error} /> : null}
+        {error ? (
+          <div className={cn(!isQuick && 'sm:col-span-2')}>
+            <ErrorBanner message={error} />
+          </div>
+        ) : null}
 
         <div
-          className={
+          className={cn(
             isQuick
               ? 'flex flex-col gap-2 pt-2'
-              : 'flex justify-end gap-2 pt-2'
-          }
+              : 'flex justify-end gap-2 pt-2 sm:col-span-2',
+          )}
         >
           <Button
             type="button"

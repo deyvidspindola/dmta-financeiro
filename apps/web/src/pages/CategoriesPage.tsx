@@ -11,6 +11,7 @@ import {
   ErrorBanner,
   LoadingBlock,
   PageHeader,
+  useConfirm,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
@@ -22,6 +23,7 @@ import type { Category } from '@/types/models'
 const c = strings.categories
 
 export function CategoriesPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
@@ -67,8 +69,15 @@ export function CategoriesPage() {
     setEditing(null)
   }
 
-  function handleDelete(categoryId: string) {
-    if (!window.confirm(c.confirmDelete)) return
+  async function handleDelete(categoryId: string) {
+    if (
+      !(await confirm({
+        message: c.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(categoryId)
   }
 

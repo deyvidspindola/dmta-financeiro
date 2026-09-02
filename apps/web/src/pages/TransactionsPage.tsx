@@ -292,6 +292,7 @@ export function TransactionsPage() {
       {entryOpen && contextId ? (
         <Modal
           title={editing ? t.edit : t.create}
+          size="xl"
           onClose={() => {
             setEntryOpen(false)
             setEditing(null)

@@ -19,6 +19,7 @@ import {
   PageHeader,
   Td,
   Tr,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
@@ -27,6 +28,7 @@ import { toastError, toastSuccess } from '@/store/toastStore'
 const t = strings.boletoPasswords
 
 export function BoletoPasswordRulesPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const [open, setOpen] = useState(false)
 
@@ -103,8 +105,15 @@ export function BoletoPasswordRulesPage() {
                   label={strings.common.delete}
                   icon={Trash2}
                   variant="danger"
-                  onClick={() => {
-                    if (!window.confirm(t.confirmDelete)) return
+                  onClick={async () => {
+                    if (
+                      !(await confirm({
+                        message: t.confirmDelete,
+                        tone: 'danger',
+                      }))
+                    ) {
+                      return
+                    }
                     deleteMutation.mutate(rule.id)
                   }}
                   disabled={deleteMutation.isPending}

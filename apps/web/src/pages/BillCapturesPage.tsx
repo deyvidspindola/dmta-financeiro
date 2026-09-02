@@ -18,6 +18,7 @@ import {
   LoadingBlock,
   PageHeader,
   TextSelect,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
@@ -30,6 +31,7 @@ const t = strings.billCaptures
 const NOT_WAITING_PASSWORD = 'Esta pendência não está aguardando senha.'
 
 export function BillCapturesPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const contexts = useAuthStore((s) => s.contexts)
   const activeScope = useAuthStore((s) => s.activeScope)
@@ -93,8 +95,16 @@ export function BillCapturesPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleReject(captureId: string) {
-    if (!window.confirm(t.confirmReject)) return
+  async function handleReject(captureId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmReject,
+        tone: 'danger',
+        confirmLabel: strings.common.confirm,
+      }))
+    ) {
+      return
+    }
     rejectMutation.mutate(captureId)
   }
 
