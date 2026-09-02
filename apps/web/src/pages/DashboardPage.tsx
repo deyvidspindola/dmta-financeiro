@@ -59,8 +59,8 @@ export function DashboardPage() {
     : (contexts.find((c) => c.id === activeScope)?.name ?? t.title)
 
   const dashboardQuery = useQuery({
-    queryKey: ['dashboard', activeScope],
-    queryFn: () => dashboardApi.getDashboard(activeScope),
+    queryKey: ['dashboard', activeScope, month],
+    queryFn: () => dashboardApi.getDashboard(activeScope, month),
   })
 
   const evolutionQuery = useQuery({

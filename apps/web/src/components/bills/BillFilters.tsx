@@ -36,20 +36,6 @@ function FilterFields({ state, onChange, contextId }: FilterFieldsProps) {
 
   return (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      <Field label={t.from}>
-        <TextInput
-          type="date"
-          value={state.from}
-          onChange={(e) => onChange({ from: e.target.value })}
-        />
-      </Field>
-      <Field label={t.to}>
-        <TextInput
-          type="date"
-          value={state.to}
-          onChange={(e) => onChange({ to: e.target.value })}
-        />
-      </Field>
       <Field label={t.status}>
         <TextSelect
           value={state.status}

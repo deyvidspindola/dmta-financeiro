@@ -10,6 +10,17 @@ export function isInMonth(isoDate: string, monthKey: string): boolean {
   return isoDate.slice(0, 7) === monthKey
 }
 
+export function lastDayOfMonth(monthKey: string): string {
+  const [year, month] = monthKey.split('-').map(Number)
+  if (!year || !month) return monthKey
+  const last = new Date(year, month, 0).getDate()
+  return `${monthKey}-${String(last).padStart(2, '0')}`
+}
+
+export function monthDateRange(monthKey: string): { from: string; to: string } {
+  return { from: `${monthKey}-01`, to: lastDayOfMonth(monthKey) }
+}
+
 export function formatMonthLabel(monthKey: string): string {
   const [year, month] = monthKey.split('-').map(Number)
   if (!year || !month) return monthKey

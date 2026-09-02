@@ -20,18 +20,21 @@ type ApiDashboardSlice = {
 
 export async function getDashboard(
   contextId: string | 'consolidated',
+  month?: string,
 ): Promise<DashboardSummary> {
-  if (useMocks) return mockApi.getDashboard(contextId)
+  if (useMocks) return mockApi.getDashboard(contextId, month)
+
+  const monthQuery = month ? `?month=${encodeURIComponent(month)}` : ''
 
   if (contextId === 'consolidated') {
     const raw = await http.get<{ totals: ApiDashboardSlice }>(
-      '/dashboard/consolidated',
+      `/dashboard/consolidated${monthQuery}`,
     )
     return mapConsolidatedDashboard(raw)
   }
 
   const raw = await http.get<ApiDashboardSlice>(
-    `/contexts/${contextId}/dashboard`,
+    `/contexts/${contextId}/dashboard${monthQuery}`,
   )
   return mapDashboard(contextId, contextId, raw)
 }

@@ -26,6 +26,7 @@ import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
+import { useMonthStore } from '@/store/monthStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import type { Bill } from '@/types/models'
 
@@ -35,6 +36,7 @@ export function BillsPage() {
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
+  const month = useMonthStore((s) => s.month)
   const isConsolidated = activeScope === CONSOLIDATED
 
   const { state: filterState, debouncedSearch, patch, clear } = useBillFilters()
@@ -47,11 +49,11 @@ export function BillsPage() {
 
   const apiFilters = useMemo(() => {
     if (isConsolidated) return undefined
-    return toApiBillFilters(filterState, debouncedSearch)
-  }, [filterState, debouncedSearch, isConsolidated])
+    return toApiBillFilters(filterState, debouncedSearch, month)
+  }, [filterState, debouncedSearch, isConsolidated, month])
 
   const listQuery = useQuery({
-    queryKey: ['bills', activeScope, apiFilters],
+    queryKey: ['bills', activeScope, month, apiFilters],
     queryFn: () =>
       isConsolidated
         ? consolidatedApi.listConsolidatedBills()
@@ -62,8 +64,8 @@ export function BillsPage() {
   const data = useMemo(() => {
     const rows = listQuery.data ?? []
     if (!isConsolidated) return rows
-    return applyClientBillFilters(rows, filterState, debouncedSearch)
-  }, [listQuery.data, isConsolidated, filterState, debouncedSearch])
+    return applyClientBillFilters(rows, filterState, debouncedSearch, month)
+  }, [listQuery.data, isConsolidated, filterState, debouncedSearch, month])
 
   const categoriesQuery = useQuery({
     queryKey: ['categories', contextId],
