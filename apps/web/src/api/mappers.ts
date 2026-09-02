@@ -32,6 +32,7 @@ import type {
   RecurringTransaction,
   SimulationStatus,
   StatementEntry,
+  StatementEntryStatus,
   TransferDetails,
   User,
 } from '@/types/models'
@@ -315,6 +316,10 @@ export function toUpdateBillBody(payload: {
   }
 }
 
+function mapStatementStatus(raw: unknown): StatementEntryStatus {
+  return raw === 'pending' ? 'pending' : 'settled'
+}
+
 export function mapTransaction(
   contextId: string,
   raw: {
@@ -324,6 +329,8 @@ export function mapTransaction(
     description: string
     amount: number
     type: EntryType
+    status?: StatementEntryStatus | string
+    settled_at?: string | null
     occurred_at?: string
     date?: string
     origin?: CaptureOrigin
@@ -357,6 +364,8 @@ export function mapTransaction(
     description: raw.description,
     amount: Number(raw.amount),
     type: raw.type,
+    status: mapStatementStatus(raw.status),
+    settled_at: raw.settled_at ?? null,
     date: raw.occurred_at ?? raw.date ?? '',
     origin: mapOrigin(raw.origin),
     bill_id:
@@ -421,6 +430,7 @@ export function toCreateTransactionBody(payload: {
   type: MoneyDirection
   date: string
   goal_id?: string | null
+  settled?: boolean
 }): {
   account_id: number
   category_id: number | null
@@ -429,6 +439,7 @@ export function toCreateTransactionBody(payload: {
   type: MoneyDirection
   occurred_at: string
   goal_id?: number
+  settled?: boolean
 } {
   return {
     account_id: asApiId(payload.account_id),
@@ -438,6 +449,7 @@ export function toCreateTransactionBody(payload: {
     type: payload.type,
     occurred_at: payload.date,
     ...(payload.goal_id ? { goal_id: asApiId(payload.goal_id) } : {}),
+    ...(payload.settled === undefined ? {} : { settled: payload.settled }),
   }
 }
 
@@ -456,7 +468,9 @@ export function toUpdateTransactionBody(payload: {
   type: MoneyDirection
   occurred_at: string
 } {
-  return toCreateTransactionBody(payload)
+  const body = toCreateTransactionBody(payload)
+  const { settled: _settled, ...rest } = body
+  return rest
 }
 
 export function toCreateTransferBody(
@@ -789,6 +803,7 @@ export function toUpdateInvestmentBody(payload: {
 type ApiDashboardSlice = {
   context_id?: string | number
   accounts_balance: number
+  accounts_balance_provisioned?: number
   pending_bills_count?: number
   pending_bills_amount: number
   overdue_bills_count: number
@@ -883,10 +898,14 @@ export function mapDashboard(
   label: string,
   raw: ApiDashboardSlice,
 ): DashboardSummary {
+  const balanceTotal = Number(raw.accounts_balance)
   return {
     scope,
     label,
-    balance_total: Number(raw.accounts_balance),
+    balance_total: balanceTotal,
+    balance_provisioned: Number(
+      raw.accounts_balance_provisioned ?? balanceTotal,
+    ),
     income_month: Number(raw.month_income),
     expense_month: Number(raw.month_expense),
     projected_income_month: Number(

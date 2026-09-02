@@ -256,6 +256,23 @@ export function TransactionForm({
           </div>
         ) : null}
 
+        {!isEdit ? (
+          <div className={cn(!isQuick && 'sm:col-span-2')}>
+            <Controller
+              name="settled"
+              control={form.control}
+              render={({ field }) => (
+                <SwitchField
+                  label={t.settled}
+                  description={t.settledHint}
+                  checked={field.value}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+        ) : null}
+
         {showRecurring ? (
           <div className="grid gap-4 sm:col-span-2 sm:grid-cols-2">
             <div className="sm:col-span-2">

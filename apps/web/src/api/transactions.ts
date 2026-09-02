@@ -17,9 +17,13 @@ export type CreateTransactionInput = {
   type: MoneyDirection
   date: string
   goal_id?: string | null
+  /** `false` = nasce previsto (não move saldo). Default no backend: `true`. */
+  settled?: boolean
 }
 
-export type UpdateTransactionInput = CreateTransactionInput
+export type UpdateTransactionInput = Omit<CreateTransactionInput, 'settled' | 'goal_id'> & {
+  goal_id?: string | null
+}
 
 export type MoveTransactionInput = {
   target_context_id: string
@@ -128,6 +132,21 @@ export async function moveTransaction(
     ),
   )
   return mapTransaction(payload.target_context_id, moved)
+}
+
+/** Efetiva um lançamento previsto (`pending` → `settled`). Idempotente. */
+export async function settleTransaction(
+  contextId: string,
+  transactionId: string,
+): Promise<StatementEntry> {
+  if (useMocks) return mockApi.settleTransaction(contextId, transactionId)
+  const settled = unwrapData(
+    await http.post<
+      | Parameters<typeof mapTransaction>[1]
+      | { data: Parameters<typeof mapTransaction>[1] }
+    >(`/contexts/${contextId}/transactions/${transactionId}/settle`),
+  )
+  return mapTransaction(contextId, settled)
 }
 
 export async function deleteTransaction(

@@ -168,6 +168,10 @@ export const strings = {
     title: 'Painel',
     consolidatedTitle: 'Painel consolidado',
     balance: 'Saldo em contas',
+    balanceReal: 'Saldo real',
+    balanceProvisioned: 'Provisionado',
+    balanceRealHint: 'Só o que já caiu na conta',
+    balanceProvisionedHint: 'Real + lançamentos previstos',
     income: 'Receitas do mês',
     expense: 'Despesas do mês',
     projectedLabel: '(previsto)',
@@ -212,6 +216,9 @@ export const strings = {
     viewInvoice: 'Ver fatura',
     delete: 'Excluir lançamento',
     transferSection: 'Detalhes da transferência',
+    settle: 'Marcar como efetivado',
+    settledToast: 'Lançamento efetivado.',
+    settledAt: (date: string) => `Efetivado em ${date}`,
   },
 
   accountDetail: {
@@ -415,6 +422,9 @@ export const strings = {
       allCategories: 'Todas as categorias',
     },
     recurringBadge: 'Recorrente',
+    pendingBadge: 'Previsto',
+    settled: 'Já caiu na conta?',
+    settledHint: 'Desligado = lançamento previsto (não move o saldo agora).',
   },
 
   transfers: {

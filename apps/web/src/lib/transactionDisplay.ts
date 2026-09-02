@@ -16,6 +16,8 @@ export function transactionDirection(tx: StatementEntry): CreditDebit {
 
 /** Efeito do lançamento no saldo da conta (positivo = aumenta saldo). */
 export function transactionBalanceEffect(tx: StatementEntry): number {
+  // Previstos não movem saldo — só entram no provisionado.
+  if (tx.status === 'pending') return 0
   const direction = transactionDirection(tx)
   return direction === 'credit' ? tx.amount : -tx.amount
 }

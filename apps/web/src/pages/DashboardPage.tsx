@@ -28,6 +28,7 @@ import {
   Stat,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
+import { cn } from '@/lib/cn'
 import { formatDateShort } from '@/lib/creditCardInvoices'
 import { formatMonthLabel, isInMonth } from '@/lib/dates'
 import { formatMoney } from '@/lib/format'
@@ -148,16 +149,49 @@ export function DashboardPage() {
       {/* Saldo em destaque */}
       <section className="space-y-1">
         <p className="text-sm font-medium text-fg-muted">{contextLabel}</p>
-        <p className="text-xs uppercase tracking-wide text-fg-subtle">
-          {t.balance}
-        </p>
         {isLoading ? (
           <Skeleton className="h-9 w-48" />
         ) : isError ? (
           <Alert tone="danger">{strings.common.error}</Alert>
         ) : data ? (
           <>
-            <Money amount={data.balance_total} size="xl" className="font-display font-bold" />
+            {data.balance_provisioned !== data.balance_total ? (
+              <div className="grid grid-cols-2 gap-3">
+                <Stat
+                  label={t.balanceReal}
+                  value={
+                    <Money
+                      amount={data.balance_total}
+                      size="xl"
+                      className="font-display font-bold"
+                    />
+                  }
+                  hint={t.balanceRealHint}
+                />
+                <Stat
+                  label={t.balanceProvisioned}
+                  value={
+                    <Money
+                      amount={data.balance_provisioned}
+                      size="xl"
+                      className="font-display font-bold"
+                    />
+                  }
+                  hint={t.balanceProvisionedHint}
+                />
+              </div>
+            ) : (
+              <>
+                <p className="text-xs uppercase tracking-wide text-fg-subtle">
+                  {t.balanceReal}
+                </p>
+                <Money
+                  amount={data.balance_total}
+                  size="xl"
+                  className="font-display font-bold"
+                />
+              </>
+            )}
             {isConsolidated ? (
               <p className="text-sm text-fg-muted">{t.hint}</p>
             ) : null}
@@ -351,13 +385,23 @@ export function DashboardPage() {
                       >
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
-                            <p className="truncate font-medium text-fg">
+                            <p
+                              className={cn(
+                                'truncate font-medium text-fg',
+                                tx.status === 'pending' && 'opacity-70',
+                              )}
+                            >
                               {tx.description}
                             </p>
                             <div className="mt-0.5 flex flex-wrap items-center gap-2">
                               <span className="text-xs text-fg-muted">
                                 {formatDateShort(tx.date)}
                               </span>
+                              {tx.status === 'pending' ? (
+                                <Badge tone="warning">
+                                  {strings.transactions.pendingBadge}
+                                </Badge>
+                              ) : null}
                               {category ? (
                                 <CategoryChip
                                   name={category.name}
@@ -366,11 +410,17 @@ export function DashboardPage() {
                               ) : null}
                             </div>
                           </div>
-                          <MoneyValue
-                            amount={tx.amount}
-                            direction={transactionDirection(tx)}
-                            size="sm"
-                          />
+                          <div
+                            className={
+                              tx.status === 'pending' ? 'opacity-70' : undefined
+                            }
+                          >
+                            <MoneyValue
+                              amount={tx.amount}
+                              direction={transactionDirection(tx)}
+                              size="sm"
+                            />
+                          </div>
                         </div>
                       </DashboardListItem>
                     </li>

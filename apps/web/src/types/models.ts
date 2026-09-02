@@ -114,6 +114,9 @@ export interface TransferDetails {
   to: TransferLeg
 }
 
+/** Previsto (não move saldo) vs efetivado (já moveu o saldo). */
+export type StatementEntryStatus = 'pending' | 'settled'
+
 export interface StatementEntry {
   id: string
   context_id: string
@@ -122,6 +125,10 @@ export interface StatementEntry {
   description: string
   amount: number
   type: EntryType
+  /** `pending` = previsto; `settled` = já caiu na conta. */
+  status: StatementEntryStatus
+  /** ISO datetime quando efetivado; null enquanto previsto. */
+  settled_at: string | null
   date: string
   origin: CaptureOrigin
   bill_id: string | null
@@ -198,7 +205,10 @@ export interface Investment {
 export interface DashboardSummary {
   scope: string
   label: string
+  /** Saldo real (só efetivados). Em mês passado = "como o mês fechou". */
   balance_total: number
+  /** Real + previstos do mês corrente/futuro. */
+  balance_provisioned: number
   income_month: number
   expense_month: number
   projected_income_month: number

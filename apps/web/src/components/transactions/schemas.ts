@@ -9,6 +9,8 @@ export const entrySchema = z.object({
   account_id: z.string().min(1, strings.common.required),
   category_id: z.string().nullable(),
   goal_id: z.string().nullable(),
+  /** Ligado = já caiu na conta (`settled: true`). Só no create. */
+  settled: z.boolean(),
   is_recurring: z.boolean(),
   interval: z.enum(['weekly', 'monthly', 'yearly']),
   start_date: z.string(),
@@ -48,6 +50,7 @@ export function emptyEntry(date = new Date().toISOString().slice(0, 10)): EntryF
     account_id: '',
     category_id: null,
     goal_id: null,
+    settled: true,
     is_recurring: false,
     interval: 'monthly',
     start_date: date,

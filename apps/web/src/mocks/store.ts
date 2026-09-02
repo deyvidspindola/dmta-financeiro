@@ -137,6 +137,8 @@ let transactions: StatementEntry[] = [
     description: 'Salário agosto',
     amount: 8500,
     type: 'income',
+    status: 'settled',
+    settled_at: '2026-08-05T12:00:00.000Z',
     date: '2026-08-05',
     origin: 'manual',
     bill_id: null,
@@ -153,6 +155,8 @@ let transactions: StatementEntry[] = [
     description: 'Nota fiscal #1042',
     amount: 3200,
     type: 'income',
+    status: 'settled',
+    settled_at: '2026-08-10T12:00:00.000Z',
     date: '2026-08-10',
     origin: 'manual',
     bill_id: null,
@@ -308,6 +312,7 @@ function buildDashboard(scope: string, label: string, contextIds: string[]): Das
     scope,
     label,
     balance_total: scopedAccounts.reduce((s, a) => s + a.balance, 0),
+    balance_provisioned: scopedAccounts.reduce((s, a) => s + a.balance, 0),
     income_month: incomeMonth,
     expense_month: expenseMonth,
     projected_income_month: incomeMonth,
@@ -672,9 +677,11 @@ export const mockApi = {
       type: 'income' | 'expense'
       date: string
       goal_id?: string | null
+      settled?: boolean
     },
   ): Promise<StatementEntry> {
     await delay()
+    const settled = payload.settled !== false
     const row: StatementEntry = {
       id: id('tx'),
       context_id: contextId,
@@ -689,6 +696,8 @@ export const mockApi = {
       description: payload.description,
       amount: payload.amount,
       type: payload.type,
+      status: settled ? 'settled' : 'pending',
+      settled_at: settled ? new Date().toISOString() : null,
       date: payload.date,
     }
     transactions = [...transactions, row]
@@ -774,6 +783,26 @@ export const mockApi = {
     return row
   },
 
+  async settleTransaction(
+    contextId: string,
+    transactionId: string,
+  ): Promise<StatementEntry> {
+    await delay()
+    const index = transactions.findIndex(
+      (row) => row.context_id === contextId && row.id === transactionId,
+    )
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    const current = transactions[index]!
+    if (current.status === 'settled') return current
+    const row: StatementEntry = {
+      ...current,
+      status: 'settled',
+      settled_at: new Date().toISOString(),
+    }
+    transactions = transactions.map((item, i) => (i === index ? row : item))
+    return row
+  },
+
   async createTransfer(
     contextId: string,
     payload: {
@@ -795,6 +824,8 @@ export const mockApi = {
       description: payload.description,
       amount: payload.amount,
       type: 'transfer',
+      status: 'settled',
+      settled_at: new Date().toISOString(),
       date: payload.occurred_at,
       origin: 'manual',
       bill_id: null,
@@ -1410,6 +1441,8 @@ export const mockApi = {
         description: bill.description,
         amount: bill.amount,
         type: bill.kind === 'receivable' ? 'income' : 'expense',
+        status: 'settled',
+        settled_at: new Date().toISOString(),
         date: payload.occurred_at ?? new Date().toISOString().slice(0, 10),
         origin: 'manual',
         bill_id: billId,
