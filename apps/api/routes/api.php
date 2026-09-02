@@ -153,6 +153,7 @@ Route::prefix('v1')->group(function () {
             Route::get('transactions/{transaction}', [TransactionController::class, 'show']);
             Route::patch('transactions/{transaction}', [TransactionController::class, 'update']);
             Route::delete('transactions/{transaction}', [TransactionController::class, 'destroy']);
+            Route::post('transactions/{transaction}/settle', [TransactionController::class, 'settle']);
             Route::post('transactions/{transaction}/move', [MoveTransactionController::class, 'store']);
 
             Route::post('transfers', [TransferController::class, 'store']);

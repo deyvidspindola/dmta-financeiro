@@ -7,6 +7,7 @@ namespace App\DTOs;
 use App\Enums\CaptureOrigin;
 use App\Enums\StatementEntryType;
 use App\UseCases\Transaction\RegisterTransaction;
+use App\UseCases\Transaction\SettleTransaction;
 
 /**
  * Entrada do caso de uso {@see RegisterTransaction}.
@@ -38,5 +39,12 @@ final readonly class RegisterTransactionData
         public ?int $recurringTransactionId = null,
         public ?int $goalId = null,
         public ?int $cardInvoiceId = null,
+        /**
+         * `false` = lançamento nasce previsto (`pending`), não move o
+         * saldo até {@see SettleTransaction}.
+         * Canais que representam dinheiro que já se moveu (boleto pago,
+         * fatura, importação de extrato) deixam `true`.
+         */
+        public bool $settled = true,
     ) {}
 }

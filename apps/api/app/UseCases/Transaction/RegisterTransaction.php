@@ -6,6 +6,7 @@ namespace App\UseCases\Transaction;
 
 use App\DTOs\RegisterTransactionData;
 use App\Enums\BillStatus;
+use App\Enums\StatementEntryStatus;
 use App\Enums\StatementEntryType;
 use App\Models\Account;
 use App\Models\Bill;
@@ -46,6 +47,8 @@ final class RegisterTransaction
     public function execute(RegisterTransactionData $data): StatementEntry
     {
         return DB::transaction(function () use ($data): StatementEntry {
+            $settled = $data->settled;
+
             $entry = StatementEntry::create([
                 'context_id' => $data->contextId,
                 'account_id' => $data->accountId,
@@ -57,9 +60,18 @@ final class RegisterTransaction
                 'description' => $data->description,
                 'amount' => $data->amount,
                 'type' => $data->type->value,
+                'status' => ($settled ? StatementEntryStatus::Settled : StatementEntryStatus::Pending)->value,
+                'settled_at' => $settled ? now() : null,
                 'occurred_at' => $data->occurredAt,
                 'origin' => $data->origin->value,
             ]);
+
+            // Lançamento previsto (pending) não move saldo, não marca boleto
+            // pago nem soma na meta — isso acontece na efetivação
+            // ({@see SettleTransaction}).
+            if (! $settled) {
+                return $entry;
+            }
 
             $sign = $data->type === StatementEntryType::Expense ? -1 : 1;
 

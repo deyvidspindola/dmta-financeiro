@@ -16,6 +16,7 @@ use App\Models\Context;
 use App\Models\StatementEntry;
 use App\UseCases\Transaction\DeleteTransaction;
 use App\UseCases\Transaction\RegisterTransaction;
+use App\UseCases\Transaction\SettleTransaction;
 use App\UseCases\Transaction\UpdateTransaction;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -78,9 +79,16 @@ final class TransactionController extends Controller
             categoryId: $request->integer('category_id') ?: null,
             billId: $request->integer('bill_id') ?: null,
             goalId: $request->integer('goal_id') ?: null,
+            settled: $request->boolean('settled', true),
         ));
 
         return new StatementEntryResource($entry);
+    }
+
+    /** Efetiva um lançamento previsto — move o saldo agora. Ver {@see SettleTransaction}. */
+    public function settle(Context $context, StatementEntry $transaction, SettleTransaction $useCase): StatementEntryResource
+    {
+        return new StatementEntryResource($useCase->execute($transaction));
     }
 
     public function update(

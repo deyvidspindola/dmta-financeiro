@@ -110,6 +110,7 @@ final class BudgetProgressService
     private function spentByCategory(Context $context, Carbon $monthStart)
     {
         return $context->statementEntries()
+            ->settled()
             ->where('type', StatementEntryType::Expense->value)
             ->whereNotNull('category_id')
             ->whereYear('occurred_at', $monthStart->year)

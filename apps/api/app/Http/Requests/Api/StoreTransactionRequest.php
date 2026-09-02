@@ -6,6 +6,7 @@ namespace App\Http\Requests\Api;
 
 use App\Http\Requests\Api\Concerns\ScopedExists;
 use App\UseCases\Transaction\TransferBetweenAccounts;
+use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -51,6 +52,19 @@ final class StoreTransactionRequest extends FormRequest
             'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
             'bill_id' => ['nullable', 'integer', $this->existsInRouteContext('bills')],
             'goal_id' => ['nullable', 'integer', $this->existsInRouteContext('goals')],
+            // `false` = lançamento previsto (não move saldo até ser
+            // efetivado). Omitido = `true` (efetivado na hora, como era).
+            'settled' => ['sometimes', 'boolean'],
         ];
+    }
+
+    public function withValidator(Validator $validator): void
+    {
+        $validator->after(function (Validator $validator): void {
+            // Boleto pago já é dinheiro que se moveu — não pode nascer previsto.
+            if ($this->has('settled') && ! $this->boolean('settled') && $this->filled('bill_id')) {
+                $validator->errors()->add('settled', 'Lançamento vinculado a boleto não pode ser previsto.');
+            }
+        });
     }
 }
