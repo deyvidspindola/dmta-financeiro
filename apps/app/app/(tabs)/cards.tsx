@@ -3,17 +3,11 @@ import { View } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { creditCardsApi } from '@/api';
 import { TabShell } from '@/components/TabShell';
-import { Badge, ListRow, Money, PressableCard, ProgressBar, Sheet, Skeleton, Text } from '@/components/ui';
+import { CardDetailSheet } from '@/components/creditCards/CardDetailSheet';
+import { Badge, Money, PressableCard, ProgressBar, Skeleton, Text } from '@/components/ui';
 import { t } from '@/i18n';
-import { formatDateShort, formatMonthLabel } from '@/lib/dates';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
-import type { CreditCard, InvoiceStatus } from '@/types/models';
-
-const INVOICE_TONE: Record<InvoiceStatus, 'neutral' | 'accent' | 'brand'> = {
-  open: 'brand',
-  closed: 'accent',
-  paid: 'neutral',
-};
+import type { CreditCard } from '@/types/models';
 
 function CardRow({ card, onPress }: { card: CreditCard; onPress: () => void }) {
   const used = card.limit > 0 ? Math.min(100, ((card.limit - (card.available_limit ?? card.limit)) / card.limit) * 100) : 0;
@@ -76,12 +70,6 @@ export default function CardsTab() {
     enabled: Boolean(activeScope),
   });
 
-  const invoicesQuery = useQuery({
-    queryKey: ['card-invoices', selected?.context_id, selected?.id],
-    queryFn: () => creditCardsApi.listCardInvoices(selected!.context_id, selected!.id),
-    enabled: selected !== null && Boolean(selected?.context_id),
-  });
-
   const contextName = useMemo(
     () => (id: string) => contexts.find((c) => c.id === id)?.name ?? '',
     [contexts],
@@ -112,40 +100,7 @@ export default function CardsTab() {
         </View>
       )}
 
-      <Sheet open={selected !== null} onClose={() => setSelected(null)} title={selected?.name}>
-        <Text variant="muted" className="mb-2 text-xs">
-          {selected ? t.creditCards.cycle(selected.closing_day, selected.due_day) : ''}
-        </Text>
-        <Text variant="label" className="mb-1">
-          {t.creditCards.invoices}
-        </Text>
-        {invoicesQuery.isLoading ? (
-          <Skeleton className="h-24 w-full" />
-        ) : (invoicesQuery.data ?? []).length === 0 ? (
-          <Text variant="muted">{t.creditCards.noInvoices}</Text>
-        ) : (
-          <View>
-            {(invoicesQuery.data ?? []).map((invoice) => (
-              <ListRow key={invoice.id}>
-                <View className="flex-row items-center justify-between gap-3">
-                  <View className="gap-0.5">
-                    <Text className="font-medium">{formatMonthLabel(invoice.reference_month.slice(0, 7))}</Text>
-                    <View className="flex-row items-center gap-2">
-                      <Badge tone={INVOICE_TONE[invoice.status]}>
-                        {t.creditCards.statuses[invoice.status]}
-                      </Badge>
-                      <Text variant="muted" className="text-xs">
-                        {t.creditCards.dueOn} {formatDateShort(invoice.due_date)}
-                      </Text>
-                    </View>
-                  </View>
-                  <Money amount={invoice.amount} size="sm" />
-                </View>
-              </ListRow>
-            ))}
-          </View>
-        )}
-      </Sheet>
+      <CardDetailSheet card={selected} onClose={() => setSelected(null)} />
     </TabShell>
   );
 }
