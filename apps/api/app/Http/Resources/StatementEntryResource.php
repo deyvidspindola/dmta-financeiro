@@ -41,6 +41,10 @@ final class StatementEntryResource extends JsonResource
             'amount' => (float) $this->amount,
             // @phpstan-ignore-next-line property.nonObject (cast StatementEntryType da migration)
             'type' => $this->type->value,
+            // @phpstan-ignore-next-line property.nonObject (cast StatementEntryStatus da migration)
+            'status' => $this->status->value,
+            // @phpstan-ignore-next-line method.nonObject (cast 'datetime' da migration; null enquanto previsto)
+            'settled_at' => $this->settled_at?->toIso8601String(),
             // @phpstan-ignore-next-line method.nonObject (cast 'date' da migration)
             'occurred_at' => $this->occurred_at->toDateString(),
             'origin' => $this->origin,

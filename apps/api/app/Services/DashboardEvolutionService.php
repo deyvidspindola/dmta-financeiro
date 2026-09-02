@@ -68,6 +68,7 @@ final class DashboardEvolutionService
         $start = Carbon::now()->startOfMonth()->subMonths($months - 1);
 
         $rowsByMonth = StatementEntry::query()
+            ->settled()
             ->whereIn('context_id', $contextIds)
             ->whereIn('type', [StatementEntryType::Income->value, StatementEntryType::Expense->value])
             ->where('occurred_at', '>=', $start->toDateString())

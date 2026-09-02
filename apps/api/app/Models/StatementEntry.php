@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use App\Enums\StatementEntryStatus;
 use App\Enums\StatementEntryType;
 use App\Enums\TransferRole;
+use App\Models\Concerns\AppliesTransactionFilters;
 use App\UseCases\Transaction\TransferBetweenAccounts;
 use Database\Factories\StatementEntryFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -18,28 +20,28 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
     'transfer_pair_id', 'transfer_role', 'recurring_transaction_id', 'goal_id',
-    'description', 'amount', 'type', 'occurred_at', 'origin',
+    'description', 'amount', 'type', 'status', 'settled_at', 'occurred_at', 'origin',
 ])]
 /**
- * Lançamento efetivo numa conta — o único registro que de fato move
- * `accounts.balance` (ver `RegisterTransaction`). `amount` é sempre
- * positivo; o sinal do impacto vem de `type`.
+ * Lançamento numa conta — o registro que move `accounts.balance` (ver
+ * {@see RegisterTransaction}). `amount` sempre positivo, o sinal vem de
+ * `type`. Pode nascer `pending` (previsto) e só mover o saldo quando
+ * efetivado — ver {@see StatementEntryStatus} e {@see SettleTransaction}.
  *
  * @property-read StatementEntryType $type
+ * @property-read StatementEntryStatus $status
  * @property-read Carbon $occurred_at
  *
  * @package App\Models
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
- *
- * @since   21/08/2026
- *
- * @updated 21/08/2026
+ * @version 1.1.0
  */
 class StatementEntry extends Model
 {
+    use AppliesTransactionFilters;
+
     /** @use HasFactory<StatementEntryFactory> */
     use HasFactory;
 
@@ -81,12 +83,8 @@ class StatementEntry extends Model
 
     /**
      * Se esta é a perna de origem (débito) de uma transferência, não a de
-     * destino (crédito). Lê a coluna `transfer_role` (preenchida por
-     * {@see TransferBetweenAccounts} e pelo backfill da migration). O
-     * fallback pela ordem de `id` só cobre um estado meio-migrado — nunca
-     * deveria acontecer em produção.
-     *
-     * Só chame depois de confirmar `transfer_pair_id !== null`.
+     * destino (crédito). Lê `transfer_role`; o fallback pela ordem de `id`
+     * só cobre um estado meio-migrado. Só chame com `transfer_pair_id !== null`.
      */
     public function isTransferOrigin(): bool
     {
@@ -105,44 +103,42 @@ class StatementEntry extends Model
     }
 
     /**
-     * Filtros opcionais de `GET /transactions`, já validados na camada
-     * HTTP (`IndexTransactionRequest`): `from`/`to` (`occurred_at`),
-     * `account_id`, `category_id`, `type`, `q` (descrição). Chave ausente
-     * não filtra; não pagina nem ordena.
+     * `->settled()` = só os efetivados (moveram o saldo); `->pending()` =
+     * só os previstos. Ver {@see StatementEntryStatus}.
      *
      * @param  Builder<StatementEntry>  $query
-     * @param  array<string, mixed>  $filters
      * @return Builder<StatementEntry>
      */
-    public function scopeApplyFilters(Builder $query, array $filters): Builder
+    public function scopeSettled(Builder $query): Builder
     {
-        return $query
-            ->when($filters['from'] ?? null, fn (Builder $q, $v) => $q->whereDate('occurred_at', '>=', $v))
-            ->when($filters['to'] ?? null, fn (Builder $q, $v) => $q->whereDate('occurred_at', '<=', $v))
-            ->when($filters['account_id'] ?? null, fn (Builder $q, $v) => $q->where('account_id', (int) $v))
-            ->when($filters['category_id'] ?? null, fn (Builder $q, $v) => $q->where('category_id', (int) $v))
-            ->when($filters['type'] ?? null, fn (Builder $q, $v) => $q->where('type', $v))
-            ->when($filters['q'] ?? null, fn (Builder $q, $v) => $q->whereLike('description', '%'.$v.'%'));
-    }
-
-    /** Sinal (+1/-1) do impacto deste lançamento no saldo da conta. */
-    public function balanceSign(): int
-    {
-        // @phpstan-ignore-next-line identical.alwaysFalse (cast StatementEntryType confirmado em runtime — larastan erra os dois lados dessa inferência)
-        return $this->type === StatementEntryType::Expense ? -1 : 1;
+        return $query->where('status', StatementEntryStatus::Settled->value);
     }
 
     /**
-     * Converte atributos para tipos de domínio.
-     *
-     * @return array<string, string>
+     * @param  Builder<StatementEntry>  $query
+     * @return Builder<StatementEntry>
      */
+    public function scopePending(Builder $query): Builder
+    {
+        return $query->where('status', StatementEntryStatus::Pending->value);
+    }
+
+    /** `true` se o lançamento já foi efetivado (moveu o saldo da conta). */
+    public function isSettled(): bool
+    {
+        // @phpstan-ignore-next-line identical.alwaysFalse (cast StatementEntryStatus confirmado em runtime — larastan erra a inferência de casts())
+        return $this->status === StatementEntryStatus::Settled;
+    }
+
+    /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'occurred_at' => 'date',
+            'settled_at' => 'datetime',
             'amount' => 'decimal:2',
             'type' => StatementEntryType::class,
+            'status' => StatementEntryStatus::class,
             'transfer_role' => TransferRole::class,
         ];
     }

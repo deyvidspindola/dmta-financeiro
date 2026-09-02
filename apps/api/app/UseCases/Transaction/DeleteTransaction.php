@@ -53,6 +53,13 @@ final class DeleteTransaction
                 return;
             }
 
+            // Lançamento previsto nunca moveu saldo/boleto/meta — só apaga.
+            if (! $entry->isSettled()) {
+                $entry->delete();
+
+                return;
+            }
+
             $this->revertBalance($entry);
 
             if ($entry->bill_id !== null) {

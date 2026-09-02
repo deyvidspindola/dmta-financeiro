@@ -60,6 +60,7 @@ final class FreeBudgetCalculator
     {
         $start = Carbon::now()->startOfMonth()->subMonths(self::INCOME_AVERAGE_MONTHS);
         $total = (float) $context->statementEntries()
+            ->settled()
             ->where('type', StatementEntryType::Income->value)
             ->where('occurred_at', '>=', $start->toDateString())
             ->sum('amount');

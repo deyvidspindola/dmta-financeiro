@@ -106,6 +106,7 @@ final class BudgetConsumptionService
     private function effectiveEntries(Context $context, array $categoryIds, Carbon $monthStart): Collection
     {
         return $context->statementEntries()
+            ->settled()
             ->where('type', StatementEntryType::Expense->value)
             ->whereIn('category_id', $categoryIds)
             ->whereYear('occurred_at', $monthStart->year)

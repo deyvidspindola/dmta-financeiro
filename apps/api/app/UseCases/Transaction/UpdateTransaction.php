@@ -48,18 +48,23 @@ final class UpdateTransaction
         }
 
         return DB::transaction(function () use ($entry, $data): StatementEntry {
-            // $entry->type já vem como enum (cast no model) — comparar
-            // contra o case, nunca contra ->value (ver DeleteTransaction).
-            // @phpstan-ignore-next-line identical.alwaysFalse (larastan erra os dois lados dessa inferência)
-            $oldSign = $entry->type === StatementEntryType::Expense ? -1 : 1;
-            Account::query()->whereKey($entry->account_id)->lockForUpdate()
-                ->increment('balance', -1 * $oldSign * (float) $entry->amount);
+            // Lançamento previsto (pending) ainda não moveu saldo nem meta —
+            // editar é só trocar os campos; o efeito é aplicado na
+            // efetivação ({@see SettleTransaction}).
+            if ($entry->isSettled()) {
+                // $entry->type já vem como enum (cast no model) — comparar
+                // contra o case, nunca contra ->value (ver DeleteTransaction).
+                // @phpstan-ignore-next-line identical.alwaysFalse (larastan erra os dois lados dessa inferência)
+                $oldSign = $entry->type === StatementEntryType::Expense ? -1 : 1;
+                Account::query()->whereKey($entry->account_id)->lockForUpdate()
+                    ->increment('balance', -1 * $oldSign * (float) $entry->amount);
 
-            $newSign = $data->type === StatementEntryType::Expense ? -1 : 1;
-            Account::query()->whereKey($data->accountId)->lockForUpdate()
-                ->increment('balance', $newSign * $data->amount);
+                $newSign = $data->type === StatementEntryType::Expense ? -1 : 1;
+                Account::query()->whereKey($data->accountId)->lockForUpdate()
+                    ->increment('balance', $newSign * $data->amount);
 
-            $this->reconcileGoals($entry, $data);
+                $this->reconcileGoals($entry, $data);
+            }
 
             $entry->update([
                 'account_id' => $data->accountId,

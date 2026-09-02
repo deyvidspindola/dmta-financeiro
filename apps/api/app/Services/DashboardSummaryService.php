@@ -63,20 +63,27 @@ final class DashboardSummaryService
 
         $incomeEffective = (float) $this->monthEntries($context, StatementEntryType::Income, $reference);
         $expenseEffective = (float) $this->monthEntries($context, StatementEntryType::Expense, $reference);
+        $pendingIncomeMonth = (float) $this->monthEntries($context, StatementEntryType::Income, $reference, settled: false);
+        $pendingExpenseMonth = (float) $this->monthEntries($context, StatementEntryType::Expense, $reference, settled: false);
         $projected = $this->projector->between($context, $monthStart, $monthEnd);
+
+        $accountsBalance = (float) $context->accounts()->sum('balance');
 
         return [
             'context_id' => $context->id,
             'month' => $reference->format('Y-m'),
-            'accounts_balance' => (float) $context->accounts()->sum('balance'),
+            'accounts_balance' => $accountsBalance,
+            // Saldo provisionado: o real + tudo que está previsto (pending)
+            // mas ainda não caiu na conta. Ver StatementEntryStatus.
+            'accounts_balance_provisioned' => round($accountsBalance + $this->pendingBalanceDelta($context), 2),
             'pending_bills_count' => $pending->count(),
             'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
             'overdue_bills_amount' => (float) $overdue->sum('amount'),
             'month_income' => $incomeEffective,
             'month_expense' => $expenseEffective,
-            'month_projected_income' => round($incomeEffective + $projected['income'], 2),
-            'month_projected_expense' => round($expenseEffective + $projected['expense'], 2),
+            'month_projected_income' => round($incomeEffective + $pendingIncomeMonth + $projected['income'], 2),
+            'month_projected_expense' => round($expenseEffective + $pendingExpenseMonth + $projected['expense'], 2),
             'investments_total' => (float) $context->investments()->sum('current_amount'),
             'credit_card_open_invoices_amount' => $this->openCardInvoicesAmount($context),
             'pending_debts_count' => $context->debts()->where('status', DebtStatus::Pending->value)->count(),
@@ -92,13 +99,31 @@ final class DashboardSummaryService
         ];
     }
 
-    private function monthEntries(Context $context, StatementEntryType $type, Carbon $reference): float
+    /** @param  bool  $settled  `true` = só efetivados (padrão); `false` = só previstos. */
+    private function monthEntries(Context $context, StatementEntryType $type, Carbon $reference, bool $settled = true): float
     {
         return (float) $context->statementEntries()
             ->where('type', $type->value)
+            ->when($settled, fn ($q) => $q->settled(), fn ($q) => $q->pending())
             ->whereYear('occurred_at', $reference->year)
             ->whereMonth('occurred_at', $reference->month)
             ->sum('amount');
+    }
+
+    /**
+     * Impacto no saldo de todos os lançamentos previstos (pending) do
+     * contexto, com sinal: receita prevista soma, despesa prevista subtrai.
+     * Sem filtro de mês — uma despesa prevista de um mês passado que você
+     * ainda não pagou continua reduzindo o caixa projetado.
+     */
+    private function pendingBalanceDelta(Context $context): float
+    {
+        $income = (float) $context->statementEntries()->pending()
+            ->where('type', StatementEntryType::Income->value)->sum('amount');
+        $expense = (float) $context->statementEntries()->pending()
+            ->where('type', StatementEntryType::Expense->value)->sum('amount');
+
+        return $income - $expense;
     }
 
     /** Total das faturas de cartão ainda não pagas (aberta + fechadas) do contexto. */
@@ -125,6 +150,7 @@ final class DashboardSummaryService
 
         $totals = [
             'accounts_balance' => $sum('accounts_balance'),
+            'accounts_balance_provisioned' => $sum('accounts_balance_provisioned'),
             'pending_bills_count' => $count('pending_bills_count'),
             'pending_bills_amount' => $sum('pending_bills_amount'),
             'overdue_bills_count' => $count('overdue_bills_count'),
