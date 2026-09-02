@@ -15,6 +15,7 @@ import {
   Modal,
   TextInput,
   TextSelect,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
@@ -53,6 +54,7 @@ export function CategoryModal({
   editingCategory = null,
   hideManageList = false,
 }: CategoryModalProps) {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const [editing, setEditing] = useState<Category | null>(null)
   const isEdit = editing !== null
@@ -146,8 +148,15 @@ export function CategoryModal({
     editForm.reset({ name: category.name })
   }
 
-  function handleDelete(categoryId: string) {
-    if (!window.confirm(strings.categories.confirmDelete)) return
+  async function handleDelete(categoryId: string) {
+    if (
+      !(await confirm({
+        message: strings.categories.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(categoryId)
   }
 

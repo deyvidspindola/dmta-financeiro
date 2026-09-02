@@ -23,6 +23,7 @@ import {
   Stat,
   Td,
   Tr,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate, formatMoney } from '@/lib/format'
@@ -35,6 +36,7 @@ import type { Debt } from '@/types/models'
 const t = strings.debts
 
 export function DebtsPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
@@ -126,8 +128,15 @@ export function DebtsPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete(debtId: string) {
-    if (!window.confirm(t.confirmDelete)) return
+  async function handleDelete(debtId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(debtId)
   }
 

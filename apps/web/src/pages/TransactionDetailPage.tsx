@@ -16,6 +16,7 @@ import {
   Modal,
   MoneyValue,
   PageHeader,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate } from '@/lib/format'
@@ -32,6 +33,7 @@ const t = strings.transactionDetail
 const tx = strings.transactions
 
 export function TransactionDetailPage() {
+  const confirm = useConfirm()
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
@@ -161,8 +163,15 @@ export function TransactionDetailPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete() {
-    if (!window.confirm(tx.confirmDelete)) return
+  async function handleDelete() {
+    if (
+      !(await confirm({
+        message: tx.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate()
   }
 
@@ -365,7 +374,7 @@ export function TransactionDetailPage() {
       </Card>
 
       {entryOpen ? (
-        <Modal title={tx.edit} onClose={() => setEntryOpen(false)}>
+        <Modal title={tx.edit} size="xl" onClose={() => setEntryOpen(false)}>
           <TransactionForm
             key={transaction.id}
             contextId={transaction.context_id}

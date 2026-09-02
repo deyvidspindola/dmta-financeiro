@@ -11,6 +11,7 @@ import {
   LoadingBlock,
   Modal,
   PageHeader,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
@@ -22,6 +23,7 @@ import type { Goal } from '@/types/models'
 const t = strings.goals
 
 export function GoalsPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
@@ -83,8 +85,15 @@ export function GoalsPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete(goalId: string) {
-    if (!window.confirm(t.confirmDelete)) return
+  async function handleDelete(goalId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(goalId)
   }
 

@@ -13,6 +13,7 @@ import {
   LoadingBlock,
   Modal,
   PageHeader,
+  useConfirm,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
@@ -23,6 +24,7 @@ import { toastError, toastSuccess } from '@/store/toastStore'
 const r = strings.recurring
 
 export function RecurringTransactionsPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
@@ -106,8 +108,16 @@ export function RecurringTransactionsPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleCancel(recurringId: string) {
-    if (!window.confirm(r.confirmCancel)) return
+  async function handleCancel(recurringId: string) {
+    if (
+      !(await confirm({
+        message: r.confirmCancel,
+        tone: 'danger',
+        confirmLabel: r.cancel,
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(recurringId)
   }
 

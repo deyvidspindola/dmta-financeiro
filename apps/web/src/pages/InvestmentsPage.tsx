@@ -20,6 +20,7 @@ import {
   Stat,
   Td,
   Tr,
+  useConfirm,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
@@ -32,6 +33,7 @@ import type { Investment } from '@/types/models'
 const t = strings.investments
 
 export function InvestmentsPage() {
+  const confirm = useConfirm()
   const queryClient = useQueryClient()
   const activeScope = useAuthStore((s) => s.activeScope)
   const contextId = useWritableContextId()
@@ -100,8 +102,15 @@ export function InvestmentsPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function handleDelete(investmentId: string) {
-    if (!window.confirm(t.confirmDelete)) return
+  async function handleDelete(investmentId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmDelete,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
     deleteMutation.mutate(investmentId)
   }
 
