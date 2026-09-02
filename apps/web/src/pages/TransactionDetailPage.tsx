@@ -1,19 +1,24 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useForm } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
+import { useMemo, useState, type ReactNode } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, FolderInput, Pencil, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { z } from 'zod'
+import { accountsApi, categoriesApi, goalsApi, transactionsApi } from '@/api'
+import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
+import { TransactionForm } from '@/components/transactions/TransactionForm'
+import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
 import {
-  accountsApi,
-  categoriesApi,
-  goalsApi,
-  transactionsApi,
-} from '@/api'
-import { OriginBadge } from '@/components/OriginBadge'
+  Badge,
+  Card,
+  CategoryChip,
+  ErrorBanner,
+  IconButton,
+  LoadingBlock,
+  Modal,
+  MoneyValue,
+  PageHeader,
+} from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
-import { formatDate, formatMoney } from '@/lib/format'
+import { formatDate } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
 import {
   canMutateEntry,
@@ -21,38 +26,10 @@ import {
 } from '@/lib/transactionDisplay'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import {
-  Button,
-  ErrorBanner,
-  Field,
-  IconButton,
-  LoadingBlock,
-  Modal,
-  MoneyValue,
-  PageHeader,
-  Panel,
-  TextInput,
-  TextSelect,
-} from '@/components/ui-legacy'
-import type { ReactNode } from 'react'
+import type { EntryFormValues } from '@/components/transactions/schemas'
 
-const entrySchema = z.object({
-  description: z.string().min(1, strings.common.required),
-  amount: z.coerce.number().positive(),
-  date: z.string().min(1, strings.common.required),
-  type: z.enum(['income', 'expense']),
-  account_id: z.string().min(1, strings.common.required),
-  category_id: z.string().nullable(),
-})
-
-const moveSchema = z.object({
-  target_context_id: z.string().min(1, strings.common.required),
-  target_account_id: z.string().min(1, strings.common.required),
-  target_category_id: z.string().nullable(),
-})
-
-type EntryFormValues = z.infer<typeof entrySchema>
-type MoveFormValues = z.infer<typeof moveSchema>
+const t = strings.transactionDetail
+const tx = strings.transactions
 
 export function TransactionDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -75,99 +52,60 @@ export function TransactionDetailPage() {
     enabled: Boolean(contextId && id),
   })
 
-  const tx = txQuery.data
+  const transaction = txQuery.data
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', contextId],
     queryFn: () => accountsApi.listAccounts(contextId!),
-    enabled: Boolean(contextId) && (entryOpen || Boolean(tx)),
+    enabled: Boolean(contextId),
   })
 
   const categoriesQuery = useQuery({
-    queryKey: ['categories', contextId, tx?.type === 'income' ? 'income' : 'expense'],
+    queryKey: [
+      'categories',
+      contextId,
+      transaction?.type === 'income' ? 'income' : 'expense',
+    ],
     queryFn: () =>
       categoriesApi.listCategories(contextId!, {
-        type: tx?.type === 'income' ? 'income' : 'expense',
+        type: transaction?.type === 'income' ? 'income' : 'expense',
       }),
     enabled:
       Boolean(contextId) &&
-      Boolean(tx) &&
-      tx?.type !== 'transfer' &&
-      (entryOpen || Boolean(tx)),
+      Boolean(transaction) &&
+      transaction?.type !== 'transfer',
   })
 
   const goalsQuery = useQuery({
     queryKey: ['goals', contextId],
     queryFn: () => goalsApi.listGoals(contextId!),
-    enabled: Boolean(contextId) && Boolean(tx?.goal_id),
+    enabled: Boolean(contextId) && Boolean(transaction?.goal_id),
   })
-
-  const form = useForm<EntryFormValues>({
-    resolver: zodResolver(entrySchema),
-    defaultValues: {
-      description: '',
-      amount: 0,
-      date: '',
-      type: 'expense',
-      account_id: '',
-      category_id: null,
-    },
-  })
-
-  const moveForm = useForm<MoveFormValues>({
-    resolver: zodResolver(moveSchema),
-    defaultValues: {
-      target_context_id: '',
-      target_account_id: '',
-      target_category_id: null,
-    },
-  })
-
-  const targetContextId = moveForm.watch('target_context_id')
-
-  const moveAccountsQuery = useQuery({
-    queryKey: ['accounts', targetContextId],
-    queryFn: () => accountsApi.listAccounts(targetContextId),
-    enabled: Boolean(targetContextId) && moving,
-  })
-
-  const moveCategoriesQuery = useQuery({
-    queryKey: [
-      'categories',
-      targetContextId,
-      tx?.type === 'income' ? 'income' : 'expense',
-    ],
-    queryFn: () =>
-      categoriesApi.listCategories(targetContextId, {
-        type: tx?.type === 'income' ? 'income' : 'expense',
-      }),
-    enabled:
-      Boolean(targetContextId) && moving && tx?.type !== 'transfer',
-  })
-
-  useEffect(() => {
-    moveForm.setValue('target_account_id', '')
-    moveForm.setValue('target_category_id', null)
-  }, [targetContextId, moveForm])
 
   const accountName = useMemo(() => {
-    if (!tx) return '—'
+    if (!transaction) return '—'
     return (
-      accountsQuery.data?.find((a) => a.id === tx.account_id)?.name ?? '—'
+      accountsQuery.data?.find((a) => a.id === transaction.account_id)?.name ??
+      '—'
     )
-  }, [tx, accountsQuery.data])
+  }, [transaction, accountsQuery.data])
 
-  const categoryName = useMemo(() => {
-    if (!tx?.category_id) return '—'
-    return (
-      categoriesQuery.data?.find((c) => c.id === tx.category_id)?.name ?? '—'
+  const category = useMemo(() => {
+    if (!transaction?.category_id) return null
+    const cat = categoriesQuery.data?.find(
+      (c) => c.id === transaction.category_id,
     )
-  }, [tx, categoriesQuery.data])
+    if (!cat) return null
+    return { name: cat.name, colorIndex: Number(cat.id) % 12 || 1 }
+  }, [transaction, categoriesQuery.data])
 
   const goalName = useMemo(() => {
-    if (!tx?.goal_id) return null
-    return goalsQuery.data?.find((g) => g.id === tx.goal_id)?.name ?? tx.goal_id
-  }, [tx, goalsQuery.data])
+    if (!transaction?.goal_id) return null
+    return (
+      goalsQuery.data?.find((g) => g.id === transaction.goal_id)?.name ??
+      transaction.goal_id
+    )
+  }, [transaction, goalsQuery.data])
 
   async function invalidateMoney() {
     await queryClient.invalidateQueries({ queryKey: ['transactions'] })
@@ -178,7 +116,7 @@ export function TransactionDetailPage() {
 
   const saveMutation = useMutation({
     mutationFn: (values: EntryFormValues) =>
-      transactionsApi.updateTransaction(tx!.context_id, tx!.id, {
+      transactionsApi.updateTransaction(transaction!.context_id, transaction!.id, {
         account_id: values.account_id,
         category_id: values.category_id || null,
         description: values.description,
@@ -188,67 +126,57 @@ export function TransactionDetailPage() {
       }),
     onSuccess: async () => {
       await invalidateMoney()
-      toastSuccess(strings.transactions.updated)
+      toastSuccess(tx.updated)
       setEntryOpen(false)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
   const moveMutation = useMutation({
-    mutationFn: (values: MoveFormValues) =>
-      transactionsApi.moveTransaction(tx!.context_id, tx!.id, {
-        target_context_id: values.target_context_id,
-        target_account_id: values.target_account_id,
-        target_category_id: values.target_category_id || null,
-      }),
+    mutationFn: (values: Parameters<typeof transactionsApi.moveTransaction>[2]) =>
+      transactionsApi.moveTransaction(
+        transaction!.context_id,
+        transaction!.id,
+        values,
+      ),
     onSuccess: async (moved) => {
       await invalidateMoney()
-      toastSuccess(strings.transactions.moved)
+      toastSuccess(tx.moved)
       setMoving(false)
-      void navigate(
-        `/transactions/${moved.id}?context=${moved.context_id}`,
-        { replace: true },
-      )
+      void navigate(`/transactions/${moved.id}?context=${moved.context_id}`, {
+        replace: true,
+      })
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
   const deleteMutation = useMutation({
     mutationFn: () =>
-      transactionsApi.deleteTransaction(tx!.context_id, tx!.id),
+      transactionsApi.deleteTransaction(transaction!.context_id, transaction!.id),
     onSuccess: async () => {
       await invalidateMoney()
-      toastSuccess(strings.transactions.deleted)
+      toastSuccess(tx.deleted)
       void navigate('/transactions')
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
-  function openEdit() {
-    if (!tx || !canMutateEntry(tx)) return
-    form.reset({
-      description: tx.description,
-      amount: tx.amount,
-      date: tx.date,
-      type: tx.type === 'transfer' ? 'expense' : tx.type,
-      account_id: tx.account_id,
-      category_id: tx.category_id,
-    })
-    setEntryOpen(true)
-  }
-
   function handleDelete() {
-    if (!window.confirm(strings.transactions.confirmDelete)) return
+    if (!window.confirm(tx.confirmDelete)) return
     deleteMutation.mutate()
   }
 
   if (!contextId) {
     return (
-      <div className="stack">
-        <PageHeader title={strings.transactionDetail.title} />
+      <div className="space-y-4 bg-canvas text-fg">
+        <PageHeader title={t.title} />
         <ErrorBanner message={strings.common.consolidatedHint} />
-        <Link to="/transactions" className="back-link">
-          <ArrowLeft size={16} aria-hidden /> {strings.transactionDetail.back}
+        <Link
+          to="/transactions"
+          className="inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          {t.back}
         </Link>
       </div>
     )
@@ -258,32 +186,63 @@ export function TransactionDetailPage() {
     return <LoadingBlock label={strings.common.loading} />
   }
 
-  if (txQuery.isError || !tx) {
+  if (txQuery.isError || !transaction) {
     return (
-      <div className="stack">
-        <PageHeader title={strings.transactionDetail.title} />
+      <div className="space-y-4 bg-canvas text-fg">
+        <PageHeader title={t.title} />
         <ErrorBanner
           message={
             txQuery.isError
               ? getErrorMessage(txQuery.error)
-              : strings.transactionDetail.notFound
+              : t.notFound
           }
         />
-        <Link to="/transactions" className="back-link">
-          <ArrowLeft size={16} aria-hidden /> {strings.transactionDetail.back}
+        <Link
+          to="/transactions"
+          className="inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
+        >
+          <ArrowLeft size={16} aria-hidden />
+          {t.back}
         </Link>
       </div>
     )
   }
 
   const isConsolidated = activeScope === CONSOLIDATED
-  const editable = !isConsolidated && canMutateEntry(tx)
-  const watchedType = form.watch('type')
+  const editable = !isConsolidated && canMutateEntry(transaction)
+  const typeLabel =
+    transaction.type === 'transfer'
+      ? tx.types.transfer
+      : tx.types[transaction.type]
+
+  const entryInitial = {
+    description: transaction.description,
+    amount: transaction.amount,
+    date: transaction.date,
+    type: (transaction.type === 'transfer' ? 'expense' : transaction.type) as
+      | 'income'
+      | 'expense',
+    account_id: transaction.account_id,
+    category_id: transaction.category_id,
+    goal_id: transaction.goal_id,
+    is_recurring: false,
+    interval: 'monthly' as const,
+    start_date: transaction.date,
+    end_date: '',
+  }
 
   return (
-    <div className="stack">
+    <div className="space-y-6 bg-canvas text-fg">
+      <Link
+        to="/transactions"
+        className="inline-flex items-center gap-1.5 text-sm text-fg-muted transition hover:text-fg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
+      >
+        <ArrowLeft size={16} aria-hidden />
+        {t.back}
+      </Link>
+
       <PageHeader
-        title={strings.transactionDetail.title}
+        title={transaction.description}
         actions={
           !isConsolidated ? (
             <>
@@ -291,12 +250,12 @@ export function TransactionDetailPage() {
                 <IconButton
                   label={strings.common.edit}
                   icon={Pencil}
-                  onClick={openEdit}
+                  onClick={() => setEntryOpen(true)}
                 />
               ) : null}
               {editable ? (
                 <IconButton
-                  label={strings.transactions.move}
+                  label={tx.move}
                   icon={FolderInput}
                   onClick={() => setMoving(true)}
                 />
@@ -313,244 +272,137 @@ export function TransactionDetailPage() {
         }
       />
 
-      <Link to="/transactions" className="back-link">
-        <ArrowLeft size={16} aria-hidden /> {strings.transactionDetail.back}
-      </Link>
-
-      <Panel>
-        <div className="detail-grid">
-          <DetailField label={strings.transactions.description}>
-            {tx.description}
-          </DetailField>
-          <DetailField label={strings.transactions.amount}>
-            <MoneyValue
-              amount={tx.amount}
-              direction={transactionDirection(tx)}
-            />
-          </DetailField>
-          <DetailField label={strings.transactions.type}>
-            {tx.type === 'transfer'
-              ? strings.transactions.types.transfer
-              : strings.transactions.types[tx.type]}
-          </DetailField>
-          <DetailField label={strings.transactions.date}>
-            {formatDate(tx.date)}
-          </DetailField>
-          <DetailField label={strings.transactions.account}>
-            <Link to={`/accounts/${tx.account_id}?context=${tx.context_id}`}>
-              {accountName}
-            </Link>
-          </DetailField>
-          <DetailField label={strings.transactions.category}>
-            {categoryName}
-          </DetailField>
-          <DetailField label={strings.billCaptures.origin}>
-            <OriginBadge origin={tx.origin} />
-          </DetailField>
-          {tx.bill_id ? (
-            <DetailField label={strings.transactionDetail.linkedBill}>
-              <Link to="/bills">{strings.transactionDetail.viewBill}</Link>
-              <span className="muted small mono"> #{tx.bill_id}</span>
-            </DetailField>
-          ) : null}
-          {goalName ? (
-            <DetailField label={strings.transactionDetail.linkedGoal}>
-              <Link to="/goals">{goalName}</Link>
-            </DetailField>
-          ) : null}
-          {tx.card_invoice_id ? (
-            <DetailField label={strings.transactionDetail.linkedInvoice}>
-              <Link to="/credit-cards">
-                {strings.transactionDetail.viewInvoice}
-              </Link>
-              <span className="muted small mono"> #{tx.card_invoice_id}</span>
-            </DetailField>
-          ) : null}
+      <Card className="space-y-6">
+        <div className="text-center">
+          <MoneyValue
+            amount={transaction.amount}
+            direction={transactionDirection(transaction)}
+            size="lg"
+          />
+          <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
+            <Badge tone="neutral">{typeLabel}</Badge>
+            <TransactionOriginBadge origin={transaction.origin} />
+          </div>
         </div>
 
-        {tx.transfer ? (
-          <div className="transfer-detail">
-            <h3 className="section-title">{strings.transactions.types.transfer}</h3>
-            <p>
-              <span className="muted">{strings.transactionDetail.transferFrom}: </span>
-              {tx.transfer.from.context.name} → {tx.transfer.from.account.name}
-            </p>
-            <p>
-              <span className="muted">{strings.transactionDetail.transferTo}: </span>
-              {tx.transfer.to.context.name} → {tx.transfer.to.account.name}
-            </p>
+        <dl className="grid gap-4 sm:grid-cols-2">
+          <DetailItem label={tx.date}>{formatDate(transaction.date)}</DetailItem>
+          <DetailItem label={tx.account}>
+            <Link
+              to={`/accounts/${transaction.account_id}?context=${transaction.context_id}`}
+              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+            >
+              {accountName}
+            </Link>
+          </DetailItem>
+          <DetailItem label={tx.category}>
+            {category ? (
+              <CategoryChip
+                name={category.name}
+                colorIndex={category.colorIndex}
+              />
+            ) : (
+              '—'
+            )}
+          </DetailItem>
+          {transaction.bill_id ? (
+            <DetailItem label={t.linkedBill}>
+              <Link
+                to="/bills"
+                className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+              >
+                {t.viewBill}
+              </Link>
+              <span className="ml-1 text-xs text-fg-subtle">
+                #{transaction.bill_id}
+              </span>
+            </DetailItem>
+          ) : null}
+          {goalName ? (
+            <DetailItem label={t.linkedGoal}>
+              <Link
+                to="/goals"
+                className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+              >
+                {goalName}
+              </Link>
+            </DetailItem>
+          ) : null}
+          {transaction.card_invoice_id ? (
+            <DetailItem label={t.linkedInvoice}>
+              <Link
+                to="/credit-cards"
+                className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
+              >
+                {t.viewInvoice}
+              </Link>
+              <span className="ml-1 text-xs text-fg-subtle">
+                #{transaction.card_invoice_id}
+              </span>
+            </DetailItem>
+          ) : null}
+        </dl>
+
+        {transaction.transfer ? (
+          <div className="rounded-xl border border-line bg-surface-2 p-4">
+            <h3 className="mb-3 text-sm font-semibold text-fg">
+              {t.transferSection}
+            </h3>
+            <div className="space-y-2 text-sm">
+              <p>
+                <span className="text-fg-muted">{t.transferFrom}: </span>
+                {transaction.transfer.from.context.name} →{' '}
+                {transaction.transfer.from.account.name}
+              </p>
+              <p>
+                <span className="text-fg-muted">{t.transferTo}: </span>
+                {transaction.transfer.to.context.name} →{' '}
+                {transaction.transfer.to.account.name}
+              </p>
+            </div>
           </div>
         ) : null}
-      </Panel>
+      </Card>
 
       {entryOpen ? (
-        <Modal
-          title={strings.transactions.edit}
-          onClose={() => setEntryOpen(false)}
-        >
-          <form
-            className="form-grid"
-            onSubmit={form.handleSubmit((values) => saveMutation.mutate(values))}
-          >
-            <Field
-              label={strings.transactions.description}
-              error={form.formState.errors.description?.message}
-            >
-              <TextInput {...form.register('description')} />
-            </Field>
-            <Field
-              label={strings.transactions.amount}
-              error={form.formState.errors.amount?.message}
-            >
-              <TextInput type="number" step="0.01" {...form.register('amount')} />
-            </Field>
-            <Field
-              label={strings.transactions.date}
-              error={form.formState.errors.date?.message}
-            >
-              <TextInput type="date" {...form.register('date')} />
-            </Field>
-            <Field label={strings.transactions.type}>
-              <TextSelect {...form.register('type')}>
-                <option value="expense">
-                  {strings.transactions.types.expense}
-                </option>
-                <option value="income">
-                  {strings.transactions.types.income}
-                </option>
-              </TextSelect>
-            </Field>
-            <Field
-              label={strings.transactions.account}
-              error={form.formState.errors.account_id?.message}
-            >
-              <TextSelect {...form.register('account_id')}>
-                <option value="">{strings.common.select}</option>
-                {(accountsQuery.data ?? []).map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            <Field label={strings.transactions.category}>
-              <TextSelect
-                {...form.register('category_id', {
-                  setValueAs: (v: string) => (v === '' ? null : v),
-                })}
-              >
-                <option value="">{strings.common.select}</option>
-                {(categoriesQuery.data ?? [])
-                  .filter((cat) =>
-                    watchedType === 'income'
-                      ? cat.type === 'income'
-                      : cat.type === 'expense',
-                  )
-                  .map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                    </option>
-                  ))}
-              </TextSelect>
-            </Field>
-            {saveMutation.isError ? (
-              <ErrorBanner message={getErrorMessage(saveMutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setEntryOpen(false)}
-              >
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={saveMutation.isPending}>
-                {strings.common.save}
-              </Button>
-            </div>
-          </form>
+        <Modal title={tx.edit} onClose={() => setEntryOpen(false)}>
+          <TransactionForm
+            key={transaction.id}
+            contextId={transaction.context_id}
+            initialValues={entryInitial}
+            isEdit
+            showRecurring={false}
+            showGoal={false}
+            isPending={saveMutation.isPending}
+            error={
+              saveMutation.isError ? getErrorMessage(saveMutation.error) : null
+            }
+            onSubmit={(values) => saveMutation.mutate(values)}
+            onCancel={() => setEntryOpen(false)}
+          />
         </Modal>
       ) : null}
 
       {moving ? (
-        <Modal
-          title={strings.transactions.moveTitle}
-          onClose={() => setMoving(false)}
-        >
-          <p className="muted small">
-            {tx.description} · {formatMoney(tx.amount)}
-          </p>
-          <form
-            className="form-grid"
-            onSubmit={moveForm.handleSubmit((values) =>
-              moveMutation.mutate(values),
-            )}
-          >
-            <Field
-              label={strings.transactions.targetContext}
-              error={moveForm.formState.errors.target_context_id?.message}
-            >
-              <TextSelect {...moveForm.register('target_context_id')}>
-                <option value="">{strings.common.select}</option>
-                {contexts
-                  .filter((ctx) => ctx.id !== tx.context_id)
-                  .map((ctx) => (
-                    <option key={ctx.id} value={ctx.id}>
-                      {ctx.name}
-                    </option>
-                  ))}
-              </TextSelect>
-            </Field>
-            <Field
-              label={strings.transactions.targetAccount}
-              error={moveForm.formState.errors.target_account_id?.message}
-            >
-              <TextSelect {...moveForm.register('target_account_id')}>
-                <option value="">{strings.common.select}</option>
-                {(moveAccountsQuery.data ?? []).map((account) => (
-                  <option key={account.id} value={account.id}>
-                    {account.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            <Field label={strings.transactions.category}>
-              <TextSelect
-                {...moveForm.register('target_category_id', {
-                  setValueAs: (v: string) => (v === '' ? null : v),
-                })}
-              >
-                <option value="">{strings.common.select}</option>
-                {(moveCategoriesQuery.data ?? []).map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            {moveMutation.isError ? (
-              <ErrorBanner message={getErrorMessage(moveMutation.error)} />
-            ) : null}
-            <div className="form-actions">
-              <Button
-                type="button"
-                variant="ghost"
-                onClick={() => setMoving(false)}
-              >
-                {strings.common.cancel}
-              </Button>
-              <Button type="submit" disabled={moveMutation.isPending}>
-                {strings.transactions.move}
-              </Button>
-            </div>
-          </form>
+        <Modal title={tx.moveTitle} onClose={() => setMoving(false)}>
+          <MoveTransactionForm
+            transaction={transaction}
+            excludeContextId={transaction.context_id}
+            contexts={contexts}
+            isPending={moveMutation.isPending}
+            error={
+              moveMutation.isError ? getErrorMessage(moveMutation.error) : null
+            }
+            onSubmit={(values) => moveMutation.mutate(values)}
+            onCancel={() => setMoving(false)}
+          />
         </Modal>
       ) : null}
     </div>
   )
 }
 
-function DetailField({
+function DetailItem({
   label,
   children,
 }: {
@@ -558,9 +410,11 @@ function DetailField({
   children: ReactNode
 }) {
   return (
-    <div className="detail-field">
-      <span className="detail-field__label muted">{label}</span>
-      <div className="detail-field__value">{children}</div>
+    <div>
+      <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
+        {label}
+      </dt>
+      <dd className="mt-1 text-sm text-fg">{children}</dd>
     </div>
   )
 }

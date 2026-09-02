@@ -560,9 +560,41 @@ export const mockApi = {
     )
   },
 
-  async listTransactions(contextId: string): Promise<StatementEntry[]> {
+  async listTransactions(
+    contextId: string,
+    filters?: {
+      from?: string
+      to?: string
+      account_id?: string
+      category_id?: string
+      type?: 'income' | 'expense' | 'transfer'
+      q?: string
+    },
+  ): Promise<StatementEntry[]> {
     await delay()
-    return byContext(transactions, contextId)
+    let rows = byContext(transactions, contextId)
+    if (filters?.from) {
+      rows = rows.filter((row) => row.date >= filters.from!)
+    }
+    if (filters?.to) {
+      rows = rows.filter((row) => row.date <= filters.to!)
+    }
+    if (filters?.account_id) {
+      rows = rows.filter((row) => row.account_id === filters.account_id)
+    }
+    if (filters?.category_id) {
+      rows = rows.filter((row) => row.category_id === filters.category_id)
+    }
+    if (filters?.type) {
+      rows = rows.filter((row) => row.type === filters.type)
+    }
+    if (filters?.q?.trim()) {
+      const needle = filters.q.trim().toLowerCase()
+      rows = rows.filter((row) =>
+        row.description.toLowerCase().includes(needle),
+      )
+    }
+    return rows
   },
 
   async createTransaction(

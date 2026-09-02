@@ -162,6 +162,8 @@ export const strings = {
     viewBill: 'Ver boleto',
     viewGoal: 'Ver meta',
     viewInvoice: 'Ver fatura',
+    delete: 'Excluir lançamento',
+    transferSection: 'Detalhes da transferência',
   },
 
   accountDetail: {
@@ -317,6 +319,23 @@ export const strings = {
       expense: 'Despesa',
       transfer: 'Transferência',
     },
+    filters: {
+      title: 'Filtros',
+      from: 'De',
+      to: 'Até',
+      month: 'Mês',
+      account: 'Conta',
+      category: 'Categoria',
+      type: 'Tipo',
+      typeAll: 'Todos os tipos',
+      search: 'Buscar',
+      searchPlaceholder: 'Descrição…',
+      clear: 'Limpar filtros',
+      activeCount: '{n} filtro(s) ativo(s)',
+      allAccounts: 'Todas as contas',
+      allCategories: 'Todas as categorias',
+    },
+    recurringBadge: 'Recorrente',
   },
 
   transfers: {

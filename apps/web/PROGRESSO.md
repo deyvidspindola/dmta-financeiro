@@ -53,6 +53,13 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   `Button`, `Alert` de erro, toggle de tema no rodapé. Componentes locais em
   `components/dashboard/`. Rota `/` em `MIGRATED_ROUTE_PATTERNS`. build + lint
   verdes; smoke visual claro/escuro + mobile ~360px.
+- **F3b — Lançamentos (esta rodada, Cursor):** `TransactionsPage`,
+  `TransactionDetailPage` e `QuickAddPage` migradas para o design system.
+  Lista agrupada por dia com `CategoryChip`/`MoneyValue`. Filtros server-side
+  (`from`/`to`/`account_id`/`category_id`/`type`/`q`) com barra colapsável no
+  mobile (modal). Forms extraídos em `components/transactions/` (`TransactionForm`,
+  `MoveTransactionForm`, `TransferForm`). Rotas `/transactions`, `/transactions/:id`
+  e `/novo` em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
 
 ## Feito
 
@@ -77,8 +84,7 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
 ## Falta / pendências
 
 - IMAP real (caixa de e-mail)
-- Consumir os filtros server-side de `GET /transactions` e `GET /bills` (a API
-  já aceita `from`/`to`/`account_id`/`category_id`/`type`/`status`/`q` — PR #51)
+- Consumir filtros server-side em `GET /bills` (a API já aceita — PR #51)
 - `GET /accounts/{id}` dedicado (hoje resolve via listagem no cliente)
 - Dashboard API não recebe mês — métricas do topo são do mês corrente da API;
   seções novas (lançamentos, orçamentos) respeitam `monthStore`
