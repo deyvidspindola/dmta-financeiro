@@ -12,18 +12,19 @@ use Illuminate\Support\Collection;
 
 /**
  * Calcula o progresso dos orçamentos de um contexto num mês: para cada
- * categoria com teto, quanto já foi gasto (a própria categoria + as
+ * categoria com teto, quanto vai ser gasto (a própria categoria + as
  * subcategorias dela, 1 nível — D-12) contra o teto efetivo (override do
  * mês tem precedência sobre o teto padrão).
  *
- * Uma query agregada de gasto por categoria + uma de subcategorias — não
- * faz uma consulta por orçamento.
+ * `spent` = já efetivado + previsto ({@see BudgetProjectionService}:
+ * boletos, cartão, recorrência do mês) — item #3, "previsto em tudo".
+ * `spent_effective` é só a parte que já virou lançamento.
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   02/09/2026
  *
@@ -31,8 +32,10 @@ use Illuminate\Support\Collection;
  */
 final class BudgetProgressService
 {
+    public function __construct(private readonly BudgetProjectionService $projection) {}
+
     /**
-     * @return list<array{budget_id: int, category_id: int, category_name: string, is_override: bool, limit: float, spent: float, remaining: float, percent: float, over: bool}>
+     * @return list<array{budget_id: int, category_id: int, category_name: string, is_override: bool, limit: float, spent: float, spent_effective: float, remaining: float, percent: float, over: bool}>
      */
     public function forMonth(Context $context, Carbon $month): array
     {
@@ -40,17 +43,23 @@ final class BudgetProgressService
 
         $effective = $this->effectiveBudgets($context, $monthStart);
         $spentByCategory = $this->spentByCategory($context, $monthStart);
+        $pendingByCategory = $this->projection->pendingByCategory($context, $monthStart);
         $childrenByParent = $context->categories()->whereNotNull('parent_id')->get()->groupBy('parent_id');
+
+        $tree = function (array $byCategory, int $categoryId) use ($childrenByParent): float {
+            $total = (float) ($byCategory[$categoryId] ?? 0);
+            foreach ($childrenByParent[$categoryId] ?? [] as $child) {
+                $total += (float) ($byCategory[$child->id] ?? 0);
+            }
+
+            return $total;
+        };
 
         $rows = [];
 
         foreach ($effective as $categoryId => $budget) {
-            $spent = (float) ($spentByCategory[$categoryId] ?? 0);
-
-            foreach ($childrenByParent[$categoryId] ?? [] as $child) {
-                $spent += (float) ($spentByCategory[$child->id] ?? 0);
-            }
-
+            $effectiveSpent = $tree($spentByCategory->all(), $categoryId);
+            $spent = round($effectiveSpent + $tree($pendingByCategory, $categoryId), 2);
             $limit = (float) $budget->limit_amount;
 
             $rows[] = [
@@ -59,7 +68,8 @@ final class BudgetProgressService
                 'category_name' => $budget->category->name,
                 'is_override' => ! $budget->isDefault(),
                 'limit' => $limit,
-                'spent' => round($spent, 2),
+                'spent' => $spent,
+                'spent_effective' => round($effectiveSpent, 2),
                 'remaining' => round($limit - $spent, 2),
                 'percent' => $limit > 0.0 ? min(999.9, round($spent / $limit * 100, 1)) : 0.0,
                 'over' => $spent > $limit,
