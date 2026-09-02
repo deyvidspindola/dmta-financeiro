@@ -1,17 +1,16 @@
 import {
   Calculator,
   CreditCard,
+  HandCoins,
   Home,
   Landmark,
   LayoutGrid,
   ListPlus,
   LogOut,
-  Monitor,
-  Moon,
   PanelLeftClose,
   PanelLeftOpen,
   Plus,
-  Sun,
+  Receipt,
   Target,
   Wallet,
 } from 'lucide-react'
@@ -20,12 +19,12 @@ import type { LucideIcon } from 'lucide-react'
 import { authApi } from '@/api'
 import { ContextSwitcher } from '@/components/ContextSwitcher'
 import { MonthNavigator } from '@/components/MonthNavigator'
+import { ThemeToggleGroup } from '@/components/ThemeToggleGroup'
 import { IconButton } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { cn } from '@/lib/cn'
 import { usePrelineInit } from '@/lib/preline'
 import { useAuthStore } from '@/store/authStore'
-import { useThemeStore, type ThemePref } from '@/store/themeStore'
 import { useUiStore } from '@/store/uiStore'
 
 type NavItem = { to: string; label: string; icon: LucideIcon; end?: boolean }
@@ -35,12 +34,14 @@ const OVERVIEW_ITEMS: NavItem[] = [
   { to: '/transactions', label: strings.nav.transactions, icon: ListPlus },
   { to: '/credit-cards', label: strings.nav.creditCards, icon: CreditCard },
   { to: '/accounts', label: strings.nav.accounts, icon: Wallet },
+  { to: '/bills', label: strings.nav.bills, icon: Receipt },
 ]
 
 const PLANNING_ITEMS: NavItem[] = [
   { to: '/budgets', label: strings.nav.budgets, icon: Landmark },
   { to: '/goals', label: strings.nav.goals, icon: Target },
   { to: '/simulator', label: strings.nav.simulator, icon: Calculator },
+  { to: '/debts', label: strings.nav.debts, icon: HandCoins },
 ]
 
 const MOBILE_TABS: NavItem[] = [
@@ -50,17 +51,10 @@ const MOBILE_TABS: NavItem[] = [
   { to: '/mais', label: strings.nav.more, icon: LayoutGrid },
 ]
 
-const THEME_OPTIONS: { value: ThemePref; label: string; icon: LucideIcon }[] = [
-  { value: 'light', label: strings.theme.light, icon: Sun },
-  { value: 'dark', label: strings.theme.dark, icon: Moon },
-  { value: 'system', label: strings.theme.system, icon: Monitor },
-]
-
 export function AppLayout() {
   const navigate = useNavigate()
   const { user, clearSession } = useAuthStore()
   const { sidebarCollapsed, toggleSidebar } = useUiStore()
-  const { pref, setPref } = useThemeStore()
 
   usePrelineInit()
 
@@ -169,35 +163,7 @@ export function AppLayout() {
             ) : null}
           </div>
 
-          <div
-            className={cn(
-              'mb-2 flex gap-0.5 rounded-xl bg-surface-2 p-1',
-              sidebarCollapsed && 'flex-col',
-            )}
-            role="group"
-            aria-label={strings.theme.label}
-          >
-            {THEME_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                title={opt.label}
-                aria-label={opt.label}
-                aria-pressed={pref === opt.value}
-                className={cn(
-                  'inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg px-2 py-1.5 text-xs font-medium transition',
-                  'focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-brand-600',
-                  pref === opt.value
-                    ? 'bg-surface text-brand-700 shadow-sm dark:text-brand-300'
-                    : 'text-fg-muted hover:text-fg',
-                )}
-                onClick={() => setPref(opt.value)}
-              >
-                <opt.icon size={14} aria-hidden />
-                {!sidebarCollapsed ? <span>{opt.label}</span> : null}
-              </button>
-            ))}
-          </div>
+          <ThemeToggleGroup compact={sidebarCollapsed} className="mb-2" />
 
           <button
             type="button"
