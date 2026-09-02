@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { useQueryClient } from '@tanstack/react-query'
 import { QRCodeSVG } from 'qrcode.react'
+import { useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { authApi } from '@/api'
+import { ApiError } from '@/api/http'
 import {
   Alert,
   Button,
   ErrorBanner,
   Field,
+  Modal,
   PageHeader,
   Panel,
   TextInput,
@@ -27,9 +31,19 @@ const confirmSchema = z.object({
 
 type ConfirmValues = z.infer<typeof confirmSchema>
 
+const resetSchema = z.object({
+  password: z.string().min(1, strings.common.required),
+  confirmText: z.string(),
+})
+
+type ResetValues = z.infer<typeof resetSchema>
+
 export function SecurityPage() {
-  const { user, setUser } = useAuthStore()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const { user, setUser, clearSession } = useAuthStore()
   const [enroll, setEnroll] = useState<MfaEnrollPayload | null>(null)
+  const [resetModalOpen, setResetModalOpen] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -38,6 +52,27 @@ export function SecurityPage() {
     resolver: zodResolver(confirmSchema),
     defaultValues: { code: '' },
   })
+
+  const resetForm = useForm<ResetValues>({
+    resolver: zodResolver(resetSchema),
+    defaultValues: { password: '', confirmText: '' },
+  })
+
+  const resetPassword = resetForm.watch('password')
+  const resetConfirmText = resetForm.watch('confirmText')
+  const canReset =
+    resetPassword.length > 0 && resetConfirmText === s.resetConfirmWord
+
+  function openResetModal() {
+    setError(null)
+    resetForm.reset({ password: '', confirmText: '' })
+    setResetModalOpen(true)
+  }
+
+  function closeResetModal() {
+    setResetModalOpen(false)
+    resetForm.reset({ password: '', confirmText: '' })
+  }
 
   async function handleEnroll() {
     setError(null)
@@ -85,6 +120,27 @@ export function SecurityPage() {
       toastSuccess(s.disableSuccess)
     } catch (err) {
       setError(getErrorMessage(err))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function handleReset(values: ResetValues) {
+    if (values.confirmText !== s.resetConfirmWord) return
+
+    setError(null)
+    setBusy(true)
+    try {
+      await authApi.resetAccountData(values.password)
+      closeResetModal()
+      toastSuccess(s.resetSuccess)
+      queryClient.clear()
+      clearSession()
+      void navigate('/login', { replace: true })
+    } catch (err) {
+      const fallback =
+        err instanceof ApiError && err.status === 422 ? s.wrongPassword : undefined
+      setError(getErrorMessage(err, fallback ?? strings.common.error))
     } finally {
       setBusy(false)
     }
@@ -169,7 +225,59 @@ export function SecurityPage() {
         </Panel>
       ) : null}
 
-      {error ? <ErrorBanner message={error} /> : null}
+      <Panel
+        title={s.dangerZone}
+        className="border border-negative/40 bg-negative/5"
+      >
+        <p className="text-sm text-fg-muted">{s.resetDescription}</p>
+        <div className="mt-4">
+          <Button variant="danger" onClick={openResetModal} disabled={busy}>
+            {s.resetButton}
+          </Button>
+        </div>
+      </Panel>
+
+      {resetModalOpen ? (
+        <Modal title={s.resetTitle} onClose={closeResetModal}>
+          <form
+            className="grid gap-4"
+            onSubmit={resetForm.handleSubmit((values) => void handleReset(values))}
+          >
+            <p className="text-sm text-fg-muted">{s.resetDescription}</p>
+            <Field
+              label={s.currentPassword}
+              error={resetForm.formState.errors.password?.message}
+            >
+              <TextInput
+                type="password"
+                autoComplete="current-password"
+                {...resetForm.register('password')}
+              />
+            </Field>
+            <Field label={s.resetConfirmHint(s.resetConfirmWord)}>
+              <TextInput
+                autoComplete="off"
+                {...resetForm.register('confirmText')}
+              />
+            </Field>
+            {error ? <ErrorBanner message={error} /> : null}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button type="button" variant="ghost" onClick={closeResetModal}>
+                {strings.common.cancel}
+              </Button>
+              <Button
+                type="submit"
+                variant="danger"
+                disabled={busy || !canReset}
+              >
+                {s.resetConfirm}
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      ) : null}
+
+      {error && !resetModalOpen ? <ErrorBanner message={error} /> : null}
       {message ? <Alert tone="success">{message}</Alert> : null}
     </div>
   )

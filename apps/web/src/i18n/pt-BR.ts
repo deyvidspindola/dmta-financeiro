@@ -136,6 +136,18 @@ export const strings = {
     codeHint: 'Digite o código de 6 dígitos gerado pelo app.',
     enrollSuccess: 'MFA ativado. No próximo login será pedido o código.',
     disableSuccess: 'MFA desligado.',
+    dangerZone: 'Zona de perigo',
+    resetDescription:
+      'Apaga de forma irreversível contas, lançamentos, cartões, orçamentos, metas, boletos e recorrências. Seu login e senha continuam válidos.',
+    resetButton: 'Apagar todos os dados',
+    resetTitle: 'Apagar todos os dados',
+    resetConfirmWord: 'APAGAR',
+    resetConfirmHint: (word: string) =>
+      `Para confirmar, digite exatamente ${word} no campo abaixo.`,
+    currentPassword: 'Senha atual',
+    resetConfirm: 'Apagar permanentemente',
+    resetSuccess: 'Todos os dados foram apagados. Faça login novamente.',
+    wrongPassword: 'Senha incorreta.',
   },
 
   dashboard: {

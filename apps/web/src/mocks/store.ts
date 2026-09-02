@@ -374,6 +374,13 @@ export const mockApi = {
     user = { ...user, mfa_enabled: false }
   },
 
+  async resetAccountData(password: string): Promise<void> {
+    await delay()
+    if (password !== 'password') {
+      throw Object.assign(new Error('Senha incorreta.'), { status: 422 })
+    }
+  },
+
   async listContexts(): Promise<Context[]> {
     await delay()
     return [...contexts]
