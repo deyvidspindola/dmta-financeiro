@@ -591,11 +591,13 @@ export function mapCreditCard(
     available_limit?: number | null
     unpaid_invoices_total?: number
     current_invoice_total?: number
+    context?: Parameters<typeof mapContextRef>[0] | null
   },
 ): CreditCard {
+  const context = raw.context ? mapContextRef(raw.context) : null
   return {
     id: asId(raw.id),
-    context_id: contextId,
+    context_id: context?.id ?? contextId,
     name: raw.name,
     brand: raw.brand ?? null,
     limit: Number(raw.credit_limit ?? raw.limit ?? 0),
@@ -607,6 +609,7 @@ export function mapCreditCard(
         : Number(raw.available_limit),
     unpaid_invoices_total: Number(raw.unpaid_invoices_total ?? 0),
     current_invoice_total: Number(raw.current_invoice_total ?? 0),
+    context,
   }
 }
 
