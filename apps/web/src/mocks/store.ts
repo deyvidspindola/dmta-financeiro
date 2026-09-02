@@ -176,6 +176,18 @@ let creditCards: CreditCard[] = [
     unpaid_invoices_total: 0,
     current_invoice_total: 0,
   },
+  {
+    id: 'cc_2',
+    context_id: 'ctx_empresa_a',
+    name: 'Cartão PJ',
+    brand: 'Mastercard',
+    limit: 25000,
+    closing_day: 10,
+    due_day: 20,
+    available_limit: 25000,
+    unpaid_invoices_total: 0,
+    current_invoice_total: 0,
+  },
 ]
 
 let invoices: CardInvoice[] = [
@@ -875,6 +887,19 @@ export const mockApi = {
   async listConsolidatedBills(): Promise<Bill[]> {
     await delay()
     return bills.map((row) => ({
+      ...row,
+      context: {
+        id: row.context_id,
+        type: contexts.find((c) => c.id === row.context_id)?.type ?? 'pf',
+        name: contexts.find((c) => c.id === row.context_id)?.name ?? row.context_id,
+        company: contexts.find((c) => c.id === row.context_id)?.company ?? null,
+      },
+    }))
+  },
+
+  async listConsolidatedCreditCards(): Promise<CreditCard[]> {
+    await delay()
+    return creditCards.map((row) => ({
       ...row,
       context: {
         id: row.context_id,

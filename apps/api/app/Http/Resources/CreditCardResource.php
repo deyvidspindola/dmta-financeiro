@@ -21,7 +21,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 02/09/2026
  */
 final class CreditCardResource extends JsonResource
 {
@@ -44,6 +44,8 @@ final class CreditCardResource extends JsonResource
             'current_invoice_total' => (float) ($this->open_invoice_total ?? 0),
             // Limite ainda disponível — null se o cartão não tem limite cadastrado.
             'available_limit' => $limit !== null ? round($limit - $unpaid, 2) : null,
+            // Só presente na visão consolidada — ver AccountResource.
+            'context' => new ContextResource($this->whenLoaded('context')),
         ];
     }
 }

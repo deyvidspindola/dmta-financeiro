@@ -7,9 +7,11 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AccountResource;
 use App\Http\Resources\BillResource;
+use App\Http\Resources\CreditCardResource;
 use App\Http\Resources\StatementEntryResource;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\CreditCard;
 use App\Models\StatementEntry;
 use App\Services\DashboardSummaryService;
 use Illuminate\Http\Request;
@@ -31,7 +33,7 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 02/09/2026
  */
 final class ConsolidatedController extends Controller
 {
@@ -60,5 +62,33 @@ final class ConsolidatedController extends Controller
         $bills = Bill::query()->with('context')->whereIn('context_id', $contextIds)->get();
 
         return BillResource::collection($bills);
+    }
+
+    /**
+     * Lista cartões de todos os contextos do usuário, com `context` aninhado.
+     *
+     * Não pagina, não cria/edita cartão e não filtra por status de fatura —
+     * só agrega o que a listagem por contexto já devolveria, com totais de
+     * fatura e o contexto de origem para badge na UI consolidada.
+     *
+     * @return AnonymousResourceCollection<int, CreditCardResource>
+     */
+    public function creditCards(Request $request): AnonymousResourceCollection
+    {
+        $contextIds = $request->user()->contexts()->pluck('id');
+        $cards = CreditCard::query()
+            ->with('context')
+            ->whereIn('context_id', $contextIds)
+            ->withSum(
+                ['invoices as unpaid_invoices_total' => fn ($query) => $query->where('status', '!=', 'paid')],
+                'total_amount',
+            )
+            ->withSum(
+                ['invoices as open_invoice_total' => fn ($query) => $query->where('status', 'open')],
+                'total_amount',
+            )
+            ->get();
+
+        return CreditCardResource::collection($cards);
     }
 }

@@ -1,8 +1,8 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
-import { creditCardsApi } from '@/api'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { consolidatedApi, creditCardsApi } from '@/api'
 import {
   CardFormModal,
   PayModal,
@@ -44,10 +44,11 @@ const STATUS_LABEL: Record<string, string> = {
 
 export function CreditCardDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const [searchParams] = useSearchParams()
   const queryClient = useQueryClient()
-  const contextId = useWritableContextId()
+  const writableContextId = useWritableContextId()
   const activeScope = useAuthStore((s) => s.activeScope)
-  const consolidated = activeScope === CONSOLIDATED
+  const isConsolidated = activeScope === CONSOLIDATED
 
   const [selectedMonthOverride, setSelectedMonthOverride] = useState<string | null>(
     null,
@@ -56,21 +57,35 @@ export function CreditCardDetailPage() {
   const [purchaseModal, setPurchaseModal] = useState(false)
   const [payInvoiceId, setPayInvoiceId] = useState<string | null>(null)
 
+  const urlContextId =
+    searchParams.get('context') ??
+    (activeScope !== CONSOLIDATED ? activeScope : null)
+
   const cards = useQuery({
-    queryKey: ['credit-cards', contextId],
-    queryFn: () => creditCardsApi.listCreditCards(contextId as string),
-    enabled: Boolean(contextId) && !consolidated,
+    queryKey: ['credit-cards', activeScope],
+    queryFn: () =>
+      isConsolidated
+        ? consolidatedApi.listConsolidatedCreditCards()
+        : creditCardsApi.listCreditCards(activeScope),
+    enabled: Boolean(activeScope),
   })
 
-  const card = useMemo(
-    () => (cards.data ?? []).find((row) => row.id === id),
-    [cards.data, id],
-  )
+  const card = useMemo(() => {
+    const rows = cards.data ?? []
+    if (urlContextId) {
+      return rows.find((row) => row.id === id && row.context_id === urlContextId)
+    }
+    return rows.find((row) => row.id === id)
+  }, [cards.data, urlContextId, id])
+
+  const cardContextId = card?.context_id ?? urlContextId
+  const canMutate = Boolean(writableContextId) && !isConsolidated
 
   const invoices = useQuery({
-    queryKey: ['card-invoices', contextId, id],
-    queryFn: () => creditCardsApi.listInvoicesForCard(contextId as string, id as string),
-    enabled: Boolean(contextId && id) && !consolidated,
+    queryKey: ['card-invoices', cardContextId, id],
+    queryFn: () =>
+      creditCardsApi.listInvoicesForCard(cardContextId as string, id as string),
+    enabled: Boolean(cardContextId && id && card),
   })
 
   const timeline = useMemo(() => {
@@ -92,14 +107,14 @@ export function CreditCardDetailPage() {
   const realInvoice = selectedEntry?.invoice ?? null
 
   const purchases = useQuery({
-    queryKey: ['card-purchases', contextId, id, realInvoice?.id],
+    queryKey: ['card-purchases', cardContextId, id, realInvoice?.id],
     queryFn: () =>
       creditCardsApi.listCardPurchases(
-        contextId as string,
+        cardContextId as string,
         id as string,
         realInvoice!.id,
       ),
-    enabled: Boolean(contextId && id && realInvoice),
+    enabled: Boolean(cardContextId && id && realInvoice),
   })
 
   const invalidate = () => {
@@ -118,21 +133,6 @@ export function CreditCardDetailPage() {
     if (selectedIdx < 0) return
     const next = timeline[selectedIdx + delta]
     if (next) setSelectedMonth(next.reference_month)
-  }
-
-  if (!contextId || consolidated) {
-    return (
-      <div className="space-y-4 bg-canvas text-fg">
-        <ErrorBanner message={t.pickContext} />
-        <Link
-          to="/credit-cards"
-          className="inline-flex items-center gap-1.5 text-sm text-fg-muted hover:text-fg"
-        >
-          <ArrowLeft size={16} aria-hidden />
-          {t.back}
-        </Link>
-      </div>
-    )
   }
 
   if (cards.isLoading) {
@@ -154,7 +154,7 @@ export function CreditCardDetailPage() {
     )
   }
 
-  if (!card) {
+  if (!card || !cardContextId) {
     return (
       <div className="space-y-4 bg-canvas text-fg">
         <ErrorBanner message={t.notFound} />
@@ -198,23 +198,36 @@ export function CreditCardDetailPage() {
           <ArrowLeft size={16} aria-hidden />
           {t.back}
         </Link>
-        <div className="flex min-w-0 flex-1 items-center justify-center gap-2 px-2">
-          <h1 className="truncate font-display text-lg font-bold sm:text-xl">
-            {card.name}
-          </h1>
-          {card.brand ? <Badge tone="brand">{card.brand}</Badge> : null}
+        <div className="flex min-w-0 flex-1 flex-col items-center gap-1 px-2">
+          <div className="flex max-w-full items-center justify-center gap-2">
+            <h1 className="truncate font-display text-lg font-bold sm:text-xl">
+              {card.name}
+            </h1>
+            {card.brand ? <Badge tone="brand">{card.brand}</Badge> : null}
+          </div>
+          {isConsolidated && card.context ? (
+            <Badge tone="accent">{card.context.name}</Badge>
+          ) : null}
         </div>
-        <div className="flex shrink-0 gap-2">
-          <Button variant="ghost" size="sm" onClick={() => setPurchaseModal(true)}>
-            <Plus size={16} />
-            <span className="hidden sm:inline">{t.newPurchase}</span>
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setEditModal(true)}>
-            <Pencil size={16} />
-            <span className="hidden sm:inline">{strings.common.edit}</span>
-          </Button>
-        </div>
+        {canMutate ? (
+          <div className="flex shrink-0 gap-2">
+            <Button variant="ghost" size="sm" onClick={() => setPurchaseModal(true)}>
+              <Plus size={16} />
+              <span className="hidden sm:inline">{t.newPurchase}</span>
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditModal(true)}>
+              <Pencil size={16} />
+              <span className="hidden sm:inline">{strings.common.edit}</span>
+            </Button>
+          </div>
+        ) : (
+          <div className="w-10" aria-hidden />
+        )}
       </div>
+
+      {isConsolidated ? (
+        <p className="text-sm text-fg-muted">{strings.common.consolidatedHint}</p>
+      ) : null}
 
       <div className="space-y-3 border-y border-line py-4">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
@@ -291,7 +304,7 @@ export function CreditCardDetailPage() {
               size="xl"
               className={selectedEntry?.isSynthetic ? 'text-fg-muted' : undefined}
             />
-            {realInvoice?.status === 'closed' ? (
+            {canMutate && realInvoice?.status === 'closed' ? (
               <Button className="mt-2" onClick={() => setPayInvoiceId(realInvoice.id)}>
                 {t.payInvoiceBtn}
               </Button>
@@ -342,9 +355,9 @@ export function CreditCardDetailPage() {
         </>
       )}
 
-      {editModal ? (
+      {editModal && writableContextId ? (
         <CardFormModal
-          contextId={contextId}
+          contextId={writableContextId}
           editing={card}
           onClose={() => setEditModal(false)}
           onSaved={() => {
@@ -354,9 +367,9 @@ export function CreditCardDetailPage() {
         />
       ) : null}
 
-      {purchaseModal ? (
+      {purchaseModal && writableContextId ? (
         <PurchaseModal
-          contextId={contextId}
+          contextId={writableContextId}
           cards={[card]}
           defaultCardId={card.id}
           onClose={() => setPurchaseModal(false)}
@@ -367,9 +380,9 @@ export function CreditCardDetailPage() {
         />
       ) : null}
 
-      {payInvoiceId ? (
+      {payInvoiceId && writableContextId ? (
         <PayModal
-          contextId={contextId}
+          contextId={writableContextId}
           invoiceId={payInvoiceId}
           cardId={card.id}
           onClose={() => setPayInvoiceId(null)}

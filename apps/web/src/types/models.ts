@@ -160,6 +160,7 @@ export interface CreditCard {
   available_limit: number | null
   unpaid_invoices_total: number
   current_invoice_total: number
+  context?: ContextRef | null
 }
 
 export interface CardInvoice {

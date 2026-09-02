@@ -1,8 +1,8 @@
 import { useMocks } from '@/api/config'
 import { http, unwrapData } from '@/api/http'
-import { mapAccount, mapBill, mapTransaction } from '@/api/mappers'
+import { mapAccount, mapBill, mapCreditCard, mapTransaction } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
-import type { Account, Bill, StatementEntry } from '@/types/models'
+import type { Account, Bill, CreditCard, StatementEntry } from '@/types/models'
 
 export async function listConsolidatedAccounts(): Promise<Account[]> {
   if (useMocks) return mockApi.listConsolidatedAccounts()
@@ -34,5 +34,16 @@ export async function listConsolidatedBills(): Promise<Bill[]> {
   >('/consolidated/bills')
   return unwrapData(payload).map((row) =>
     mapBill(row.context ? String(row.context.id) : '', row),
+  )
+}
+
+export async function listConsolidatedCreditCards(): Promise<CreditCard[]> {
+  if (useMocks) return mockApi.listConsolidatedCreditCards()
+  const payload = await http.get<
+    | Array<Parameters<typeof mapCreditCard>[1]>
+    | { data: Array<Parameters<typeof mapCreditCard>[1]> }
+  >('/consolidated/credit-cards')
+  return unwrapData(payload).map((row) =>
+    mapCreditCard(row.context ? String(row.context.id) : '', row),
   )
 }

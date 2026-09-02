@@ -40,9 +40,11 @@ function resolveBrandStyle(brand: string | null): BrandStyle {
 /** Cartão visual estilo cartão de crédito para a grade da listagem. */
 export function VisualCreditCard({
   card,
+  showContext = false,
   className,
 }: {
   card: CreditCard
+  showContext?: boolean
   className?: string
 }) {
   const style = resolveBrandStyle(card.brand)
@@ -61,7 +63,17 @@ export function VisualCreditCard({
       )}
     >
       <div className="flex items-start justify-between gap-2">
-        <h2 className="truncate font-display text-base font-semibold">{card.name}</h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-display text-base font-semibold">{card.name}</h2>
+          {showContext && card.context ? (
+            <Badge
+              tone="accent"
+              className="mt-1.5 bg-white/15 text-white"
+            >
+              {card.context.name}
+            </Badge>
+          ) : null}
+        </div>
         {card.brand ? (
           <Badge tone={style.badgeTone} className="shrink-0 bg-white/15 text-white">
             {card.brand}
