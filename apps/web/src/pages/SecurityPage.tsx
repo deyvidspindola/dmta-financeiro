@@ -138,9 +138,14 @@ export function SecurityPage() {
       clearSession()
       void navigate('/login', { replace: true })
     } catch (err) {
-      const fallback =
-        err instanceof ApiError && err.status === 422 ? s.wrongPassword : undefined
-      setError(getErrorMessage(err, fallback ?? strings.common.error))
+      // O único erro de validação possível aqui é a senha — a API ainda
+      // devolve a chave crua (`validation.current_password`), então não
+      // passamos por getErrorMessage nesse caso.
+      if (err instanceof ApiError && err.status === 422) {
+        setError(s.wrongPassword)
+        return
+      }
+      setError(getErrorMessage(err))
     } finally {
       setBusy(false)
     }
