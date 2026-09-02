@@ -1,3 +1,4 @@
+import type { BudgetDetail } from '@/api/budgets'
 import type {
   Account,
   AuthSession,
@@ -1393,6 +1394,24 @@ export const mockApi = {
         recurring_transaction_id: null,
       },
     ]
+  },
+
+  async getBudgetDetail(
+    _contextId: string,
+    budgetId: number,
+    month: string,
+  ): Promise<BudgetDetail> {
+    await delay()
+    return {
+      budget_id: budgetId,
+      category_id: 'cat_moradia',
+      category_name: 'Moradia',
+      limit: 2000,
+      month,
+      spent: 650,
+      spent_effective: 0,
+      items: [],
+    }
   },
 
   async downloadBillsImportTemplate(): Promise<void> {

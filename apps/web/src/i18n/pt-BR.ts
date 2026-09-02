@@ -97,6 +97,18 @@ export const strings = {
     pickContext: 'Selecione um contexto para ver os orçamentos.',
     effectiveVsProjected: (effective: string, projected: string) =>
       `${effective} já gastos · ${projected} previsto`,
+    detailTitle: 'Consumo do teto',
+    sectionSpent: 'Já gastos',
+    sectionForecast: 'Previsto',
+    emptyConsumption: 'Nada consumindo este teto ainda.',
+    forecastTag: 'previsto',
+    kinds: {
+      transaction: 'Lançamento',
+      bill: 'Boleto',
+      card_purchase: 'Compra no cartão',
+      recurring_transaction: 'Lançamento recorrente',
+      recurring_bill: 'Boleto recorrente',
+    },
   },
 
   auth: {

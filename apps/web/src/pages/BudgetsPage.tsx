@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react'
 import { budgetsApi, categoriesApi } from '@/api'
 import { BudgetCard } from '@/components/budgets/BudgetCard'
 import { BudgetCreateForm } from '@/components/budgets/BudgetCreateForm'
+import { BudgetDetailModal } from '@/components/budgets/BudgetDetailModal'
 import { summarizeBudgets } from '@/components/budgets/budgetSummary'
 import {
   Button,
@@ -33,6 +34,7 @@ export function BudgetsPage() {
   const month = useMonthStore((state) => state.month)
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
+  const [detail, setDetail] = useState<BudgetProgress | null>(null)
   const [editing, setEditing] = useState<BudgetProgress | null>(null)
   const [editLimit, setEditLimit] = useState('')
 
@@ -158,12 +160,22 @@ export function BudgetsPage() {
           <BudgetCard
             key={row.budget_id}
             row={row}
+            onOpen={() => setDetail(row)}
             onEdit={() => openEdit(row)}
             onDelete={() => remove.mutate(row.budget_id)}
             deletePending={remove.isPending}
           />
         ))}
       </div>
+
+      {detail ? (
+        <BudgetDetailModal
+          contextId={contextId}
+          budget={detail}
+          month={month}
+          onClose={() => setDetail(null)}
+        />
+      ) : null}
 
       {creating ? (
         <Modal title={t.newBudget} onClose={() => setCreating(false)}>
