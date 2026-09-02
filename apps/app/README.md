@@ -17,10 +17,10 @@ npm install
 Edite `.env`:
 
 ```
-EXPO_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8090/api/v1
 ```
 
-- Dev local com o Docker do `apps/api`: `http://localhost:8000/api/v1`.
+- Dev local com o Docker do `apps/api`: `http://localhost:8090/api/v1`.
 - Device físico (Expo Go): use o IP da máquina — `http://192.168.x.x:8000/api/v1`.
 - Produção: `https://financeiro.dmta.dev.br/api/v1`.
 
@@ -55,6 +55,39 @@ Verificado: `typecheck`, `lint`, `format` e `expo export -p web` limpos.
 Próximos PRs (trilho B): navegação Mobills (bottom tabs / nav lateral, navegador
 de mês, FAB "+"), telas core + drilldown, cartões, orçamento, etc. Ver
 `../../docs/fases/F3_app_expo.md` e o plano `adaptive-twirling-gizmo`.
+
+## Builds e updates (EAS) — Android
+
+Duas coisas, configuradas em `eas.json` + `.github/workflows/build-mobile.yml`:
+
+- **`eas build` (binário APK)** — gera o app instalável. Preciso no 1º
+  install e quando muda código nativo / o SDK do Expo / config nativa. Roda
+  só por `workflow_dispatch` (Actions → *App (Expo) — build & update* → Run
+  workflow → perfil `preview`).
+- **`eas update` (OTA)** — a cada `push` em `main` que toca `apps/app/**`, o
+  CI publica só o bundle JS no canal `preview`. Os APKs `preview` já
+  instalados **puxam a atualização ao abrir, sem reinstalar**.
+
+### Setup (uma vez)
+
+1. **Secret `EXPO_TOKEN`** no repo GitHub: expo.dev → *Account settings →
+   Access tokens* → cria → *Settings → Secrets and variables → Actions* →
+   `EXPO_TOKEN`.
+2. De `apps/app/`, logado (`eas login`):
+
+   ```bash
+   eas init                 # cria o projeto na conta drspindola, grava extra.eas.projectId
+   eas update:configure     # grava updates.url e liga os canais preview/production
+   git add app.json && git commit -m "chore(app): eas init + update config"
+   ```
+
+3. **1º build:** Actions → *App (Expo) — build & update* → Run workflow →
+   `preview`. A EAS manda o link do APK — instala no Android.
+4. Daí em diante: cada merge em `main` que mexe no `apps/app` → OTA
+   automático → abre o app, ele atualiza.
+
+`--no-wait`: o CI não segura o job esperando a fila (free tier passa de 1h).
+Acompanhe em https://expo.dev/accounts/drspindola/projects/dmta-financeiro-app.
 
 ## Estrutura
 
