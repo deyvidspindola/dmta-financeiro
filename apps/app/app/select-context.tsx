@@ -24,7 +24,7 @@ export default function SelectContextScreen() {
   function choose(scope: ActiveScope) {
     if (query.data) setContexts(query.data);
     setActiveScope(scope);
-    router.replace('/home');
+    router.replace('/(tabs)');
   }
 
   const contexts = query.data ?? [];

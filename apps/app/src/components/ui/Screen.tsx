@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, View } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, type Edge } from 'react-native-safe-area-context';
 import { cn } from '@/lib/cn';
 
 export type ScreenProps = {
@@ -8,14 +8,21 @@ export type ScreenProps = {
   scroll?: boolean;
   center?: boolean;
   className?: string;
+  edges?: Edge[];
 };
 
 /** Container de tela: safe area + fundo do tema + (opcional) scroll/centro. */
-export function Screen({ children, scroll = false, center = false, className }: ScreenProps) {
+export function Screen({
+  children,
+  scroll = false,
+  center = false,
+  className,
+  edges = ['top', 'bottom'],
+}: ScreenProps) {
   const inner = cn('flex-1 px-5', center && 'justify-center', className);
 
   return (
-    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'bottom']}>
+    <SafeAreaView className="flex-1 bg-canvas" edges={edges}>
       <KeyboardAvoidingView
         className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}

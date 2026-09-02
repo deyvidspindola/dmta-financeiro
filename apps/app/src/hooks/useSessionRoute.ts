@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/authStore';
 
-export type SessionRoute = '/login' | '/select-context' | '/home';
+export type SessionRoute = '/login' | '/select-context' | '/(tabs)';
 
 /**
  * Rota onde a sessão atual deve estar. Usada pelo guard das telas do
@@ -12,5 +12,5 @@ export function useSessionRoute(): SessionRoute {
 
   if (!token) return '/login';
   if (!scopeChosen) return '/select-context';
-  return '/home';
+  return '/(tabs)';
 }
