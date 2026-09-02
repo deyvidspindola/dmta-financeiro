@@ -83,9 +83,15 @@ export const strings = {
     newBudget: 'Novo orçamento',
     category: 'Categoria',
     limit: 'Teto (R$)',
+    editLimit: 'Editar teto',
     spent: 'Gasto',
-    remaining: 'Restante',
+    remaining: 'Restam',
     over: 'Estourou',
+    ofLimit: 'de',
+    totalSpent: 'Total gasto',
+    totalLimit: 'Total do teto',
+    overCount: (count: number) =>
+      count === 1 ? '1 categoria estourou' : `${count} categorias estouraram`,
     pickContext: 'Selecione um contexto para ver os orçamentos.',
   },
 
@@ -421,6 +427,9 @@ export const strings = {
     deleted: 'Meta excluída.',
     confirmDelete: 'Excluir esta meta?',
     needContext: 'Selecione um contexto para gerenciar metas.',
+    ofTarget: 'de',
+    projectedCompletion: (month: string) =>
+      `No ritmo atual, conclui em ${month}.`,
     statuses: {
       active: 'Ativa',
       completed: 'Concluída',
@@ -460,6 +469,11 @@ export const strings = {
       yellow: 'Amarelo',
       red: 'Vermelho',
     },
+    impactChart: 'Orçamento livre mês a mês',
+    freeBudgetAfterInstallment: 'Após a parcela',
+    commitmentResult: (pct: number) =>
+      pct > 0 ? `${pct}% do orçamento livre` : 'Sem orçamento livre cadastrado',
+    addScenarioB: 'Comparar cenário B',
   },
 
   debts: {
@@ -491,6 +505,12 @@ export const strings = {
       pending: 'Pendente',
       settled: 'Quitada',
     },
+    totalOwe: 'Total a pagar',
+    totalOwed: 'Total a receber',
+    settleHint:
+      'Opcionalmente escolha uma conta para gerar o lançamento da quitação.',
+    accountOptional: 'Conta (opcional)',
+    noAccount: 'Só marcar como quitada',
   },
 
   imports: {

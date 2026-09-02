@@ -1,33 +1,40 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus, Trash2 } from 'lucide-react'
-import { useState } from 'react'
+import { Plus } from 'lucide-react'
+import { useMemo, useState } from 'react'
 import { budgetsApi, categoriesApi } from '@/api'
+import { BudgetCard } from '@/components/budgets/BudgetCard'
+import { BudgetCreateForm } from '@/components/budgets/BudgetCreateForm'
+import { summarizeBudgets } from '@/components/budgets/budgetSummary'
 import {
   Button,
   EmptyState,
   ErrorBanner,
   Field,
-  IconButton,
   LoadingBlock,
   Modal,
+  Money,
   PageHeader,
+  ProgressBar,
+  Stat,
   TextInput,
-  TextSelect,
-} from '@/components/ui-legacy'
+} from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
+import { formatMonthLabel } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
-import { formatMoney } from '@/lib/format'
 import { useMonthStore } from '@/store/monthStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
+import type { BudgetProgress } from '@/api/budgets'
+
+const t = strings.budgets
 
 export function BudgetsPage() {
   const contextId = useWritableContextId()
   const month = useMonthStore((state) => state.month)
   const queryClient = useQueryClient()
   const [creating, setCreating] = useState(false)
-  const [categoryId, setCategoryId] = useState('')
-  const [limit, setLimit] = useState('')
+  const [editing, setEditing] = useState<BudgetProgress | null>(null)
+  const [editLimit, setEditLimit] = useState('')
 
   const budgets = useQuery({
     queryKey: ['budgets', contextId, month],
@@ -42,21 +49,36 @@ export function BudgetsPage() {
     enabled: Boolean(contextId) && creating,
   })
 
+  const summary = useMemo(
+    () => summarizeBudgets(budgets.data ?? []),
+    [budgets.data],
+  )
+
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ['budgets'] })
 
   const create = useMutation({
-    mutationFn: () =>
+    mutationFn: (values: { categoryId: string; limit: number }) =>
       budgetsApi.createBudget(contextId as string, {
-        category_id: categoryId,
-        limit_amount: Number(limit),
+        category_id: values.categoryId,
+        limit_amount: values.limit,
       }),
     onSuccess: () => {
       void invalidate()
       toastSuccess(strings.common.save)
       setCreating(false)
-      setCategoryId('')
-      setLimit('')
+    },
+    onError: (error) => toastError(getErrorMessage(error)),
+  })
+
+  const update = useMutation({
+    mutationFn: (values: { budgetId: number; limit: number }) =>
+      budgetsApi.updateBudget(contextId as string, values.budgetId, values.limit),
+    onSuccess: () => {
+      void invalidate()
+      toastSuccess(strings.common.save)
+      setEditing(null)
+      setEditLimit('')
     },
     onError: (error) => toastError(getErrorMessage(error)),
   })
@@ -68,11 +90,16 @@ export function BudgetsPage() {
     onError: (error) => toastError(getErrorMessage(error)),
   })
 
+  function openEdit(row: BudgetProgress) {
+    setEditing(row)
+    setEditLimit(String(row.limit))
+  }
+
   if (!contextId) {
     return (
-      <div className="page">
-        <PageHeader title={strings.budgets.title} />
-        <ErrorBanner message={strings.budgets.pickContext} />
+      <div className="space-y-4 bg-canvas text-fg">
+        <PageHeader title={t.title} />
+        <ErrorBanner message={t.pickContext} />
       </div>
     )
   }
@@ -80,13 +107,13 @@ export function BudgetsPage() {
   const rows = budgets.data ?? []
 
   return (
-    <div className="page">
+    <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
-        title={strings.budgets.title}
-        description={strings.budgets.description}
+        title={t.title}
+        description={`${t.description} · ${formatMonthLabel(month)}`}
         actions={
           <Button onClick={() => setCreating(true)}>
-            <Plus size={16} /> {strings.budgets.newBudget}
+            <Plus size={16} /> {t.newBudget}
           </Button>
         }
       />
@@ -96,84 +123,111 @@ export function BudgetsPage() {
         <ErrorBanner message={getErrorMessage(budgets.error)} />
       ) : null}
 
-      {!budgets.isLoading && rows.length === 0 ? (
-        <EmptyState message={strings.budgets.empty} />
+      {summary ? (
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Stat
+              label={t.totalSpent}
+              value={<Money amount={summary.spent} size="lg" />}
+              tone="negative"
+            />
+            <Stat
+              label={t.totalLimit}
+              value={<Money amount={summary.limit} size="lg" />}
+              hint={
+                summary.overCount > 0
+                  ? t.overCount(summary.overCount)
+                  : undefined
+              }
+            />
+          </div>
+          <ProgressBar
+            value={summary.pct}
+            tone={summary.overCount > 0 ? 'negative' : 'brand'}
+            label={t.totalSpent}
+          />
+        </div>
       ) : null}
 
-      <div className="budget-list">
-        {rows.map((row) => {
-          const pct = Math.min(100, row.percent)
-          return (
-            <div key={row.budget_id} className="budget-card">
-              <div className="budget-card__head">
-                <strong>{row.category_name}</strong>
-                <IconButton
-                  label={strings.common.delete}
-                  icon={Trash2}
-                  variant="danger"
-                  onClick={() => remove.mutate(row.budget_id)}
-                />
-              </div>
-              <div className="budget-bar">
-                <div
-                  className={`budget-bar__fill${row.over ? ' is-over' : ''}`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-              <div className="budget-card__foot">
-                <span>
-                  {formatMoney(row.spent)}{' '}
-                  <span className="muted">/ {formatMoney(row.limit)}</span>
-                </span>
-                <span className={row.over ? 'negative' : 'muted'}>
-                  {row.over
-                    ? strings.budgets.over
-                    : `${strings.budgets.remaining}: ${formatMoney(row.remaining)}`}
-                </span>
-              </div>
-            </div>
-          )
-        })}
+      {!budgets.isLoading && rows.length === 0 ? (
+        <EmptyState message={t.empty} />
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        {rows.map((row) => (
+          <BudgetCard
+            key={row.budget_id}
+            row={row}
+            onEdit={() => openEdit(row)}
+            onDelete={() => remove.mutate(row.budget_id)}
+            deletePending={remove.isPending}
+          />
+        ))}
       </div>
 
       {creating ? (
-        <Modal title={strings.budgets.newBudget} onClose={() => setCreating(false)}>
-          <div className="form-grid">
-            <Field label={strings.budgets.category}>
-              <TextSelect
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-              >
-                <option value="">{strings.common.select}</option>
-                {(categories.data ?? []).map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </TextSelect>
-            </Field>
-            <Field label={strings.budgets.limit}>
+        <Modal title={t.newBudget} onClose={() => setCreating(false)}>
+          <BudgetCreateForm
+            categories={categories.data ?? []}
+            isPending={create.isPending}
+            error={create.isError ? getErrorMessage(create.error) : null}
+            onSubmit={(values) => create.mutate(values)}
+            onCancel={() => setCreating(false)}
+          />
+        </Modal>
+      ) : null}
+
+      {editing ? (
+        <Modal
+          title={t.editLimit}
+          onClose={() => {
+            setEditing(null)
+            setEditLimit('')
+          }}
+        >
+          <form
+            className="grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault()
+              update.mutate({
+                budgetId: editing.budget_id,
+                limit: Number(editLimit),
+              })
+            }}
+          >
+            <p className="text-sm text-fg-muted">{editing.category_name}</p>
+            <Field label={t.limit}>
               <TextInput
                 type="number"
                 step="0.01"
                 min="0.01"
                 inputMode="decimal"
-                value={limit}
-                onChange={(event) => setLimit(event.target.value)}
+                value={editLimit}
+                onChange={(event) => setEditLimit(event.target.value)}
               />
             </Field>
-            <div className="form-grid__actions">
-              <Button variant="ghost" onClick={() => setCreating(false)}>
+            {update.isError ? (
+              <ErrorBanner message={getErrorMessage(update.error)} />
+            ) : null}
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => {
+                  setEditing(null)
+                  setEditLimit('')
+                }}
+              >
                 {strings.common.cancel}
               </Button>
               <Button
-                onClick={() => create.mutate()}
-                disabled={!categoryId || Number(limit) <= 0 || create.isPending}
+                type="submit"
+                disabled={Number(editLimit) <= 0 || update.isPending}
               >
                 {strings.common.save}
               </Button>
             </div>
-          </div>
+          </form>
         </Modal>
       ) : null}
     </div>
