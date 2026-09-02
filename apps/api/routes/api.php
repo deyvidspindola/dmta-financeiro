@@ -176,6 +176,7 @@ Route::prefix('v1')->group(function () {
             Route::post('credit-cards/{creditCard}/invoices/{invoice}/pay', PayCardInvoiceController::class);
             Route::get('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'index']);
             Route::post('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'store']);
+            Route::patch('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'update']);
             Route::delete('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'destroy']);
 
             Route::get('investments', [InvestmentController::class, 'index']);
