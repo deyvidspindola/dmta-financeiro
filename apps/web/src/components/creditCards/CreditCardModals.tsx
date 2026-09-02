@@ -1,8 +1,10 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
-import { accountsApi, categoriesApi, creditCardsApi } from '@/api'
+import { accountsApi, creditCardsApi } from '@/api'
+import { CardPurchaseForm } from '@/components/creditCards/CardPurchaseForm'
 import {
   Button,
+  DatePickerField,
   Field,
   Modal,
   TextInput,
@@ -12,7 +14,7 @@ import { strings } from '@/i18n/pt-BR'
 import { currentMonthKey } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import type { CreditCard } from '@/types/models'
+import type { CardPurchase, CreditCard } from '@/types/models'
 
 const t = strings.creditCards
 
@@ -115,117 +117,27 @@ export function PurchaseModal({
   contextId,
   cards,
   defaultCardId,
+  editing = null,
   onClose,
   onSaved,
 }: {
   contextId: string
   cards: CreditCard[]
   defaultCardId?: string
+  editing?: CardPurchase | null
   onClose: () => void
   onSaved: () => void
 }) {
-  const [cardId, setCardId] = useState(defaultCardId ?? cards[0]?.id ?? '')
-  const [description, setDescription] = useState('')
-  const [amount, setAmount] = useState('')
-  const [occurredAt, setOccurredAt] = useState(today())
-  const [categoryId, setCategoryId] = useState('')
-  const [installments, setInstallments] = useState('1')
-
-  const categories = useQuery({
-    queryKey: ['categories', contextId, 'expense'],
-    queryFn: () => categoriesApi.listCategories(contextId, { type: 'expense' }),
-  })
-
-  const save = useMutation({
-    mutationFn: () =>
-      creditCardsApi.createCardPurchase(contextId, cardId, {
-        description,
-        amount: Number(amount),
-        occurred_at: occurredAt,
-        category_id: categoryId || null,
-        installments: Number(installments),
-      }),
-    onSuccess: () => {
-      toastSuccess(t.purchaseSaved)
-      onSaved()
-    },
-    onError: (error) => toastError(getErrorMessage(error)),
-  })
-
   return (
-    <Modal title={t.newPurchase} onClose={onClose}>
-      <div className="grid gap-4">
-        {cards.length > 1 ? (
-          <Field label={t.title}>
-            <TextSelect value={cardId} onChange={(e) => setCardId(e.target.value)}>
-              {cards.map((card) => (
-                <option key={card.id} value={card.id}>
-                  {card.name}
-                </option>
-              ))}
-            </TextSelect>
-          </Field>
-        ) : null}
-        <Field label={strings.quickAdd.description}>
-          <TextInput
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            maxLength={150}
-          />
-        </Field>
-        <Field label={strings.quickAdd.amount}>
-          <TextInput
-            type="number"
-            step="0.01"
-            inputMode="decimal"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-          />
-        </Field>
-        <Field label={t.purchaseDate}>
-          <TextInput
-            type="date"
-            value={occurredAt}
-            onChange={(e) => setOccurredAt(e.target.value)}
-          />
-        </Field>
-        <Field label={strings.quickAdd.category}>
-          <TextSelect
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-          >
-            <option value="">{strings.quickAdd.noCategory}</option>
-            {(categories.data ?? []).map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </TextSelect>
-        </Field>
-        <Field label={t.installments}>
-          <TextInput
-            type="number"
-            min="1"
-            max="48"
-            value={installments}
-            onChange={(e) => setInstallments(e.target.value)}
-          />
-        </Field>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>
-            {strings.common.cancel}
-          </Button>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={
-              !cardId || !description.trim() || Number(amount) <= 0 || save.isPending
-            }
-            loading={save.isPending}
-          >
-            {strings.common.save}
-          </Button>
-        </div>
-      </div>
+    <Modal title={editing ? t.editPurchase : t.newPurchase} onClose={onClose}>
+      <CardPurchaseForm
+        contextId={contextId}
+        cards={cards}
+        defaultCardId={defaultCardId}
+        editing={editing}
+        onCancel={onClose}
+        onSaved={onSaved}
+      />
     </Modal>
   )
 }
@@ -284,11 +196,7 @@ export function PayModal({
           </TextSelect>
         </Field>
         <Field label={strings.quickAdd.date}>
-          <TextInput
-            type="date"
-            value={occurredAt}
-            onChange={(e) => setOccurredAt(e.target.value)}
-          />
+          <DatePickerField value={occurredAt} onChange={setOccurredAt} />
         </Field>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="ghost" onClick={onClose}>
