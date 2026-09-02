@@ -9,6 +9,7 @@ use App\Models\Context;
 use App\Services\DashboardSummaryService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 
 /**
  * Dashboard por contexto e dashboard consolidado (capítulo 04.3, F0).
@@ -17,22 +18,31 @@ use Illuminate\Http\Request;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 02/09/2026
  */
 final class DashboardController extends Controller
 {
-    public function show(Context $context, DashboardSummaryService $service): JsonResponse
+    /** `?month=YYYY-MM` (padrão: mês atual) rege `month_income`/`month_expense`. */
+    public function show(Request $request, Context $context, DashboardSummaryService $service): JsonResponse
     {
-        return response()->json($service->forContext($context));
+        return response()->json($service->forContext($context, $this->referenceMonth($request)));
     }
 
     public function consolidated(Request $request, DashboardSummaryService $service): JsonResponse
     {
-        return response()->json($service->consolidated($request->user()));
+        return response()->json($service->consolidated($request->user(), $this->referenceMonth($request)));
+    }
+
+    /** Mês de `?month=YYYY-MM`, ou `null` quando ausente/vazio (o serviço assume o mês atual). */
+    private function referenceMonth(Request $request): ?Carbon
+    {
+        return $request->filled('month')
+            ? Carbon::parse($request->string('month')->toString())->startOfMonth()
+            : null;
     }
 
     /** Série mensal (receita/despesa/saldo) de um contexto — `?months=` entre 1 e 24, padrão 6. */
