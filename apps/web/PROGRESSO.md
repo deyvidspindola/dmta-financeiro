@@ -85,6 +85,16 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   Componentes em `components/bills|recurring|categories/`. `CategoryModal`
   migrado para `@/components/ui`. Rotas `/bills`, `/recurring`, `/categories`
   em `MIGRATED_ROUTE_PATTERNS`. build + lint verdes.
+- **F3f — Mais + infraestrutura (esta rodada, Cursor):** `MorePage` repaginada
+  como gaveta com grupos (`Card` + links com ícone/chevron). Migradas:
+  `BillCapturesPage`, `BoletoPasswordRulesPage`, `ImportBillsPage`,
+  `ImportStatementPage`, `CompaniesPage`, `InvestmentsPage`, `SecurityPage`.
+  Componentes em `components/more|billCaptures|boletoPasswords|imports|
+  companies|investments/`. Rotas `/mais`, `/bill-captures`, `/boleto-passwords`,
+  `/import-bills`, `/import-statement`, `/companies`, `/investments`, `/security`
+  em `MIGRATED_ROUTE_PATTERNS`. **Todas as telas migradas** — `ui-legacy`/
+  `global.css`/`.legacy-light` podem sair na F4. build + lint verdes; smoke
+  visual claro/escuro + mobile ~360px.
 
 ## Feito
 
@@ -115,5 +125,7 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
 
 ## Próximo passo concreto
 
-1. Mergear PR FE3.
-2. FE4+: unificar recorrência na UI, gaveta exportação/backup, mais gráficos.
+1. Mergear PR F3f.
+2. **F4 — Limpeza:** remover `ui-legacy.tsx`, `global.css` legado e opt-in
+   `.legacy-light` do `AppLayout`.
+3. FE4+: unificar recorrência na UI, gaveta exportação/backup, mais gráficos.

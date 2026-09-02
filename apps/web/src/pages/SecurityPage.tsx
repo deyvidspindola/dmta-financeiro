@@ -4,19 +4,22 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { QRCodeSVG } from 'qrcode.react'
 import { z } from 'zod'
 import { authApi } from '@/api'
-import { strings } from '@/i18n/pt-BR'
-import { getErrorMessage } from '@/lib/errors'
-import { useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
 import {
+  Alert,
   Button,
   ErrorBanner,
   Field,
   PageHeader,
   Panel,
   TextInput,
-} from '@/components/ui-legacy'
+} from '@/components/ui'
+import { strings } from '@/i18n/pt-BR'
+import { getErrorMessage } from '@/lib/errors'
+import { useAuthStore } from '@/store/authStore'
+import { toastSuccess } from '@/store/toastStore'
 import type { MfaEnrollPayload } from '@/api/auth'
+
+const s = strings.security
 
 const confirmSchema = z.object({
   code: z.string().min(6, strings.common.required).max(8),
@@ -60,8 +63,8 @@ export function SecurityPage() {
       const me = await authApi.getMe()
       setUser(me)
       setEnroll(null)
-      setMessage(strings.security.enrollSuccess)
-      toastSuccess(strings.security.enrollSuccess)
+      setMessage(s.enrollSuccess)
+      toastSuccess(s.enrollSuccess)
     } catch (err) {
       setError(getErrorMessage(err, strings.auth.invalidMfa))
     } finally {
@@ -78,8 +81,8 @@ export function SecurityPage() {
       const me = await authApi.getMe()
       setUser(me)
       setEnroll(null)
-      setMessage(strings.security.disableSuccess)
-      toastSuccess(strings.security.disableSuccess)
+      setMessage(s.disableSuccess)
+      toastSuccess(s.disableSuccess)
     } catch (err) {
       setError(getErrorMessage(err))
     } finally {
@@ -90,23 +93,21 @@ export function SecurityPage() {
   const mfaEnabled = user?.mfa_enabled === true
 
   return (
-    <div className="stack">
-      <PageHeader title={strings.security.title} />
+    <div className="space-y-6 bg-canvas text-fg">
+      <PageHeader title={s.title} />
 
-      <Panel title={strings.security.mfaStatus}>
-        <p className="muted">
-          Status:{' '}
-          <strong>
-            {mfaEnabled
-              ? strings.security.mfaEnabled
-              : strings.security.mfaDisabled}
+      <Panel title={s.mfaStatus}>
+        <p className="text-sm text-fg-muted">
+          {s.statusLabel}:{' '}
+          <strong className="text-fg">
+            {mfaEnabled ? s.mfaEnabled : s.mfaDisabled}
           </strong>
         </p>
 
-        <div className="form-actions" style={{ justifyContent: 'flex-start' }}>
+        <div className="mt-4 flex flex-wrap gap-2">
           {!mfaEnabled ? (
             <Button onClick={() => void handleEnroll()} disabled={busy}>
-              {strings.security.enroll}
+              {s.enroll}
             </Button>
           ) : (
             <Button
@@ -114,24 +115,30 @@ export function SecurityPage() {
               onClick={() => void handleDisable()}
               disabled={busy}
             >
-              {strings.security.disable}
+              {s.disable}
             </Button>
           )}
         </div>
       </Panel>
 
       {enroll ? (
-        <Panel title={strings.security.enroll}>
-          <p className="muted">{strings.security.qrHint}</p>
-          <div className="qr-wrap">
+        <Panel title={s.enroll}>
+          <p className="text-sm text-fg-muted">{s.qrHint}</p>
+          <div
+            className="my-4 inline-flex rounded-xl border border-line bg-white p-3"
+            role="img"
+            aria-label={s.qrAlt}
+          >
             <QRCodeSVG value={enroll.otpauth_uri} size={192} />
           </div>
-          <Field label={strings.security.secretLabel}>
-            <code className="mono secret-box">{enroll.secret}</code>
+          <Field label={s.secretLabel}>
+            <code className="block rounded-xl bg-surface-2 px-3 py-2 font-mono text-sm break-all">
+              {enroll.secret}
+            </code>
           </Field>
-          <p className="muted small">{strings.security.codeHint}</p>
+          <p className="mt-2 text-sm text-fg-muted">{s.codeHint}</p>
           <form
-            className="form-grid"
+            className="mt-4 grid gap-4"
             onSubmit={confirmForm.handleSubmit((values) =>
               void handleConfirm(values),
             )}
@@ -146,7 +153,7 @@ export function SecurityPage() {
                 {...confirmForm.register('code')}
               />
             </Field>
-            <div className="form-actions">
+            <div className="flex flex-wrap justify-end gap-2">
               <Button
                 type="button"
                 variant="ghost"
@@ -155,7 +162,7 @@ export function SecurityPage() {
                 {strings.common.cancel}
               </Button>
               <Button type="submit" disabled={busy}>
-                {strings.security.confirm}
+                {s.confirm}
               </Button>
             </div>
           </form>
@@ -163,7 +170,7 @@ export function SecurityPage() {
       ) : null}
 
       {error ? <ErrorBanner message={error} /> : null}
-      {message ? <p className="success-banner">{message}</p> : null}
+      {message ? <Alert tone="success">{message}</Alert> : null}
     </div>
   )
 }

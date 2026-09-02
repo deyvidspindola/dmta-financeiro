@@ -33,6 +33,8 @@ export const strings = {
       overview: 'Visão geral',
       planning: 'Planejamento',
     },
+    billCaptureQueue: 'Fila de capturas',
+    billPasswordRules: 'Regras de senha',
     consolidatedView: 'Visão consolidada',
     pf: 'PF',
     pj: 'PJ',
@@ -109,11 +111,23 @@ export const strings = {
     invalidMfa: 'Código MFA inválido.',
   },
 
+  more: {
+    groups: {
+      registers: 'Cadastros',
+      imports: 'Importar',
+      emailBills: 'Boletos por e-mail',
+      account: 'Conta',
+    },
+    logout: 'Sair',
+  },
+
   security: {
     title: 'Segurança',
     mfaStatus: 'Autenticação em duas etapas (TOTP)',
+    statusLabel: 'Status',
     mfaEnabled: 'Ativada',
     mfaDisabled: 'Desativada',
+    qrAlt: 'QR code para configurar autenticador TOTP',
     enroll: 'Configurar MFA',
     confirm: 'Confirmar código',
     disable: 'Desligar MFA',
@@ -414,6 +428,7 @@ export const strings = {
     contextNameHint: 'Ex.: Minha Empresa',
     companyName: 'Razão social',
     document: 'CNPJ',
+    documentPlaceholder: 'Somente dígitos (opcional)',
     empty: 'Nenhuma empresa cadastrada ainda.',
     created: 'Empresa e contexto criados.',
   },
@@ -432,6 +447,10 @@ export const strings = {
     updated: 'Investimento atualizado.',
     deleted: 'Investimento excluído.',
     confirmDelete: 'Excluir este investimento?',
+    needContext: 'Selecione um contexto para cadastrar e listar investimentos.',
+    totalPosition: 'Posição total',
+    contribution: 'Aporte',
+    contributionHint: 'Informe o valor investido ao cadastrar; depois atualize a posição atual.',
   },
 
   goals: {
@@ -555,6 +574,9 @@ export const strings = {
     failedReason: 'Motivo',
     done: 'Importação concluída.',
     needContext: 'Selecione um contexto para importar.',
+    instructions: 'Instruções',
+    chooseFile: 'Escolher arquivo CSV',
+    noFileSelected: 'Nenhum arquivo selecionado',
   },
 
   billCaptures: {
