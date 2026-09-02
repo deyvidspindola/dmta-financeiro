@@ -7,6 +7,7 @@ import {
   DatePickerField,
   Field,
   Modal,
+  MoneyInput,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -35,7 +36,7 @@ export function CardFormModal({
 }) {
   const [name, setName] = useState(editing?.name ?? '')
   const [brand, setBrand] = useState(editing?.brand ?? '')
-  const [limit, setLimit] = useState(String(editing?.limit ?? ''))
+  const [limit, setLimit] = useState(editing?.limit ?? 0)
   const [closingDay, setClosingDay] = useState(String(editing?.closing_day ?? 5))
   const [dueDay, setDueDay] = useState(String(editing?.due_day ?? 12))
 
@@ -44,7 +45,7 @@ export function CardFormModal({
       const payload = {
         name,
         brand: brand || null,
-        limit: Number(limit),
+        limit,
         closing_day: Number(closingDay),
         due_day: Number(dueDay),
       }
@@ -69,12 +70,7 @@ export function CardFormModal({
           <TextInput value={brand} onChange={(e) => setBrand(e.target.value)} />
         </Field>
         <Field label={t.limit}>
-          <TextInput
-            type="number"
-            step="0.01"
-            value={limit}
-            onChange={(e) => setLimit(e.target.value)}
-          />
+          <MoneyInput value={limit} onChange={setLimit} />
         </Field>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label={t.closingDay}>

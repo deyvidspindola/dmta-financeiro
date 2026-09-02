@@ -14,10 +14,10 @@ import {
   LoadingBlock,
   Modal,
   Money,
+  MoneyInput,
   PageHeader,
   ProgressBar,
   Stat,
-  TextInput,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
@@ -36,7 +36,7 @@ export function BudgetsPage() {
   const [creating, setCreating] = useState(false)
   const [detail, setDetail] = useState<BudgetProgress | null>(null)
   const [editing, setEditing] = useState<BudgetProgress | null>(null)
-  const [editLimit, setEditLimit] = useState('')
+  const [editLimit, setEditLimit] = useState(0)
 
   const budgets = useQuery({
     queryKey: ['budgets', contextId, month],
@@ -80,7 +80,7 @@ export function BudgetsPage() {
       void invalidate()
       toastSuccess(strings.common.save)
       setEditing(null)
-      setEditLimit('')
+      setEditLimit(0)
     },
     onError: (error) => toastError(getErrorMessage(error)),
   })
@@ -94,7 +94,7 @@ export function BudgetsPage() {
 
   function openEdit(row: BudgetProgress) {
     setEditing(row)
-    setEditLimit(String(row.limit))
+    setEditLimit(row.limit)
   }
 
   if (!contextId) {
@@ -194,7 +194,7 @@ export function BudgetsPage() {
           title={t.editLimit}
           onClose={() => {
             setEditing(null)
-            setEditLimit('')
+            setEditLimit(0)
           }}
         >
           <form
@@ -203,20 +203,13 @@ export function BudgetsPage() {
               event.preventDefault()
               update.mutate({
                 budgetId: editing.budget_id,
-                limit: Number(editLimit),
+                limit: editLimit,
               })
             }}
           >
             <p className="text-sm text-fg-muted">{editing.category_name}</p>
             <Field label={t.limit}>
-              <TextInput
-                type="number"
-                step="0.01"
-                min="0.01"
-                inputMode="decimal"
-                value={editLimit}
-                onChange={(event) => setEditLimit(event.target.value)}
-              />
+              <MoneyInput value={editLimit} onChange={setEditLimit} />
             </Field>
             {update.isError ? (
               <ErrorBanner message={getErrorMessage(update.error)} />
@@ -227,14 +220,14 @@ export function BudgetsPage() {
                 variant="ghost"
                 onClick={() => {
                   setEditing(null)
-                  setEditLimit('')
+                  setEditLimit(0)
                 }}
               >
                 {strings.common.cancel}
               </Button>
               <Button
                 type="submit"
-                disabled={Number(editLimit) <= 0 || update.isPending}
+                disabled={editLimit <= 0 || update.isPending}
               >
                 {strings.common.save}
               </Button>

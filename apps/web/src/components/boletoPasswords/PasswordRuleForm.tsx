@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   emptyPasswordRuleValues,
@@ -7,6 +7,7 @@ import {
 } from '@/components/boletoPasswords/passwordRuleUtils'
 import {
   Button,
+  DatePickerField,
   ErrorBanner,
   Field,
   TextInput,
@@ -66,7 +67,17 @@ export function PasswordRuleForm({
       ) : null}
       {ruleType === 'birth_date' ? (
         <Field label={t.date}>
-          <TextInput type="date" {...form.register('date')} />
+          <Controller
+            name="date"
+            control={form.control}
+            render={({ field }) => (
+              <DatePickerField
+                key="birth-date"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+              />
+            )}
+          />
         </Field>
       ) : null}
       <Field label={t.label}>

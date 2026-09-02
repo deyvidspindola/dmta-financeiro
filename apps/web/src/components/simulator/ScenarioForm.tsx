@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useMutation } from '@tanstack/react-query'
 import { simulationsApi } from '@/api'
@@ -12,6 +12,7 @@ import {
   Button,
   ErrorBanner,
   Field,
+  MoneyInput,
   Panel,
   TextInput,
 } from '@/components/ui'
@@ -55,7 +56,19 @@ export function ScenarioForm({ title, contextId }: ScenarioFormProps) {
           label={t.amount}
           error={form.formState.errors.amount?.message}
         >
-          <TextInput type="number" step="0.01" {...form.register('amount')} />
+          <Controller
+            name="amount"
+            control={form.control}
+            render={({ field }) => (
+              <MoneyInput
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                aria-invalid={Boolean(form.formState.errors.amount)}
+              />
+            )}
+          />
         </Field>
         <Field
           label={t.installments}
@@ -64,7 +77,18 @@ export function ScenarioForm({ title, contextId }: ScenarioFormProps) {
           <TextInput type="number" {...form.register('installments')} />
         </Field>
         <Field label={t.cashPrice}>
-          <TextInput type="number" step="0.01" {...form.register('cash_price')} />
+          <Controller
+            name="cash_price"
+            control={form.control}
+            render={({ field }) => (
+              <MoneyInput
+                value={field.value ?? 0}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+              />
+            )}
+          />
         </Field>
         {mutation.isError ? (
           <ErrorBanner message={getErrorMessage(mutation.error)} />

@@ -1,9 +1,10 @@
-import { useForm } from 'react-hook-form'
+import { Controller, useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import {
   Button,
   ErrorBanner,
   Field,
+  MoneyInput,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -65,10 +66,18 @@ export function AccountForm({
           label={t.balance}
           error={form.formState.errors.balance?.message}
         >
-          <TextInput
-            type="number"
-            step="0.01"
-            {...form.register('balance')}
+          <Controller
+            name="balance"
+            control={form.control}
+            render={({ field }) => (
+              <MoneyInput
+                value={field.value}
+                onChange={field.onChange}
+                onBlur={field.onBlur}
+                name={field.name}
+                aria-invalid={Boolean(form.formState.errors.balance)}
+              />
+            )}
           />
         </Field>
       ) : null}
