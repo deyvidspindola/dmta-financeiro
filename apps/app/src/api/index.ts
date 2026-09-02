@@ -4,5 +4,10 @@
  */
 export * as authApi from './auth';
 export * as contextsApi from './contexts';
+export * as dashboardApi from './dashboard';
+export * as accountsApi from './accounts';
+export * as transactionsApi from './transactions';
+export * as consolidatedApi from './consolidated';
+export * as categoriesApi from './categories';
 export { bindAuthToken, ApiError, http, unwrapData } from './http';
 export { API_BASE_URL } from './config';

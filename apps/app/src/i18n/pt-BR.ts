@@ -165,6 +165,8 @@ export const strings = {
     overBudgets: (count: number) => (count === 1 ? '1 estourou' : `${count} estouraram`),
     noBudgets: 'Nenhum orçamento neste mês.',
     noGoals: 'Nenhuma meta ativa.',
+    projectedLabel: '(previsto)',
+    effectiveHint: (amount: string) => `${amount} já efetivado`,
   },
 
   transactionDetail: {
@@ -624,6 +626,11 @@ export const strings = {
     currency: 'R$',
     close: 'Fechar',
     delete: 'Excluir',
+    comingSoon: 'Em breve',
+  },
+
+  newTransaction: {
+    title: 'Novo lançamento',
   },
 } as const;
 

@@ -191,6 +191,8 @@ export interface DashboardSummary {
   balance_total: number;
   income_month: number;
   expense_month: number;
+  projected_income_month: number;
+  projected_expense_month: number;
   pending_bills_count: number;
   pending_bills_amount: number;
   overdue_bills_count: number;
