@@ -226,6 +226,10 @@ export function CreditCardDetailPage() {
           <span>
             {t.usedLabel} {usedPct}%
           </span>
+          <span className="text-fg-muted">·</span>
+          <span>{t.closesOnDay(card.closing_day)}</span>
+          <span className="text-fg-muted">·</span>
+          <span>{t.dueOnDay(card.due_day)}</span>
           <ProgressBar
             value={usedPct}
             tone={progressTone}

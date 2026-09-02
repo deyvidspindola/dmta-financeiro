@@ -267,6 +267,10 @@ export const strings = {
     statusOpen: 'Aberta',
     invoiceChipStrip: 'Faturas por mês',
     chipNoAmount: '—',
+    closesOnDay: (day: number) => `Fecha dia ${day}`,
+    dueOnDay: (day: number) => `Vence dia ${day}`,
+    cardCycleFooter: (closing: number, due: number) =>
+      `Fecha ${String(closing).padStart(2, '0')} · Vence ${String(due).padStart(2, '0')}`,
   },
 
   bills: {
