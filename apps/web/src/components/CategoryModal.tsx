@@ -58,15 +58,6 @@ export function CategoryModal({
   const isEdit = editing !== null
   const openedForExternalEdit = editingCategory !== null
 
-  const listType = editingCategory?.type ?? defaultType
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories', contextId, listType],
-    queryFn: () =>
-      categoriesApi.listCategories(contextId, { type: listType }),
-    enabled: open && Boolean(contextId),
-  })
-
   const createForm = useForm<CreateValues>({
     resolver: zodResolver(createSchema),
     defaultValues: {
@@ -82,6 +73,17 @@ export function CategoryModal({
   })
 
   const selectedType = createForm.watch('type')
+
+  // Em criação, a lista de categorias-mãe segue o tipo escolhido no form;
+  // em edição, o tipo da categoria sendo editada.
+  const listType = editingCategory?.type ?? selectedType
+
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories', contextId, listType],
+    queryFn: () =>
+      categoriesApi.listCategories(contextId, { type: listType }),
+    enabled: open && Boolean(contextId),
+  })
 
   useEffect(() => {
     if (!open) return
@@ -235,10 +237,18 @@ export function CategoryModal({
             <TextInput {...createForm.register('name')} autoFocus />
           </Field>
           <Field label={strings.categories.type}>
-            <input type="hidden" {...createForm.register('type')} />
-            <p className="text-sm text-fg-muted">
-              {strings.categories.types[defaultType]}
-            </p>
+            <TextSelect
+              {...createForm.register('type', {
+                onChange: () => createForm.setValue('parent_id', null),
+              })}
+            >
+              <option value="expense">
+                {strings.categories.types.expense}
+              </option>
+              <option value="income">
+                {strings.categories.types.income}
+              </option>
+            </TextSelect>
           </Field>
           <Field label={strings.categories.parent}>
             <TextSelect
