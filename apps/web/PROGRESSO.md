@@ -92,9 +92,16 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
   Componentes em `components/more|billCaptures|boletoPasswords|imports|
   companies|investments/`. Rotas `/mais`, `/bill-captures`, `/boleto-passwords`,
   `/import-bills`, `/import-statement`, `/companies`, `/investments`, `/security`
-  em `MIGRATED_ROUTE_PATTERNS`. **Todas as telas migradas** — `ui-legacy`/
-  `global.css`/`.legacy-light` podem sair na F4. build + lint verdes; smoke
-  visual claro/escuro + mobile ~360px.
+  em `MIGRATED_ROUTE_PATTERNS`. **Todas as telas migradas.** build + lint
+  verdes; smoke visual claro/escuro + mobile ~360px.
+- **F4 — Limpeza (esta rodada, Claude):** removidos `src/components/ui-legacy.tsx`
+  e `src/styles/global.css` (1.556 linhas). `theme.css` sem a `@layer legacy`
+  e sem `.legacy-light`; o `<body>` assume `bg-canvas`/`text-fg`. `AppLayout`
+  sem `MIGRATED_ROUTE_PATTERNS`/`useIsMigratedRoute`. **Code-splitting por
+  rota** (`React.lazy` + `Suspense` no `App.tsx`) — bundle inicial de
+  ~163 → **~103 kB gzip**, CSS 78 → 60 kB, cada tela é um chunk. build +
+  lint verdes; smoke visual OK. **Reforma visual concluída** — todo o
+  `apps/web` no design system Preline/Tailwind.
 
 ## Feito
 
@@ -125,7 +132,7 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
 
 ## Próximo passo concreto
 
-1. Mergear PR F3f.
-2. **F4 — Limpeza:** remover `ui-legacy.tsx`, `global.css` legado e opt-in
-   `.legacy-light` do `AppLayout`.
-3. FE4+: unificar recorrência na UI, gaveta exportação/backup, mais gráficos.
+Reforma visual fechada. Backlog de features (não visual):
+- Unificar recorrência na UI, gaveta exportação/backup.
+- Consumir filtros de `GET /bills` server-side onde ainda falta.
+- `apps/app` (D-18) segue em trilho próprio (B1+).
