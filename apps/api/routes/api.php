@@ -89,6 +89,7 @@ Route::prefix('v1')->group(function () {
         Route::get('consolidated/accounts', [ConsolidatedController::class, 'accounts']);
         Route::get('consolidated/transactions', [ConsolidatedController::class, 'transactions']);
         Route::get('consolidated/bills', [ConsolidatedController::class, 'bills']);
+        Route::get('consolidated/credit-cards', [ConsolidatedController::class, 'creditCards']);
 
         // Fila de captura por e-mail (F1, D-06) — sem contexto até
         // confirmar, por isso fora do grupo /contexts/{context} abaixo.
