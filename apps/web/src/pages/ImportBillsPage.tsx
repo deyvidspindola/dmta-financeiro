@@ -1,17 +1,21 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { importsApi } from '@/api'
+import { CsvFileField, ImportResult } from '@/components/imports/ImportFields'
+import {
+  Button,
+  Card,
+  CardHeader,
+  ErrorBanner,
+  PageHeader,
+} from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { toastSuccess } from '@/store/toastStore'
-import {
-  Button,
-  ErrorBanner,
-  Field,
-  PageHeader,
-} from '@/components/ui-legacy'
 import type { BillImportSummary } from '@/types/models'
+
+const i = strings.imports
 
 export function ImportBillsPage() {
   const activeScope = useAuthStore((s) => s.activeScope)
@@ -28,63 +32,51 @@ export function ImportBillsPage() {
     mutationFn: (csv: File) => importsApi.importBillsCsv(contextId!, csv),
     onSuccess: (result) => {
       setSummary(result)
-      toastSuccess(strings.imports.done)
+      toastSuccess(i.done)
     },
   })
 
   return (
-    <div className="stack">
+    <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
-        title={strings.imports.billsTitle}
-        description={strings.imports.billsHint}
+        title={i.billsTitle}
+        description={i.billsHint}
         actions={
           <Button
             variant="ghost"
             onClick={() => templateMutation.mutate()}
             disabled={!contextId || templateMutation.isPending}
           >
-            {strings.imports.downloadTemplate}
+            {i.downloadTemplate}
           </Button>
         }
       />
 
-      {!contextId ? (
-        <ErrorBanner message={strings.imports.needContext} />
-      ) : null}
+      {!contextId ? <ErrorBanner message={i.needContext} /> : null}
 
-      <Field label={strings.imports.file}>
-        <input
-          className="input"
-          type="file"
-          accept=".csv,text/csv"
-          onChange={(event) => setFile(event.target.files?.[0] ?? null)}
-        />
-      </Field>
-      <Button
-        onClick={() => file && importMutation.mutate(file)}
-        disabled={!contextId || !file || importMutation.isPending}
-      >
-        {strings.imports.upload}
-      </Button>
+      <Card>
+        <CardHeader title={i.instructions} description={i.billsHint} />
+        <div className="space-y-4">
+          <CsvFileField
+            file={file}
+            onChange={setFile}
+            disabled={!contextId}
+          />
+          <Button
+            onClick={() => file && importMutation.mutate(file)}
+            disabled={!contextId || !file || importMutation.isPending}
+          >
+            {i.upload}
+          </Button>
+        </div>
+      </Card>
+
       {importMutation.isError ? (
         <ErrorBanner message={getErrorMessage(importMutation.error)} />
       ) : null}
+
       {summary ? (
-        <div className="success-banner">
-          <p>
-            {strings.imports.imported}: {summary.imported} ·{' '}
-            {strings.imports.failed}: {summary.failed.length}
-          </p>
-          {summary.failed.length > 0 ? (
-            <ul>
-              {summary.failed.map((row) => (
-                <li key={`${row.row}-${row.reason}`}>
-                  {strings.imports.failedRow} {row.row}: {row.reason}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
+        <ImportResult imported={summary.imported} failed={summary.failed} />
       ) : null}
     </div>
   )

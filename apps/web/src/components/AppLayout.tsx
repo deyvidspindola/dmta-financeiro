@@ -67,6 +67,14 @@ const MIGRATED_ROUTE_PATTERNS = [
   '/bills',
   '/recurring',
   '/categories',
+  '/mais',
+  '/bill-captures',
+  '/boleto-passwords',
+  '/import-bills',
+  '/import-statement',
+  '/companies',
+  '/investments',
+  '/security',
 ]
 
 function useIsMigratedRoute(): boolean {
