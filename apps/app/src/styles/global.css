@@ -1,0 +1,34 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Tokens semânticos — mesmos valores do apps/web (theme.css). NativeWind
+ * lê estas CSS vars em runtime; o dark mode é pela classe `dark` na raiz
+ * (themeStore + colorScheme do NativeWind).
+ */
+@layer base {
+  :root {
+    --canvas: #f6f8f7;
+    --surface: #ffffff;
+    --surface-2: #f1f5f4;
+    --line: #e3e9e7;
+    --fg: #0d1b16;
+    --fg-muted: #48605a;
+    --fg-subtle: #7c918b;
+    --positive: #059669;
+    --negative: #dc2626;
+  }
+
+  .dark:root {
+    --canvas: #0a0f0d;
+    --surface: #121917;
+    --surface-2: #1a2320;
+    --line: #263130;
+    --fg: #e7efec;
+    --fg-muted: #9db0aa;
+    --fg-subtle: #6b7f79;
+    --positive: #34d399;
+    --negative: #f87171;
+  }
+}
