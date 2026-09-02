@@ -3,7 +3,7 @@ import { View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { z } from 'zod';
 import { authApi, ApiError } from '@/api';
-import { Button, Screen, Text, TextField } from '@/components/ui';
+import { Button, Logo, Screen, Text, TextField } from '@/components/ui';
 import { t } from '@/i18n';
 import { isMfaChallenge } from '@/types/models';
 import { useAuthStore } from '@/store/authStore';
@@ -86,9 +86,12 @@ export default function LoginScreen() {
   return (
     <Screen scroll center>
       <View className="gap-6">
-        <View className="gap-1">
-          <Text variant="heading">{t.appName}</Text>
-          <Text variant="muted">{t.appTagline}</Text>
+        <View className="items-center gap-3">
+          <Logo size={76} />
+          <View className="items-center gap-1">
+            <Text variant="heading">{t.appName}</Text>
+            <Text variant="muted">{t.appTagline}</Text>
+          </View>
         </View>
 
         {step.name === 'credentials' ? (
