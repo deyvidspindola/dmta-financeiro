@@ -3,7 +3,8 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, creditCardsApi } from '@/api';
-import { Badge, Button, ListRow, Money, MoneyValue, SelectField, Sheet, Skeleton, Text } from '@/components/ui';
+import { ApiError } from '@/api/http';
+import { Badge, Button, ConfirmSheet, ListRow, Money, MoneyValue, SelectField, Sheet, Skeleton, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { formatDateShort, formatMonthLabel } from '@/lib/dates';
@@ -20,6 +21,7 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
   const queryClient = useQueryClient();
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAccountId, setPayAccountId] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<'none' | 'first' | 'paid'>('none');
   const [openInvoiceId, setOpenInvoiceId] = useState<string | null>(null);
 
   const invoicesQuery = useQuery({
@@ -62,6 +64,19 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
     },
   });
 
+  const remove = useMutation({
+    mutationFn: (force: boolean) =>
+      creditCardsApi.deleteCreditCard(card!.context_id, card!.id, force),
+    onSuccess: () => {
+      invalidate();
+      setConfirmDelete('none');
+      onClose();
+    },
+    onError: (err) => {
+      setConfirmDelete(err instanceof ApiError && err.status === 422 ? 'paid' : 'none');
+    },
+  });
+
   function openPurchaseForm(purchaseId?: string) {
     if (!card) return;
     router.push({
@@ -76,6 +91,7 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
   }
 
   return (
+    <>
     <Sheet open={card !== null} onClose={onClose} title={card?.name}>
       <View className="mb-3 flex-row items-center justify-between">
         <Text variant="muted" className="text-xs">
@@ -185,6 +201,38 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
           })}
         </View>
       )}
+
+      {card ? (
+        <Button
+          label={t.creditCards.delete}
+          variant="ghost"
+          onPress={() => setConfirmDelete('first')}
+          className="mt-4"
+        />
+      ) : null}
     </Sheet>
+
+      <ConfirmSheet
+        open={confirmDelete === 'first'}
+        title={t.creditCards.delete}
+        message={t.creditCards.confirmDelete}
+        confirmLabel={t.common.delete}
+        tone="danger"
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(false)}
+        onClose={() => setConfirmDelete('none')}
+      />
+
+      <ConfirmSheet
+        open={confirmDelete === 'paid'}
+        title={t.creditCards.delete}
+        message={t.creditCards.confirmDeletePaid}
+        confirmLabel={t.common.delete}
+        tone="danger"
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate(true)}
+        onClose={() => setConfirmDelete('none')}
+      />
+    </>
   );
 }

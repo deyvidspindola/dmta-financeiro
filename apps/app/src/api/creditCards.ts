@@ -42,6 +42,15 @@ export async function payCardInvoice(
   );
 }
 
+export async function deleteCreditCard(
+  contextId: string,
+  creditCardId: string,
+  force = false,
+): Promise<void> {
+  const query = force ? '?force=1' : '';
+  await http.delete(`/contexts/${contextId}/credit-cards/${creditCardId}${query}`);
+}
+
 export async function listCardPurchases(
   contextId: string,
   creditCardId: string,

@@ -82,9 +82,11 @@ export async function updateCreditCard(
 export async function deleteCreditCard(
   contextId: string,
   creditCardId: string,
+  force = false,
 ): Promise<void> {
-  if (useMocks) return mockApi.deleteCreditCard(contextId, creditCardId)
-  await http.delete(`/contexts/${contextId}/credit-cards/${creditCardId}`)
+  if (useMocks) return mockApi.deleteCreditCard(contextId, creditCardId, force)
+  const query = force ? '?force=1' : ''
+  await http.delete(`/contexts/${contextId}/credit-cards/${creditCardId}${query}`)
 }
 
 export async function listCardInvoices(
