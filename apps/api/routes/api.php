@@ -123,6 +123,7 @@ Route::prefix('v1')->group(function () {
             Route::patch('accounts/{account}', [AccountController::class, 'update']);
             Route::delete('accounts/{account}', [AccountController::class, 'destroy']);
             Route::get('accounts/{account}/statement-imports/template', [StatementImportController::class, 'template']);
+            Route::post('accounts/{account}/statement-imports/preview', [StatementImportController::class, 'preview']);
             Route::post('accounts/{account}/statement-imports', [StatementImportController::class, 'store']);
 
             Route::get('categories', [CategoryController::class, 'index']);
@@ -136,6 +137,7 @@ Route::prefix('v1')->group(function () {
             Route::delete('bills/{bill}', [BillController::class, 'destroy']);
             Route::post('bills/{bill}/pay', [PayBillController::class, 'store']);
             Route::get('bills/import/template', [BillImportController::class, 'template']);
+            Route::post('bills/import/preview', [BillImportController::class, 'preview']);
             Route::post('bills/import', [BillImportController::class, 'store']);
 
             Route::get('debts', [DebtController::class, 'index']);

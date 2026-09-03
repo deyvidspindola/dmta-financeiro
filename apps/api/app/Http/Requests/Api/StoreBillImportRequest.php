@@ -7,17 +7,18 @@ namespace App\Http\Requests\Api;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validação de `POST /api/v1/contexts/{context}/bills/import`.
+ * Validação de preview/store de importação de boletos CSV.
+ * `lines` só entra no store (subconjunto a importar).
  *
  * @package App\Http\Requests\Api
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   22/08/2026
  *
- * @updated 22/08/2026
+ * @updated 03/09/2026
  */
 final class StoreBillImportRequest extends FormRequest
 {
@@ -31,6 +32,18 @@ final class StoreBillImportRequest extends FormRequest
     {
         return [
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:2048'],
+            'lines' => ['sometimes', 'array', 'distinct'],
+            'lines.*' => ['integer', 'min:2'],
         ];
+    }
+
+    /** @return list<int>|null */
+    public function onlyLines(): ?array
+    {
+        if (! $this->has('lines')) {
+            return null;
+        }
+
+        return array_map('intval', $this->input('lines', []));
     }
 }

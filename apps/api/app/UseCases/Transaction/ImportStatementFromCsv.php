@@ -4,63 +4,60 @@ declare(strict_types=1);
 
 namespace App\UseCases\Transaction;
 
-use App\DTOs\RegisterTransactionData;
 use App\Exceptions\Domain\InvalidStatementImportRowException;
-use App\Models\StatementEntry;
+use App\Services\CsvImportReader;
+use App\Services\StatementImportClassifier;
 use App\Services\StatementImportRowParser;
 use Illuminate\Http\UploadedFile;
 use Throwable;
 
 /**
- * Importa o extrato de uma conta a partir de uma planilha CSV (fallback
- * manual do capítulo 05.3, D-06 — Pluggy continua fora até a F2). Cada
- * linha é independente: uma linha inválida não derruba o lote, e uma
- * linha repetida (mesma conta, data, valor e descrição de um lançamento
- * já existente) é pulada em vez de duplicar saldo — reenviar o mesmo
- * arquivo duas vezes é seguro.
+ * Importa o extrato de uma conta a partir de CSV. Com `$onlyLines` nulo,
+ * duplicatas são puladas — reenviar o arquivo é seguro. Com `$onlyLines`
+ * preenchido, a seleção explícita ignora dedup (forçar). O preview fica
+ * em {@see PreviewStatementFromCsv}.
  *
  * @package App\UseCases\Transaction
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   22/08/2026
  *
- * @updated 22/08/2026
+ * @updated 03/09/2026
  */
 final class ImportStatementFromCsv
 {
     private const REQUIRED_COLUMNS = ['data', 'descricao', 'valor'];
 
     public function __construct(
+        private readonly CsvImportReader $csvReader,
         private readonly StatementImportRowParser $parser,
+        private readonly StatementImportClassifier $classifier,
         private readonly RegisterTransaction $registerTransaction,
     ) {}
 
-    /** @return array{imported: int, duplicates: int, failed: list<array{row: int, reason: string}>} */
-    public function execute(UploadedFile $file, int $contextId, int $accountId): array
+    /**
+     * @param  list<int>|null  $onlyLines  Quando informado, importa só essas linhas e ignora dedup.
+     * @return array{imported: int, duplicates: int, failed: list<array{row: int, reason: string}>}
+     */
+    public function execute(UploadedFile $file, int $contextId, int $accountId, ?array $onlyLines = null): array
     {
-        $handle = fopen($file->getRealPath(), 'rb');
-        $header = $this->readHeader($handle);
+        $allow = $onlyLines === null ? null : array_flip($onlyLines);
         $imported = 0;
         $duplicates = 0;
         $failed = [];
-        $rowNumber = 1;
 
-        while (($cells = fgetcsv($handle, escape: '\\')) !== false) {
-            $rowNumber++;
-
-            if ($cells === [null]) {
-                continue; // linha em branco (comum no fim do arquivo)
+        foreach ($this->csvReader->eachRow($file, self::REQUIRED_COLUMNS, InvalidStatementImportRowException::class) as $item) {
+            if ($allow !== null && ! isset($allow[$item['line']])) {
+                continue;
             }
 
-            $row = array_combine($header, array_pad(array_slice($cells, 0, count($header)), count($header), ''));
-
             try {
-                $data = $this->parser->parse($row, $contextId, $accountId);
+                $data = $this->parser->parse($item['raw'], $contextId, $accountId);
 
-                if ($this->isDuplicate($data)) {
+                if ($allow === null && $this->classifier->isDuplicate($data)) {
                     $duplicates++;
 
                     continue;
@@ -69,49 +66,12 @@ final class ImportStatementFromCsv
                 $this->registerTransaction->execute($data);
                 $imported++;
             } catch (InvalidStatementImportRowException $e) {
-                $failed[] = ['row' => $rowNumber, 'reason' => $e->getMessage()];
+                $failed[] = ['row' => $item['line'], 'reason' => $e->getMessage()];
             } catch (Throwable $e) {
-                $failed[] = ['row' => $rowNumber, 'reason' => 'Erro inesperado: '.$e->getMessage()];
+                $failed[] = ['row' => $item['line'], 'reason' => 'Erro inesperado: '.$e->getMessage()];
             }
         }
 
-        fclose($handle);
-
         return ['imported' => $imported, 'duplicates' => $duplicates, 'failed' => $failed];
-    }
-
-    /** Mesma conta, data, valor, tipo e descrição de um lançamento já existente = reenvio do mesmo arquivo. */
-    private function isDuplicate(RegisterTransactionData $data): bool
-    {
-        return StatementEntry::query()
-            ->where('account_id', $data->accountId)
-            ->where('occurred_at', $data->occurredAt)
-            ->where('amount', $data->amount)
-            ->where('type', $data->type->value)
-            ->where('description', $data->description)
-            ->exists();
-    }
-
-    /**
-     * @param  resource  $handle
-     * @return list<string>
-     */
-    private function readHeader($handle): array
-    {
-        $header = fgetcsv($handle, escape: '\\');
-
-        if ($header === false || $header === [null]) {
-            throw new InvalidStatementImportRowException('Planilha vazia.');
-        }
-
-        $header[0] = preg_replace('/^\x{FEFF}/u', '', (string) $header[0]) ?? $header[0];
-        $header = array_map(static fn (string $column) => mb_strtolower(trim($column)), $header);
-        $missing = array_diff(self::REQUIRED_COLUMNS, $header);
-
-        if ($missing !== []) {
-            throw new InvalidStatementImportRowException('Colunas obrigatórias faltando: '.implode(', ', $missing).'.');
-        }
-
-        return $header;
     }
 }

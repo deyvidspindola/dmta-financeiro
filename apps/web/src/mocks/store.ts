@@ -1476,16 +1476,102 @@ export const mockApi = {
     await delay()
   },
 
-  async importBillsCsv(_file: File) {
+  async previewBillsCsv(_file: File) {
     await delay()
-    return { imported: 2, failed: [] }
+    return {
+      rows: [
+        {
+          line: 2,
+          raw: { descricao: 'Conta de luz', valor: '150.90' },
+          parsed: {
+            description: 'Conta de luz',
+            amount: 150.9,
+            due_date: '2026-09-10',
+            direction: 'payable' as const,
+            category_name: 'Utilidades',
+            beneficiary: 'Enel',
+          },
+          status: 'ok' as const,
+          reason: null,
+        },
+        {
+          line: 3,
+          raw: { descricao: 'Duplicado', valor: '50.00' },
+          parsed: {
+            description: 'Duplicado',
+            amount: 50,
+            due_date: '2026-09-11',
+            direction: 'payable' as const,
+            category_name: null,
+            beneficiary: null,
+          },
+          status: 'duplicate' as const,
+          reason: 'Boleto já existente neste contexto.',
+        },
+        {
+          line: 4,
+          raw: { descricao: '', valor: 'x' },
+          parsed: null,
+          status: 'invalid' as const,
+          reason: 'Descrição em branco.',
+        },
+      ],
+      summary: { total: 3, ok: 1, duplicates: 1, invalid: 1 },
+    }
+  },
+
+  async importBillsCsv(_file: File, _lines?: number[]) {
+    await delay()
+    return { imported: 2, duplicates: 0, failed: [] }
   },
 
   async downloadStatementImportTemplate(): Promise<void> {
     await delay()
   },
 
-  async importStatementCsv(_file: File) {
+  async previewStatementCsv(_file: File) {
+    await delay()
+    return {
+      rows: [
+        {
+          line: 2,
+          raw: { data: '10/09/2026', descricao: 'Mercado', valor: '-50.00' },
+          parsed: {
+            occurred_at: '2026-09-10',
+            description: 'Mercado',
+            amount: -50,
+            type: 'expense' as const,
+            category_name: null,
+          },
+          status: 'ok' as const,
+          reason: null,
+        },
+        {
+          line: 3,
+          raw: { data: '11/09/2026', descricao: 'Salário', valor: '1000.00' },
+          parsed: {
+            occurred_at: '2026-09-11',
+            description: 'Salário',
+            amount: 1000,
+            type: 'income' as const,
+            category_name: null,
+          },
+          status: 'duplicate' as const,
+          reason: 'Lançamento já existente nesta conta.',
+        },
+        {
+          line: 4,
+          raw: { data: 'xx', descricao: '', valor: '0' },
+          parsed: null,
+          status: 'invalid' as const,
+          reason: 'Descrição em branco.',
+        },
+      ],
+      summary: { total: 3, ok: 1, duplicates: 1, invalid: 1 },
+    }
+  },
+
+  async importStatementCsv(_file: File, _lines?: number[]) {
     await delay()
     return { imported: 1, duplicates: 1, failed: [] }
   },
