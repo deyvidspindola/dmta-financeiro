@@ -1575,4 +1575,60 @@ export const mockApi = {
     await delay()
     return { imported: 1, duplicates: 1, failed: [] }
   },
+
+  async downloadCardInvoiceTemplate(): Promise<void> {
+    await delay()
+  },
+
+  async previewCardInvoiceCsv(
+    _file: File,
+  ): Promise<import('@/types/models').CardInvoiceImportPreview> {
+    await delay()
+    return {
+      rows: [
+        {
+          line: 2,
+          raw: { data: '05/09/2026', descricao: 'Mercado', valor: '50.00' },
+          parsed: {
+            occurred_at: '2026-09-05',
+            description: 'Mercado',
+            amount: 50,
+            category_name: null,
+          },
+          status: 'ok',
+          reason: null,
+        },
+        {
+          line: 3,
+          raw: {
+            data: '08/09/2026',
+            descricao: 'Notebook',
+            valor: '499.90',
+            parcela: '2/6',
+          },
+          parsed: {
+            occurred_at: '2026-09-08',
+            description: 'Notebook (2/6)',
+            amount: 499.9,
+            category_name: 'Eletrônicos',
+          },
+          status: 'duplicate',
+          reason: 'Compra já existente neste cartão.',
+        },
+        {
+          line: 4,
+          raw: { data: 'xx', descricao: '', valor: '0' },
+          parsed: null,
+          status: 'invalid',
+          reason: 'Descrição em branco.',
+        },
+      ],
+      summary: { total: 3, ok: 1, duplicates: 1, invalid: 1 },
+    }
+  },
+
+  async importCardInvoiceCsv(_file: File, _lines?: number[]) {
+    await delay()
+    return { imported: 1, duplicates: 0, failed: [] }
+  },
 }

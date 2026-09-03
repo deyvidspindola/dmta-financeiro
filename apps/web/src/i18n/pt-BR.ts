@@ -22,6 +22,7 @@ export const strings = {
     debts: 'Dívidas',
     importBills: 'Importar boletos',
     importStatement: 'Importar extrato',
+    importCardInvoice: 'Importar fatura',
     logout: 'Sair',
     context: 'Contexto',
     consolidated: 'Consolidado',
@@ -613,10 +614,14 @@ export const strings = {
     statementTitle: 'Importar extrato (CSV)',
     statementHint:
       'Escolha a conta, envie o CSV e revise o preview. Duplicatas ficam desmarcadas; reenviar sem seleção continua seguro.',
+    cardInvoiceTitle: 'Importar fatura de cartão (CSV)',
+    cardInvoiceHint:
+      'Escolha o cartão, envie o CSV da fatura e revise o preview. Parcelas N/M com N>1 só anotam na descrição.',
     downloadTemplate: 'Baixar modelo',
     upload: 'Enviar CSV',
     file: 'Arquivo',
     account: 'Conta do extrato',
+    creditCard: 'Cartão',
     summary: 'Resumo da importação',
     imported: 'Importados',
     duplicates: 'Duplicados',

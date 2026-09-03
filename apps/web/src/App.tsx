@@ -92,6 +92,11 @@ const ImportStatementPage = lazy(() =>
     default: m.ImportStatementPage,
   })),
 )
+const ImportCardInvoicePage = lazy(() =>
+  import('@/pages/ImportCardInvoicePage').then((m) => ({
+    default: m.ImportCardInvoicePage,
+  })),
+)
 const SecurityPage = lazy(() =>
   import('@/pages/SecurityPage').then((m) => ({ default: m.SecurityPage })),
 )
@@ -172,6 +177,10 @@ export default function App() {
               <Route path="debts" element={<DebtsPage />} />
               <Route path="import-bills" element={<ImportBillsPage />} />
               <Route path="import-statement" element={<ImportStatementPage />} />
+              <Route
+                path="import-card-invoice"
+                element={<ImportCardInvoicePage />}
+              />
               <Route path="security" element={<SecurityPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />

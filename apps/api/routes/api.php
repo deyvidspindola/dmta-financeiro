@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\V1\BillImportController;
 use App\Http\Controllers\Api\V1\BoletoPasswordRuleController;
 use App\Http\Controllers\Api\V1\BudgetController;
 use App\Http\Controllers\Api\V1\CardInvoiceController;
+use App\Http\Controllers\Api\V1\CardInvoiceImportController;
 use App\Http\Controllers\Api\V1\CardPurchaseController;
 use App\Http\Controllers\Api\V1\CashFlowController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -189,6 +190,9 @@ Route::prefix('v1')->group(function () {
             Route::post('credit-cards/{creditCard}/purchases', [CardPurchaseController::class, 'store']);
             Route::patch('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'update']);
             Route::delete('credit-cards/{creditCard}/purchases/{purchase}', [CardPurchaseController::class, 'destroy']);
+            Route::get('credit-cards/{creditCard}/invoice-import/template', [CardInvoiceImportController::class, 'template']);
+            Route::post('credit-cards/{creditCard}/invoice-import/preview', [CardInvoiceImportController::class, 'preview']);
+            Route::post('credit-cards/{creditCard}/invoice-import', [CardInvoiceImportController::class, 'store']);
 
             Route::get('investments', [InvestmentController::class, 'index']);
             Route::post('investments', [InvestmentController::class, 'store']);

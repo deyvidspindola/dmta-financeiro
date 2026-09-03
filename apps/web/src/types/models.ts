@@ -359,6 +359,32 @@ export interface BillImportPreview {
   summary: ImportPreviewSummary
 }
 
+export interface CardInvoiceImportParsed {
+  description: string
+  amount: number
+  occurred_at: string
+  category_name: string | null
+}
+
+export interface CardInvoiceImportPreviewRow {
+  line: number
+  raw: Record<string, string>
+  parsed: CardInvoiceImportParsed | null
+  status: ImportPreviewStatus
+  reason: string | null
+}
+
+export interface CardInvoiceImportPreview {
+  rows: CardInvoiceImportPreviewRow[]
+  summary: ImportPreviewSummary
+}
+
+export interface CardInvoiceImportSummary {
+  imported: number
+  duplicates: number
+  failed: ImportFailure[]
+}
+
 export interface LoginCredentials {
   email: string
   password: string
