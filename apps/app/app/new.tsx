@@ -7,6 +7,7 @@ import { accountsApi, categoriesApi, transactionsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   Button,
+  DateField,
   MoneyField,
   Screen,
   SelectField,
@@ -105,7 +106,12 @@ export default function NewTransactionScreen() {
 
   function submit() {
     setFormError(null);
-    const parsed = schema.safeParse({ amount, description, account_id: accountId ?? '', occurred_at: occurredAt });
+    const parsed = schema.safeParse({
+      amount,
+      description,
+      account_id: accountId ?? '',
+      occurred_at: occurredAt,
+    });
     if (!parsed.success) {
       const next: Record<string, string> = {};
       for (const issue of parsed.error.issues) {
@@ -148,9 +154,17 @@ export default function NewTransactionScreen() {
                   setType(option);
                   setCategoryId(null);
                 }}
-                className={cn('flex-1 items-center rounded-lg py-2', type === option && 'bg-canvas')}
+                className={cn(
+                  'flex-1 items-center rounded-lg py-2',
+                  type === option && 'bg-canvas',
+                )}
               >
-                <Text className={cn('text-sm', type === option ? 'font-semibold text-fg' : 'text-fg-muted')}>
+                <Text
+                  className={cn(
+                    'text-sm',
+                    type === option ? 'font-semibold text-fg' : 'text-fg-muted',
+                  )}
+                >
                   {option === 'income' ? t.newTransaction.typeIncome : t.newTransaction.typeExpense}
                 </Text>
               </Pressable>
@@ -185,18 +199,17 @@ export default function NewTransactionScreen() {
             options={categoryOptions}
             onChange={(v) => setCategoryId(v || null)}
           />
-          <TextField
+          <DateField
             label={t.newTransaction.date}
             value={occurredAt}
-            onChangeText={setOccurredAt}
-            autoCapitalize="none"
+            onChange={setOccurredAt}
             error={errors.occurred_at}
           />
           <SwitchField
-            label={t.newTransaction.settled}
-            hint={t.newTransaction.settledHint}
-            value={settled}
-            onChange={setSettled}
+            label={t.newTransaction.forecast}
+            hint={t.newTransaction.forecastHint}
+            value={!settled}
+            onChange={(isForecast) => setSettled(!isForecast)}
           />
 
           {formError ? <Text variant="error">{formError}</Text> : null}

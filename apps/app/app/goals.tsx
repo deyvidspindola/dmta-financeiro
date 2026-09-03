@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   ConfirmSheet,
+  DateField,
   MoneyField,
   ProgressBar,
   Screen,
@@ -138,9 +139,7 @@ export default function GoalsScreen() {
 
           <Button
             label={t.goals.create}
-            onPress={() =>
-              setForm({ id: null, name: '', target: 0, targetDate: '', notes: '' })
-            }
+            onPress={() => setForm({ id: null, name: '', target: 0, targetDate: '', notes: '' })}
           />
         </View>
       )}
@@ -165,12 +164,11 @@ export default function GoalsScreen() {
               value={form.target}
               onChange={(v) => setForm({ ...form, target: v })}
             />
-            <TextField
+            <DateField
               label={t.goals.targetDate}
               value={form.targetDate}
-              onChangeText={(v) => setForm({ ...form, targetDate: v })}
-              autoCapitalize="none"
-              placeholder="AAAA-MM-DD"
+              onChange={(v) => setForm({ ...form, targetDate: v })}
+              optional
             />
             <TextField
               label={t.goals.notes}

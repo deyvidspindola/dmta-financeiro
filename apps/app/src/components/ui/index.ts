@@ -28,4 +28,5 @@ export { MoneyField } from './MoneyField';
 export { SelectField } from './SelectField';
 export type { SelectOption } from './SelectField';
 export { SwitchField } from './SwitchField';
+export { DateField } from './DateField';
 export { ConfirmSheet } from './ConfirmSheet';
