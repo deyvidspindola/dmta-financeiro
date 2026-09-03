@@ -7,6 +7,7 @@ use App\Enums\ContextType;
 use App\Enums\TransferRole;
 use App\Models\Account;
 use App\Models\Bill;
+use App\Models\BoletoPasswordRule;
 use App\Models\Budget;
 use App\Models\CardInvoice;
 use App\Models\CardPurchase;
@@ -18,6 +19,8 @@ use App\Models\Debt;
 use App\Models\Goal;
 use App\Models\Investment;
 use App\Models\InvestmentContribution;
+use App\Models\PendingBillCapture;
+use App\Models\PendingNotificationCapture;
 use App\Models\RecurringBill;
 use App\Models\RecurringTransaction;
 use App\Models\StatementEntry;
@@ -60,6 +63,18 @@ test('apaga todo o dado financeiro e recria um contexto PF limpo', function () {
         ->and(CreditCard::query()->count())->toBe(0)
         ->and(RecurringTransaction::query()->count())->toBe(0)
         ->and(Company::query()->count())->toBe(0);
+});
+
+test('limpa as filas de captura e as regras de senha de boleto', function () {
+    PendingBillCapture::factory()->count(3)->create();
+    PendingNotificationCapture::factory()->count(2)->create();
+    BoletoPasswordRule::factory()->create();
+
+    $this->postJson('/api/v1/account/reset', ['password' => 'password'])->assertSuccessful();
+
+    expect(PendingBillCapture::query()->count())->toBe(0)
+        ->and(PendingNotificationCapture::query()->count())->toBe(0)
+        ->and(BoletoPasswordRule::query()->count())->toBe(0);
 });
 
 test('limpa subcategoria, transferência e todas as tabelas de domínio (FINANCEIRO-C)', function () {

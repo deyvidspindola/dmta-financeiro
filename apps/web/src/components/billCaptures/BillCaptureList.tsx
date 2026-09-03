@@ -1,4 +1,4 @@
-import { Check, KeyRound, X } from 'lucide-react'
+import { Check, KeyRound, Trash2, X } from 'lucide-react'
 import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
 import { captureStatusTone } from '@/components/billCaptures/captureDisplay'
 import {
@@ -20,7 +20,9 @@ type BillCaptureListProps = {
   onConfirm: (capture: BillCapture) => void
   onReject: (captureId: string) => void
   onUnlock: (capture: BillCapture) => void
+  onDelete: (captureId: string) => void
   rejectPending?: boolean
+  deletePending?: boolean
 }
 
 export function BillCaptureList({
@@ -28,7 +30,9 @@ export function BillCaptureList({
   onConfirm,
   onReject,
   onUnlock,
+  onDelete,
   rejectPending,
+  deletePending,
 }: BillCaptureListProps) {
   return (
     <DataTable
@@ -73,6 +77,15 @@ export function BillCaptureList({
                   label={t.unlock}
                   icon={KeyRound}
                   onClick={() => onUnlock(capture)}
+                />
+              ) : null}
+              {capture.status !== 'confirmed' ? (
+                <IconButton
+                  label={t.delete}
+                  icon={Trash2}
+                  variant="danger"
+                  onClick={() => onDelete(capture.id)}
+                  disabled={deletePending}
                 />
               ) : (
                 <span className="text-sm text-fg-muted">—</span>

@@ -666,10 +666,16 @@ export const strings = {
     beneficiary: 'Beneficiário',
     confirm: 'Confirmar',
     reject: 'Rejeitar',
+    delete: 'Excluir',
     confirmTitle: 'Confirmar boleto capturado',
     confirmed: 'Boleto confirmado e cadastrado.',
     rejected: 'Captura rejeitada.',
+    deleted: 'Captura excluída.',
     confirmReject: 'Rejeitar esta captura sem criar boleto?',
+    confirmDelete:
+      'Excluir esta captura de vez? Some da fila e apaga o PDF guardado — não dá pra desfazer.',
+    monthFilter: 'Vencimento',
+    allMonths: 'Todos os meses',
     poll: 'Capturar boletos agora',
     polling: 'Verificando caixa de e-mail…',
     pollSuccess: (processed: number, captured: number) =>

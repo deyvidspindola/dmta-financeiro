@@ -67,6 +67,27 @@ class PendingBillCapture extends Model
     }
 
     /**
+     * Filtra por mês de vencimento (`YYYY-MM`) — ajuda a achar uma
+     * captura numa fila grande. `null` = todos os meses. Capturas sem
+     * `due_date` (arrecadação, parsing falho) só aparecem sem filtro.
+     *
+     * @param  Builder<PendingBillCapture>  $query
+     * @return Builder<PendingBillCapture>
+     */
+    public function scopeForMonth(Builder $query, ?string $month): Builder
+    {
+        if ($month === null || ! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            return $query;
+        }
+
+        [$year, $monthNumber] = explode('-', $month);
+
+        return $query
+            ->whereYear('due_date', (int) $year)
+            ->whereMonth('due_date', (int) $monthNumber);
+    }
+
+    /**
      * Converte atributos para tipos de domínio.
      *
      * @return array<string, string>

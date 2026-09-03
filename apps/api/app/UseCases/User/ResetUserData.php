@@ -36,8 +36,8 @@ use Illuminate\Support\Facades\DB;
  * CASCADE` das suas mães. Preserva a conta de acesso: {@see User}, senha,
  * MFA e tokens Sanctum não são tocados — o usuário continua logado.
  *
- * Não apaga a fila de captura por e-mail (`pending_bill_captures`) nem as
- * regras de senha de boleto: não são escopadas por usuário.
+ * Filas de captura e regras de senha de boleto não têm `context_id` —
+ * {@see PurgeCaptureData} zera essas à parte.
  *
  * @package App\UseCases\User
  *
@@ -56,12 +56,11 @@ final class ResetUserData
      * contextos. Só o `ON DELETE CASCADE` de `contexts` não basta: no
      * MySQL/InnoDB, o `SET NULL` que o cascade dispara numa FK
      * auto-referente (`categories.parent_id`,
-     * `statement_entries.transfer_pair_id`) ou entre linhas irmãs revalida
-     * a FK `context_id` da linha — e o contexto já foi apagado no mesmo
-     * cascade, o que estoura `SQLSTATE[23000] 1452` (issue FINANCEIRO-C).
-     * Apagar cada tabela enquanto o contexto existe faz a revalidação
-     * achar o pai; a ordem entre elas é indiferente (toda FK aqui é
-     * `CASCADE` ou `SET NULL`). SQLite (testes) não tem esse comportamento.
+     * `statement_entries.transfer_pair_id`) revalida a FK `context_id` da
+     * linha — e o contexto já foi apagado no mesmo cascade, o que estoura
+     * `SQLSTATE[23000] 1452` (issue FINANCEIRO-C). Apagar cada tabela com o
+     * contexto ainda vivo faz a revalidação achar o pai; a ordem entre elas
+     * é indiferente. SQLite (testes) não tem esse comportamento.
      *
      * @var list<class-string<Model>>
      */
@@ -80,13 +79,14 @@ final class ResetUserData
         Account::class,
     ];
 
-    public function __construct(private readonly CreateContext $createContext) {}
+    public function __construct(
+        private readonly CreateContext $createContext,
+        private readonly PurgeCaptureData $purgeCaptureData,
+    ) {}
 
     /**
-     * Executa o reset e devolve o novo contexto PF "Pessoal".
-     *
      * @param  User  $user  Dono dos dados a apagar.
-     * @return Context Contexto PF recém-criado, vazio.
+     * @return Context Contexto PF "Pessoal" recém-criado, vazio.
      */
     public function execute(User $user): Context
     {
@@ -107,6 +107,8 @@ final class ResetUserData
             if ($companyIds !== []) {
                 Company::query()->whereIn('id', $companyIds)->delete();
             }
+
+            $this->purgeCaptureData->execute();
 
             return $this->createContext->execute(new CreateContextData(
                 userId: $user->id,

@@ -14,6 +14,7 @@ use App\Http\Resources\PendingBillCaptureResource;
 use App\Models\Context;
 use App\Models\PendingBillCapture;
 use App\UseCases\Bill\ConfirmBillCapture;
+use App\UseCases\Bill\DeleteBillCapture;
 use App\UseCases\Bill\RejectBillCapture;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -37,10 +38,14 @@ final class BillCaptureController extends Controller
 {
     public function index(Request $request): AnonymousResourceCollection
     {
+        $month = $request->string('month')->toString();
+
         return PendingBillCaptureResource::collection(
-            PendingBillCapture::query()->latest()->forList(
-                $request->string('status', 'pending')->toString(),
-            )->get(),
+            PendingBillCapture::query()
+                ->latest()
+                ->forList($request->string('status', 'pending')->toString())
+                ->forMonth($month !== '' ? $month : null)
+                ->get(),
         );
     }
 
@@ -64,6 +69,13 @@ final class BillCaptureController extends Controller
     }
 
     public function reject(PendingBillCapture $capture, RejectBillCapture $useCase): JsonResponse
+    {
+        $useCase->execute($capture);
+
+        return response()->json(status: 204);
+    }
+
+    public function destroy(PendingBillCapture $capture, DeleteBillCapture $useCase): JsonResponse
     {
         $useCase->execute($capture);
 

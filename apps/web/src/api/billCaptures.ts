@@ -34,13 +34,15 @@ export type SaveBoletoPasswordRuleInput = {
 
 export async function listBillCaptures(
   status: BillCaptureListStatus = 'pending',
+  month: string | null = null,
 ): Promise<BillCapture[]> {
-  if (useMocks) return mockApi.listBillCaptures(status)
-  const query = `?status=${status}`
+  if (useMocks) return mockApi.listBillCaptures(status, month)
+  const params = new URLSearchParams({ status })
+  if (month) params.set('month', month)
   const payload = await http.get<
     | Array<Parameters<typeof mapBillCapture>[0]>
     | { data: Array<Parameters<typeof mapBillCapture>[0]> }
-  >(`/bill-captures${query}`)
+  >(`/bill-captures?${params.toString()}`)
   return unwrapData(payload).map(mapBillCapture)
 }
 
@@ -68,6 +70,11 @@ export async function confirmBillCapture(
 export async function rejectBillCapture(captureId: string): Promise<void> {
   if (useMocks) return mockApi.rejectBillCapture(captureId)
   await http.post(`/bill-captures/${captureId}/reject`)
+}
+
+export async function deleteBillCapture(captureId: string): Promise<void> {
+  if (useMocks) return mockApi.deleteBillCapture(captureId)
+  await http.delete(`/bill-captures/${captureId}`)
 }
 
 /** Dispara a captura na hora, sem esperar o próximo ciclo do agendador (a cada 5 minutos). */
