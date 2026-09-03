@@ -51,6 +51,13 @@ export const strings = {
     system: 'Sistema',
   },
 
+  more: {
+    manage: 'Gerenciar',
+    settings: 'Configurações',
+    soon: 'Em breve',
+    logoutConfirm: 'Sair da conta neste aparelho?',
+  },
+
   shell: {
     collapseSidebar: 'Recolher menu',
     expandSidebar: 'Expandir menu',
@@ -215,6 +222,10 @@ export const strings = {
       wallet: 'Carteira',
       other: 'Outra',
     },
+    needContext: 'Selecione um contexto (PF ou empresa) para gerenciar contas.',
+    total: 'Total em contas',
+    save: 'Salvar conta',
+    balanceEditHint: 'O saldo só muda por lançamento.',
   },
 
   creditCards: {
