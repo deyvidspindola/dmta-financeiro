@@ -32,29 +32,41 @@ final class PreviewCardInvoice
         private readonly CardInvoiceImportClassifier $classifier,
     ) {}
 
+    /** Texto de PDF mostrado no preview quando nada foi identificado — corta em ~12k. */
+    private const RAW_TEXT_LIMIT = 12000;
+
     /**
-     * @return array{rows: list<array<string, mixed>>, summary: array{total: int, ok: int, duplicates: int, invalid: int}, needs_password: bool, unsupported: bool}
+     * @return array{rows: list<array<string, mixed>>, summary: array{total: int, ok: int, duplicates: int, invalid: int}, needs_password: bool, unsupported: bool, raw_text: ?string}
      */
     public function execute(UploadedFile $file, int $contextId, int $creditCardId, ?string $pdfPassword = null): array
     {
-        $rows = [];
         $summary = ['total' => 0, 'ok' => 0, 'duplicates' => 0, 'invalid' => 0];
 
         try {
-            foreach ($this->reader->rows($file, $pdfPassword) as $item) {
-                $classified = $this->classifier->classify($item['raw'], $item['line'], $contextId, $creditCardId);
-                $rows[] = $classified;
-                $summary['total']++;
-                $summary[match ($classified['status']) {
-                    'ok' => 'ok',
-                    'duplicate' => 'duplicates',
-                    default => 'invalid',
-                }]++;
-            }
+            $read = $this->reader->read($file, $pdfPassword);
         } catch (CardInvoicePdfPasswordRequiredException $e) {
-            return ['rows' => [], 'summary' => $summary, 'needs_password' => true, 'unsupported' => $e->unsupported];
+            return ['rows' => [], 'summary' => $summary, 'needs_password' => true, 'unsupported' => $e->unsupported, 'raw_text' => null];
         }
 
-        return ['rows' => $rows, 'summary' => $summary, 'needs_password' => false, 'unsupported' => false];
+        $rows = [];
+
+        foreach ($read['rows'] as $item) {
+            $classified = $this->classifier->classify($item['raw'], $item['line'], $contextId, $creditCardId);
+            $rows[] = $classified;
+            $summary['total']++;
+            $summary[match ($classified['status']) {
+                'ok' => 'ok',
+                'duplicate' => 'duplicates',
+                default => 'invalid',
+            }]++;
+        }
+
+        return [
+            'rows' => $rows,
+            'summary' => $summary,
+            'needs_password' => false,
+            'unsupported' => false,
+            'raw_text' => $read['pdf_text'] !== null ? mb_substr($read['pdf_text'], 0, self::RAW_TEXT_LIMIT) : null,
+        ];
     }
 }

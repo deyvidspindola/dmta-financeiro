@@ -155,14 +155,27 @@ test('preview de fatura em PDF (sem senha) extrai as compras', function () {
         'TOTAL DA FATURA 439,90',
     );
 
-    $this->post($this->base.'/preview', ['file' => $file], ['Accept' => 'application/json'])
+    $response = $this->post($this->base.'/preview', ['file' => $file], ['Accept' => 'application/json'])
         ->assertOk()
         ->assertJsonPath('needs_password', false)
         ->assertJsonPath('summary.ok', 2)
         ->assertJsonPath('rows.0.parsed.description', 'SUPERMERCADO BOM PRECO')
         ->assertJsonPath('rows.1.parsed.amount', 250);
 
+    // texto extraído volta no preview pra diagnóstico quando algo falha
+    expect($response->json('raw_text'))->toContain('POSTO SHELL');
     expect(CardPurchase::query()->count())->toBe(0);
+});
+
+test('preview de PDF ilegível devolve raw_text vazio e nenhuma linha', function () {
+    // PDF sem camada de texto (só o cabeçalho) — smalot não extrai nada
+    $file = UploadedFile::fake()->createWithContent('fatura.pdf', "%PDF-1.4\n%%EOF");
+
+    $this->post($this->base.'/preview', ['file' => $file], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('needs_password', false)
+        ->assertJsonPath('summary.total', 0)
+        ->assertJsonPath('rows', []);
 });
 
 test('PDF protegido sem senha cadastrada volta needs_password', function () {

@@ -229,7 +229,7 @@ export function ImportCardInvoicePage() {
         <ErrorBanner message={getErrorMessage(importMutation.error)} />
       ) : null}
 
-      {preview && !needsPassword && !summary ? (
+      {preview && !needsPassword && !summary && preview.rows.length > 0 ? (
         <Card>
           <CardHeader title={i.previewTitle} />
           <ImportPreviewTable
@@ -238,6 +238,19 @@ export function ImportCardInvoicePage() {
             importing={importMutation.isPending}
             onImport={(lines) => importMutation.mutate(lines)}
           />
+          {preview.raw_text ? <RawTextDetails text={preview.raw_text} /> : null}
+        </Card>
+      ) : null}
+
+      {preview && !needsPassword && !summary && preview.rows.length === 0 ? (
+        <Card>
+          <CardHeader title={i.previewTitle} />
+          <div className="space-y-3">
+            <ErrorBanner message={i.pdfNoRows} />
+            {preview.raw_text !== null ? (
+              <RawTextDetails text={preview.raw_text || i.pdfNoText} defaultOpen />
+            ) : null}
+          </div>
         </Card>
       ) : null}
 
@@ -254,5 +267,24 @@ export function ImportCardInvoicePage() {
         </div>
       ) : null}
     </div>
+  )
+}
+
+function RawTextDetails({
+  text,
+  defaultOpen = false,
+}: {
+  text: string
+  defaultOpen?: boolean
+}) {
+  return (
+    <details className="mt-4 rounded-xl border border-line bg-surface-2 p-3" open={defaultOpen}>
+      <summary className="cursor-pointer text-sm font-medium text-fg">
+        {strings.imports.pdfExtractedText}
+      </summary>
+      <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-words text-xs text-fg-muted">
+        {text}
+      </pre>
+    </details>
   )
 }

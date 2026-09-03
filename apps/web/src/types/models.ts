@@ -381,6 +381,8 @@ export interface CardInvoiceImportPreview {
   needs_password: boolean
   /** PDF cifrado num formato que o servidor não sabe abrir. */
   unsupported: boolean
+  /** Texto extraído do PDF (só PDF) — para diagnóstico quando a leitura falha. */
+  raw_text: string | null
 }
 
 export interface CardInvoiceImportSummary {
