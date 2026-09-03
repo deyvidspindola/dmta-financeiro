@@ -1624,6 +1624,9 @@ export const mockApi = {
             description: 'Mercado',
             amount: 50,
             category_name: null,
+            installment_number: null,
+            installment_total: null,
+            installments_pending: 1,
           },
           status: 'ok',
           reason: null,
@@ -1638,12 +1641,15 @@ export const mockApi = {
           },
           parsed: {
             occurred_at: '2026-09-08',
-            description: 'Notebook (2/6)',
+            description: 'Notebook',
             amount: 499.9,
             category_name: 'Eletrônicos',
+            installment_number: 2,
+            installment_total: 6,
+            installments_pending: 5,
           },
-          status: 'duplicate',
-          reason: 'Compra já existente neste cartão.',
+          status: 'ok',
+          reason: null,
         },
         {
           line: 4,
@@ -1653,7 +1659,7 @@ export const mockApi = {
           reason: 'Descrição em branco.',
         },
       ],
-      summary: { total: 3, ok: 1, duplicates: 1, invalid: 1 },
+      summary: { total: 3, ok: 2, duplicates: 0, invalid: 1 },
     }
   },
 

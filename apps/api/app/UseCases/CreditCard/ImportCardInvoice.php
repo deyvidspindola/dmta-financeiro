@@ -6,23 +6,26 @@ namespace App\UseCases\CreditCard;
 
 use App\Exceptions\Domain\CardInvoicePdfPasswordRequiredException;
 use App\Exceptions\Domain\InvalidCardInvoiceImportRowException;
-use App\Services\CardInvoiceImportClassifier;
 use App\Services\CardInvoiceImportRowParser;
 use App\Services\CardInvoiceRowReader;
 use Illuminate\Http\UploadedFile;
 use Throwable;
 
 /**
- * Importa compras de uma fatura de cartão (CSV ou PDF). Com `$onlyLines`
- * nulo, duplicatas são puladas; com `$onlyLines`, a seleção do usuário
- * manda e a dedup é ignorada. PDF protegido → precisa de `$pdfPassword`
- * (a mesma que abriu no preview).
+ * Importa as compras de uma fatura de cartão (CSV ou PDF). Cada linha
+ * vira uma compra à vista OU a parcela atual + as futuras
+ * ({@see RegisterImportedCardInvoiceRow}), que é o que faz o parcelamento
+ * aparecer nos meses seguintes do cartão. `imported` conta as compras
+ * criadas (uma linha "1/3" conta 3); `duplicates`, as já existentes.
+ *
+ * Com `$onlyLines` a seleção do usuário manda; sem, linhas totalmente
+ * duplicadas são puladas. PDF protegido → `$pdfPassword` (a do preview).
  *
  * @package App\UseCases\CreditCard
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 3.0.0
  *
  * @since   03/09/2026
  *
@@ -33,8 +36,7 @@ final class ImportCardInvoice
     public function __construct(
         private readonly CardInvoiceRowReader $reader,
         private readonly CardInvoiceImportRowParser $parser,
-        private readonly CardInvoiceImportClassifier $classifier,
-        private readonly RegisterCardPurchase $registerCardPurchase,
+        private readonly RegisterImportedCardInvoiceRow $registerRow,
     ) {}
 
     /**
@@ -56,16 +58,10 @@ final class ImportCardInvoice
             }
 
             try {
-                $data = $this->parser->parse($item['raw'], $contextId, $creditCardId);
-
-                if ($allow === null && $this->classifier->isDuplicate($data)) {
-                    $duplicates++;
-
-                    continue;
-                }
-
-                $this->registerCardPurchase->execute($data);
-                $imported++;
+                $row = $this->parser->parse($item['raw'], $contextId, $creditCardId);
+                $result = $this->registerRow->execute($row, force: $allow !== null);
+                $imported += $result['created'];
+                $duplicates += $result['skipped'];
             } catch (InvalidCardInvoiceImportRowException $e) {
                 $failed[] = ['row' => $item['line'], 'reason' => $e->getMessage()];
             } catch (Throwable $e) {

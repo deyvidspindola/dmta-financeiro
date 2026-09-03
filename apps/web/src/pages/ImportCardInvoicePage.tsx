@@ -39,7 +39,20 @@ const columns: ImportPreviewColumn<CardInvoiceImportPreviewRow>[] = [
   {
     key: 'description',
     header: i.colDescription,
-    cell: (row) => row.parsed?.description ?? row.raw.descricao ?? '—',
+    cell: (row) => {
+      const p = row.parsed
+      const base = p?.description ?? row.raw.descricao ?? '—'
+      if (!p?.installment_total) return base
+      const future = Math.max(0, p.installments_pending - 1)
+      return (
+        <span>
+          {base}{' '}
+          <span className="text-xs text-fg-muted">
+            {i.installmentNote(p.installment_number ?? 0, p.installment_total, future)}
+          </span>
+        </span>
+      )
+    },
   },
   {
     key: 'amount',
@@ -184,6 +197,9 @@ export function ImportCardInvoicePage() {
               }}
               disabled={!contextId}
             />
+            <p className="text-xs text-fg-subtle">
+              {i.cardInvoiceInstallmentsHint}
+            </p>
             {previewMutation.isPending ? (
               <p className="text-sm text-fg-muted">{i.loadingPreview}</p>
             ) : null}

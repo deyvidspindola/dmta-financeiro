@@ -4,21 +4,23 @@ declare(strict_types=1);
 
 namespace App\Services;
 
-use App\DTOs\RegisterCardPurchaseData;
+use App\DTOs\CardInvoiceRowData;
 use App\Exceptions\Domain\InvalidCardInvoiceImportRowException;
 use App\Models\Category;
+use App\UseCases\CreditCard\RegisterImportedCardInvoiceRow;
 use DateTime;
 
 /**
- * Converte uma linha da fatura CSV (`data,descricao,valor,categoria,parcela`)
- * em {@see RegisterCardPurchaseData}. Parcela "N/M" com N>1 só anota na
- * descrição — a fatura já veio fechada, não recria parcelamento.
+ * Converte uma linha da fatura (`data,descricao,valor,categoria,parcela`)
+ * em {@see CardInvoiceRowData}. `parcela` "N/M": a linha é a parcela N de
+ * M e `valor` é o valor de UMA parcela — quem projeta as demais é o
+ * {@see RegisterImportedCardInvoiceRow}.
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   03/09/2026
  *
@@ -31,7 +33,7 @@ final class CardInvoiceImportRowParser
      *
      * @throws InvalidCardInvoiceImportRowException
      */
-    public function parse(array $row, int $contextId, int $creditCardId): RegisterCardPurchaseData
+    public function parse(array $row, int $contextId, int $creditCardId): CardInvoiceRowData
     {
         $description = trim($row['descricao'] ?? '');
 
@@ -39,38 +41,44 @@ final class CardInvoiceImportRowParser
             throw new InvalidCardInvoiceImportRowException('Descrição em branco.');
         }
 
-        $installmentLabel = $this->parseInstallmentLabel(trim($row['parcela'] ?? ''));
+        [$first, $total] = $this->parseInstallment(trim($row['parcela'] ?? ''));
 
-        if ($installmentLabel !== null) {
-            $description .= ' ('.$installmentLabel.')';
-        }
-
-        return new RegisterCardPurchaseData(
+        return new CardInvoiceRowData(
             contextId: $contextId,
             creditCardId: $creditCardId,
             description: $description,
             amount: $this->parseAmount($row['valor'] ?? ''),
             occurredAt: $this->parseDate($row['data'] ?? ''),
             categoryId: $this->resolveCategoryId(trim($row['categoria'] ?? ''), $contextId),
-            installments: 1,
+            firstInstallment: $first,
+            installmentTotal: $total,
         );
     }
 
-    /** Aceita "250.90" e "250,90". Zero ou negativo invalida. */
+    /** Aceita "250.90" e "250,90". Zero invalida; negativo costuma ser pagamento de fatura. */
     private function parseAmount(string $raw): float
     {
         $raw = trim($raw);
 
         if (str_contains($raw, ',')) {
-            $raw = str_replace('.', '', $raw);
-            $raw = str_replace(',', '.', $raw);
+            $raw = str_replace(['.', ','], ['', '.'], $raw);
         }
 
-        if ($raw === '' || ! is_numeric($raw) || (float) $raw <= 0) {
+        if ($raw === '' || ! is_numeric($raw)) {
             throw new InvalidCardInvoiceImportRowException("Valor inválido: \"{$raw}\".");
         }
 
-        return (float) $raw;
+        $value = (float) $raw;
+
+        if ($value < 0) {
+            throw new InvalidCardInvoiceImportRowException('Valor negativo — provavelmente um pagamento de fatura, não uma compra.');
+        }
+
+        if ($value === 0.0) {
+            throw new InvalidCardInvoiceImportRowException('Valor zerado.');
+        }
+
+        return $value;
     }
 
     /** Aceita "dd/mm/aaaa" e "aaaa-mm-dd". */
@@ -90,31 +98,28 @@ final class CardInvoiceImportRowParser
     }
 
     /**
-     * Retorna o rótulo "N/M" só quando N>1 (parcela já lançada na fatura).
-     * Vazio ou "1/M" não altera a descrição.
+     * "N/M" → `[N, M]`. Vazio → `[1, 1]` (compra à vista).
+     *
+     * @return array{int, int}
      */
-    private function parseInstallmentLabel(string $raw): ?string
+    private function parseInstallment(string $raw): array
     {
         if ($raw === '') {
-            return null;
+            return [1, 1];
         }
 
-        if (! preg_match('/^(\d+)\s*\/\s*(\d+)$/', $raw, $matches)) {
-            throw new InvalidCardInvoiceImportRowException(
-                "Parcela inválida (use \"2/6\" ou deixe vazio): \"{$raw}\".",
-            );
+        if (preg_match('/^(\d+)\s*\/\s*(\d+)$/', $raw, $m) !== 1) {
+            throw new InvalidCardInvoiceImportRowException("Parcela inválida (use \"2/6\" ou deixe vazio): \"{$raw}\".");
         }
 
-        $current = (int) $matches[1];
-        $total = (int) $matches[2];
+        $first = (int) $m[1];
+        $total = (int) $m[2];
 
-        if ($current < 1 || $total < 1 || $current > $total) {
-            throw new InvalidCardInvoiceImportRowException(
-                "Parcela inválida (use \"2/6\" ou deixe vazio): \"{$raw}\".",
-            );
+        if ($first < 1 || $total < 1 || $first > $total) {
+            throw new InvalidCardInvoiceImportRowException("Parcela inválida (use \"2/6\" ou deixe vazio): \"{$raw}\".");
         }
 
-        return $current > 1 ? "{$current}/{$total}" : null;
+        return [$first, $total];
     }
 
     private function resolveCategoryId(string $name, int $contextId): ?int

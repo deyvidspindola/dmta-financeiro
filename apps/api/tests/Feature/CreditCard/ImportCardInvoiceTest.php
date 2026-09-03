@@ -82,7 +82,7 @@ test('preview não grava compras e classifica ok/invalid', function () {
     expect(CardPurchase::query()->count())->toBe(0);
 });
 
-test('preview anota parcela N/M na descrição quando N>1', function () {
+test('preview de parcela N/M mostra a parcela e quantas ainda faltam criar', function () {
     $this->post($this->base.'/preview', [
         'file' => invoiceCsv(
             "data,descricao,valor,categoria,parcela\n"
@@ -90,7 +90,48 @@ test('preview anota parcela N/M na descrição quando N>1', function () {
         ),
     ], ['Accept' => 'application/json'])
         ->assertOk()
-        ->assertJsonPath('rows.0.parsed.description', 'Notebook (2/6)');
+        ->assertJsonPath('rows.0.parsed.description', 'Notebook')
+        ->assertJsonPath('rows.0.parsed.installment_number', 2)
+        ->assertJsonPath('rows.0.parsed.installment_total', 6)
+        ->assertJsonPath('rows.0.parsed.installments_pending', 5);
+});
+
+test('importar parcela N/M cria a parcela atual e projeta as futuras nas faturas seguintes', function () {
+    // cartão fecha dia 10 / vence 20; compra 04/08 parcela 1/3
+    $this->post($this->base, [
+        'file' => invoiceCsv("data,descricao,valor,categoria,parcela\n04/08/2026,Geladeira,300.00,,1/3\n"),
+    ], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('imported', 3)
+        ->assertJsonPath('duplicates', 0);
+
+    $purchases = CardPurchase::query()->orderBy('installment_number')->get();
+    expect($purchases)->toHaveCount(3);
+    expect($purchases->pluck('installment_number')->all())->toBe([1, 2, 3]);
+    expect($purchases->every(fn ($p) => (float) $p->amount === 300.0))->toBeTrue();
+
+    // três faturas distintas, uma por mês (ago / set / out)
+    $months = $purchases
+        ->map(fn ($p) => $p->cardInvoice->reference_month->format('Y-m'))
+        ->sort()->values()->all();
+    expect($months)->toBe(['2026-08', '2026-09', '2026-10']);
+});
+
+test('reimportar uma fatura que se sobrepõe não duplica parcelas', function () {
+    // fatura de agosto: parcela 1/3
+    $this->post($this->base, [
+        'file' => invoiceCsv("data,descricao,valor,categoria,parcela\n04/08/2026,Geladeira,300.00,,1/3\n"),
+    ], ['Accept' => 'application/json'])->assertJsonPath('imported', 3);
+
+    // fatura de setembro (mesma compra, agora aparece como 2/3)
+    $this->post($this->base, [
+        'file' => invoiceCsv("data,descricao,valor,categoria,parcela\n04/08/2026,Geladeira,300.00,,2/3\n"),
+    ], ['Accept' => 'application/json'])
+        ->assertOk()
+        ->assertJsonPath('imported', 0)
+        ->assertJsonPath('duplicates', 2);
+
+    expect(CardPurchase::query()->count())->toBe(3);
 });
 
 test('preview marca duplicata quando já existe a compra', function () {

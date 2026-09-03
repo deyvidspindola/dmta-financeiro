@@ -361,9 +361,15 @@ export interface BillImportPreview {
 
 export interface CardInvoiceImportParsed {
   description: string
+  /** Valor de UMA parcela (ou o total, quando à vista). */
   amount: number
   occurred_at: string
   category_name: string | null
+  /** Nº da parcela que essa linha representa; null = compra à vista. */
+  installment_number: number | null
+  installment_total: number | null
+  /** Quantas compras a linha ainda vai criar (parcela atual + futuras não importadas). */
+  installments_pending: number
 }
 
 export interface CardInvoiceImportPreviewRow {
