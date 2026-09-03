@@ -9,7 +9,10 @@ export const entrySchema = z.object({
   account_id: z.string().min(1, strings.common.required),
   category_id: z.string().nullable(),
   goal_id: z.string().nullable(),
-  /** Ligado = já caiu na conta (`settled: true`). Só no create. */
+  /**
+   * Payload API: `true` = efetivado, `false` = previsão.
+   * No form o switch "É uma previsão?" inverte a UI (`checked = !settled`).
+   */
   settled: z.boolean(),
   is_recurring: z.boolean(),
   interval: z.enum(['weekly', 'monthly', 'yearly']),

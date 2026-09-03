@@ -1,68 +1,21 @@
 import {
   useEffect,
   useId,
+  useLayoutEffect,
   useRef,
+  useState,
+  type CSSProperties,
   type InputHTMLAttributes,
 } from 'react'
+import { createPortal } from 'react-dom'
+import { Calendar } from 'vanilla-calendar-pro'
 import { CONTROL } from '@/components/ui/form'
 import { formatIsoDatePtBr, toIsoDate } from '@/lib/datesIso'
 import { cn } from '@/lib/cn'
 import { strings } from '@/i18n/pt-BR'
-// Garante lodash global + HSDatepicker mesmo fora do AppLayout (ex.: /kit).
-import '@/lib/preline'
-
-type HSDatepickerInstance = {
-  on: (
-    evt: 'change',
-    cb: (payload: { selectedDates: string[]; selectedTime: string }) => void,
-  ) => void
-  destroy: () => void
-}
-
-type HSDatepickerCtor = {
-  new (el: HTMLElement, options?: Record<string, unknown>): HSDatepickerInstance
-  getInstance: (
-    target: HTMLElement | string,
-    isInstance?: boolean,
-  ) => { element: HSDatepickerInstance } | HTMLElement | null
-  autoInit: () => void
-}
-
-function getHSDatepicker(): HSDatepickerCtor | undefined {
-  return (window as Window & { HSDatepicker?: HSDatepickerCtor }).HSDatepicker
-}
-
-function destroyDatepicker(el: HTMLElement): void {
-  const HSDatepicker = getHSDatepicker()
-  if (!HSDatepicker) return
-  const instance = HSDatepicker.getInstance(el, true)
-  if (instance && typeof instance === 'object' && 'element' in instance) {
-    instance.element.destroy()
-  }
-}
-
-type DatePickerOptions = {
-  selectedDates?: string[]
-  selectionDatesMode?: 'single' | 'multiple' | 'multiple-ranged'
-  dateFormat?: string
-  dateLocale?: string
-  applyUtilityClasses?: boolean
-  mode?: 'default' | 'custom-select'
-}
-
-function buildOptions(
-  selected: string[],
-  mode: DatePickerOptions['selectionDatesMode'] = 'single',
-): DatePickerOptions {
-  return {
-    selectedDates: selected.filter(Boolean),
-    selectionDatesMode: mode,
-    dateFormat: 'DD/MM/YYYY',
-    dateLocale: 'pt-BR',
-    applyUtilityClasses: true,
-    mode: 'default',
-  }
-}
+import 'vanilla-calendar-pro/styles/index.css'
+import 'vanilla-calendar-pro/styles/themes/light.css'
+import 'vanilla-calendar-pro/styles/themes/dark.css'
 
 type DatePickerFieldProps = Omit<
   InputHTMLAttributes<HTMLInputElement>,
@@ -73,10 +26,21 @@ type DatePickerFieldProps = Omit<
   onChange: (iso: string) => void
 }
 
+function isDarkTheme(): boolean {
+  return document.documentElement.classList.contains('dark')
+}
+
+function formatRangeDisplay(from: string, to: string): string {
+  return [from, to]
+    .filter(Boolean)
+    .map(formatIsoDatePtBr)
+    .join(' — ')
+}
+
 /**
- * Data única via Preline Advanced Datepicker (Vanilla Calendar Pro).
- * Valor externo sempre ISO `YYYY-MM-DD`. Remonte com `key` ao trocar o
- * registro editado (o calendário inicializa com `selectedDates` no mount).
+ * Data única via vanilla-calendar-pro (mesma lib do Preline datepicker).
+ * Valor externo sempre ISO `YYYY-MM-DD`. Input `readonly` — só abre o
+ * calendário ao clicar. Portal no `body` pra não ficar cortado em modal.
  */
 export function DatePickerField({
   value,
@@ -90,55 +54,111 @@ export function DatePickerField({
   const autoId = useId()
   const id = idProp ?? autoId
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
-  const initialIso = useRef(value)
+  const [open, setOpen] = useState(false)
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
 
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
 
-  useEffect(() => {
-    const el = inputRef.current
-    if (!el || disabled) return
-
-    const HSDatepicker = getHSDatepicker()
-    if (!HSDatepicker) return
-
-    destroyDatepicker(el)
-    el.setAttribute(
-      'data-hs-datepicker',
-      JSON.stringify(buildOptions(initialIso.current ? [initialIso.current] : [])),
-    )
-    el.value = formatIsoDatePtBr(initialIso.current)
-
-    const instance = new HSDatepicker(el)
-    instance.on('change', ({ selectedDates }) => {
-      const iso = toIsoDate(selectedDates[0] ?? '')
-      onChangeRef.current(iso)
+  useLayoutEffect(() => {
+    if (!open || !inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    const gap = 4
+    const calendarH = 340
+    const spaceBelow = window.innerHeight - rect.bottom - gap
+    const placeAbove = spaceBelow < calendarH && rect.top > spaceBelow
+    setPanelStyle({
+      position: 'fixed',
+      left: Math.min(rect.left, window.innerWidth - 292),
+      top: placeAbove ? undefined : rect.bottom + gap,
+      bottom: placeAbove ? window.innerHeight - rect.top + gap : undefined,
+      zIndex: 100,
     })
+  }, [open])
 
-    return () => destroyDatepicker(el)
-  }, [disabled])
-
-  // Sync display when value muda de fora (sem recriar o calendário).
   useEffect(() => {
-    const el = inputRef.current
-    if (!el || document.activeElement === el) return
-    const display = formatIsoDatePtBr(value)
-    if (el.value !== display) el.value = display
-  }, [value])
+    if (!open || !panelRef.current) return
+
+    const calendar = new Calendar(panelRef.current, {
+      inputMode: false,
+      locale: 'pt-BR',
+      firstWeekday: 0,
+      selectedDates: value ? [value] : [],
+      selectedTheme: isDarkTheme() ? 'dark' : 'light',
+      enableDateToggle: false,
+      onClickDate(self) {
+        const iso = toIsoDate(self.context.selectedDates[0] ?? '')
+        onChangeRef.current(iso)
+        setOpen(false)
+      },
+    })
+    const destroy = calendar.init()
+
+    return () => {
+      destroy()
+      calendar.destroy()
+    }
+  }, [open, value])
+
+  useEffect(() => {
+    if (!open) return
+
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node
+      if (inputRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [open])
 
   return (
-    <input
-      ref={inputRef}
-      id={id}
-      type="text"
-      readOnly
-      disabled={disabled}
-      placeholder={placeholder ?? strings.common.datePlaceholder}
-      className={cn(CONTROL, 'hs-datepicker h-10', className)}
-      {...props}
-    />
+    <>
+      <input
+        ref={inputRef}
+        id={id}
+        type="text"
+        readOnly
+        disabled={disabled}
+        value={formatIsoDatePtBr(value)}
+        placeholder={placeholder ?? strings.common.datePlaceholder}
+        className={cn(CONTROL, 'h-10 cursor-pointer', className)}
+        onClick={() => {
+          if (!disabled) setOpen(true)
+        }}
+        onFocus={() => {
+          if (!disabled) setOpen(true)
+        }}
+        {...props}
+      />
+      {open
+        ? createPortal(
+            <div
+              ref={panelRef}
+              style={panelStyle}
+              className="dmta-datepicker-panel"
+              role="dialog"
+              aria-label={strings.common.datePlaceholder}
+            />,
+            document.body,
+          )
+        : null}
+    </>
   )
 }
 
@@ -156,7 +176,7 @@ type DateRangeFieldProps = {
 }
 
 /**
- * Range De/Até com o datepicker Preline em modo `multiple-ranged`.
+ * Range De/Até com vanilla-calendar-pro em modo `multiple-ranged`.
  * `from`/`to` são ISO `YYYY-MM-DD`. Ideal para filtros de período.
  */
 export function DateRangeField({
@@ -172,48 +192,83 @@ export function DateRangeField({
   const autoFrom = useId()
   const autoTo = useId()
   const inputRef = useRef<HTMLInputElement>(null)
+  const panelRef = useRef<HTMLDivElement>(null)
   const onChangeRef = useRef(onChange)
-  const initial = useRef(value)
+  const [open, setOpen] = useState(false)
+  const [panelStyle, setPanelStyle] = useState<CSSProperties>({})
 
   useEffect(() => {
     onChangeRef.current = onChange
   }, [onChange])
 
-  useEffect(() => {
-    const el = inputRef.current
-    if (!el || disabled) return
-
-    const HSDatepicker = getHSDatepicker()
-    if (!HSDatepicker) return
-
-    destroyDatepicker(el)
-    const selected = [initial.current.from, initial.current.to].filter(Boolean)
-    el.setAttribute(
-      'data-hs-datepicker',
-      JSON.stringify(buildOptions(selected, 'multiple-ranged')),
-    )
-    el.value = selected.map(formatIsoDatePtBr).filter(Boolean).join(' — ')
-
-    const instance = new HSDatepicker(el)
-    instance.on('change', ({ selectedDates }) => {
-      const isos = selectedDates.map(toIsoDate).filter(Boolean)
-      const from = isos[0] ?? ''
-      const to = isos.length > 1 ? isos[isos.length - 1]! : ''
-      onChangeRef.current({ from, to })
+  useLayoutEffect(() => {
+    if (!open || !inputRef.current) return
+    const rect = inputRef.current.getBoundingClientRect()
+    const gap = 4
+    const calendarH = 340
+    const spaceBelow = window.innerHeight - rect.bottom - gap
+    const placeAbove = spaceBelow < calendarH && rect.top > spaceBelow
+    setPanelStyle({
+      position: 'fixed',
+      left: Math.min(rect.left, window.innerWidth - 292),
+      top: placeAbove ? undefined : rect.bottom + gap,
+      bottom: placeAbove ? window.innerHeight - rect.top + gap : undefined,
+      zIndex: 100,
     })
-
-    return () => destroyDatepicker(el)
-  }, [disabled])
+  }, [open])
 
   useEffect(() => {
-    const el = inputRef.current
-    if (!el || document.activeElement === el) return
-    const display = [value.from, value.to]
-      .filter(Boolean)
-      .map(formatIsoDatePtBr)
-      .join(' — ')
-    if (el.value !== display) el.value = display
-  }, [value.from, value.to])
+    if (!open || !panelRef.current) return
+
+    const selected = [value.from, value.to].filter(Boolean)
+    const calendar = new Calendar(panelRef.current, {
+      inputMode: false,
+      locale: 'pt-BR',
+      firstWeekday: 0,
+      selectionDatesMode: 'multiple-ranged',
+      selectedDates: selected,
+      selectedTheme: isDarkTheme() ? 'dark' : 'light',
+      onClickDate(self) {
+        const isos = self.context.selectedDates
+          .map((d) => toIsoDate(d))
+          .filter(Boolean)
+        const from = isos[0] ?? ''
+        const to = isos.length > 1 ? (isos[isos.length - 1] ?? '') : ''
+        onChangeRef.current({ from, to })
+        if (from && to) setOpen(false)
+      },
+    })
+    const destroy = calendar.init()
+
+    return () => {
+      destroy()
+      calendar.destroy()
+    }
+  }, [open, value.from, value.to])
+
+  useEffect(() => {
+    if (!open) return
+
+    function onPointerDown(event: MouseEvent) {
+      const target = event.target as Node
+      if (inputRef.current?.contains(target)) return
+      if (panelRef.current?.contains(target)) return
+      setOpen(false)
+    }
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key !== 'Escape') return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      setOpen(false)
+    }
+
+    document.addEventListener('mousedown', onPointerDown)
+    document.addEventListener('keydown', onKeyDown, true)
+    return () => {
+      document.removeEventListener('mousedown', onPointerDown)
+      document.removeEventListener('keydown', onKeyDown, true)
+    }
+  }, [open])
 
   return (
     <div className={cn('grid gap-3 sm:grid-cols-2', className)}>
@@ -237,10 +292,29 @@ export function DateRangeField({
           type="text"
           readOnly
           disabled={disabled}
+          value={formatRangeDisplay(value.from, value.to)}
           aria-labelledby={`${fromId ?? autoFrom} ${toId ?? autoTo}`}
           placeholder={strings.common.dateRangePlaceholder}
-          className={cn(CONTROL, 'hs-datepicker h-10')}
+          className={cn(CONTROL, 'h-10 cursor-pointer')}
+          onClick={() => {
+            if (!disabled) setOpen(true)
+          }}
+          onFocus={() => {
+            if (!disabled) setOpen(true)
+          }}
         />
+        {open
+          ? createPortal(
+              <div
+                ref={panelRef}
+                style={panelStyle}
+                className="dmta-datepicker-panel"
+                role="dialog"
+                aria-label={strings.common.dateRangePlaceholder}
+              />,
+              document.body,
+            )
+          : null}
       </div>
     </div>
   )

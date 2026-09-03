@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { AppLayout } from '@/components/AppLayout'
 import { RequireAuth } from '@/components/RequireAuth'
 import { ToastHost } from '@/components/ToastHost'
-import { ConfirmDialogHost, LoadingBlock } from '@/components/ui'
+import { LoadingBlock } from '@/components/ui'
 import { applyTheme, useThemeStore } from '@/store/themeStore'
 import { strings } from '@/i18n/pt-BR'
 import { bindAuthToken } from '@/api'
@@ -128,7 +128,6 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <BrowserRouter basename="/app">
         <ToastHost />
-        <ConfirmDialogHost />
         <Suspense
           fallback={
             <div className="flex min-h-dvh items-center justify-center bg-canvas">

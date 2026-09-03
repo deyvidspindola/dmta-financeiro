@@ -136,7 +136,8 @@ export function TransactionsPage() {
         amount: values.amount,
         type: values.type,
         date: values.date,
-        goal_id: values.goal_id || null,
+        goal_id:
+          values.type === 'income' ? values.goal_id || null : null,
         settled: values.settled,
       }
       if (editing) {

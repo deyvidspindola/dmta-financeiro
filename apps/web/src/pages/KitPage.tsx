@@ -246,7 +246,7 @@ export function KitPage() {
                   if (ok) toastSuccess('Confirmado (só no kit)')
                 }}
               >
-                Testar ConfirmDialog
+                Testar confirmação (SweetAlert)
               </Button>
             </div>
           </div>
