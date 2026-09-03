@@ -18,7 +18,7 @@ const MANAGE: Item[] = [
   { label: t.nav.budgets, icon: 'pie-chart', href: '/budgets' },
   { label: t.nav.goals, icon: 'target', href: '/goals' },
   { label: t.nav.debts, icon: 'users', href: '/debts' },
-  { label: t.nav.bills, icon: 'file-text' },
+  { label: t.nav.bills, icon: 'file-text', href: '/bills' },
 ];
 
 const THEMES: { value: ThemePref; label: string }[] = [

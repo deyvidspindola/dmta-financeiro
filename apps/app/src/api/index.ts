@@ -13,5 +13,6 @@ export * as creditCardsApi from './creditCards';
 export * as budgetsApi from './budgets';
 export * as goalsApi from './goals';
 export * as debtsApi from './debts';
+export * as billsApi from './bills';
 export { bindAuthToken, ApiError, http, unwrapData } from './http';
 export { API_BASE_URL } from './config';
