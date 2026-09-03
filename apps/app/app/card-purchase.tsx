@@ -5,7 +5,15 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { categoriesApi, creditCardsApi } from '@/api';
 import { ApiError } from '@/api/http';
-import { Button, MoneyField, Screen, SelectField, Text, TextField } from '@/components/ui';
+import {
+  Button,
+  DateField,
+  MoneyField,
+  Screen,
+  SelectField,
+  Text,
+  TextField,
+} from '@/components/ui';
 import { t } from '@/i18n';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 
@@ -66,7 +74,12 @@ export default function CardPurchaseScreen() {
         category_id: categoryId || null,
       };
       return isEdit
-        ? creditCardsApi.updateCardPurchase(params.contextId!, params.cardId!, params.purchaseId!, base)
+        ? creditCardsApi.updateCardPurchase(
+            params.contextId!,
+            params.cardId!,
+            params.purchaseId!,
+            base,
+          )
         : creditCardsApi.createCardPurchase(params.contextId!, params.cardId!, {
             ...base,
             installments: Math.max(1, Number(installments) || 1),
@@ -143,11 +156,10 @@ export default function CardPurchaseScreen() {
           options={categoryOptions}
           onChange={(v) => setCategoryId(v || null)}
         />
-        <TextField
+        <DateField
           label={t.creditCards.purchaseDate}
           value={occurredAt}
-          onChangeText={setOccurredAt}
-          autoCapitalize="none"
+          onChange={setOccurredAt}
           error={errors.occurred_at}
         />
         {!isEdit ? (

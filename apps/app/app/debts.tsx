@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   ConfirmSheet,
+  DateField,
   ListRow,
   MoneyField,
   MoneyValue,
@@ -222,12 +223,11 @@ export default function DebtsScreen() {
               value={form.counterparty}
               onChangeText={(v) => setForm({ ...form, counterparty: v })}
             />
-            <TextField
+            <DateField
               label={t.debts.dueDate}
               value={form.dueDate}
-              onChangeText={(v) => setForm({ ...form, dueDate: v })}
-              autoCapitalize="none"
-              placeholder="AAAA-MM-DD"
+              onChange={(v) => setForm({ ...form, dueDate: v })}
+              optional
             />
 
             {formError ? <Text variant="error">{formError}</Text> : null}

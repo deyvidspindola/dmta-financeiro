@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Modal, Pressable, ScrollView, View } from 'react-native';
+import { Modal, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { Badge, Text } from '@/components/ui';
@@ -16,6 +16,7 @@ export function ContextSwitcher() {
   const { contexts, activeScope, setActiveScope } = useAuthStore();
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
+  const { height: screenH } = useWindowDimensions();
   const palette = colorScheme === 'dark' ? ICON_COLORS.dark : ICON_COLORS.light;
 
   const ordered = useMemo(
@@ -63,12 +64,14 @@ export function ContextSwitcher() {
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable className="flex-1 bg-black/40" onPress={() => setOpen(false)}>
-          <View className="mt-16 px-4">
+          <View className="mt-14 px-4">
             <Pressable
-              className="ml-auto max-h-[70%] w-64 overflow-hidden rounded-xl border border-line bg-surface"
+              // 2 seções + N contextos: mostra tudo, só rola se passar de ~metade da tela.
+              style={{ maxHeight: screenH * 0.72 }}
+              className="ml-auto w-72 overflow-hidden rounded-xl border border-line bg-surface"
               onPress={(e) => e.stopPropagation()}
             >
-              <ScrollView>
+              <ScrollView scrollEnabled={ordered.length > 6}>
                 <View className="px-3 py-2">
                   <Text
                     variant="muted"

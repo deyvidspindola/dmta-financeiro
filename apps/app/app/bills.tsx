@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   ConfirmSheet,
+  DateField,
   ListRow,
   MoneyField,
   MoneyValue,
@@ -270,11 +271,10 @@ export default function BillsScreen() {
               value={form.amount}
               onChange={(v) => setForm({ ...form, amount: v })}
             />
-            <TextField
+            <DateField
               label={t.bills.dueDate}
               value={form.dueDate}
-              onChangeText={(v) => setForm({ ...form, dueDate: v })}
-              autoCapitalize="none"
+              onChange={(v) => setForm({ ...form, dueDate: v })}
             />
             <SelectField
               label={t.bills.category}
