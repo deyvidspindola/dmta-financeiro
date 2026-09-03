@@ -3,7 +3,9 @@
 declare(strict_types=1);
 
 use App\Enums\BoletoPasswordRuleType;
+use App\Enums\CardInvoiceStatus;
 use App\Models\BoletoPasswordRule;
+use App\Models\CardInvoice;
 use App\Models\CardPurchase;
 use App\Models\CreditCard;
 use Illuminate\Http\UploadedFile;
@@ -115,6 +117,16 @@ test('importar parcela N/M cria a parcela atual e projeta as futuras nas faturas
         ->map(fn ($p) => $p->cardInvoice->reference_month->format('Y-m'))
         ->sort()->values()->all();
     expect($months)->toBe(['2026-08', '2026-09', '2026-10']);
+});
+
+test('importação fecha as faturas de meses já passados', function () {
+    // hoje é depois de 2026-09; a fatura de julho (fecha dia 10) já passou
+    $this->post($this->base, [
+        'file' => invoiceCsv("data,descricao,valor,categoria,parcela\n03/07/2026,Compra antiga,80.00,,\n"),
+    ], ['Accept' => 'application/json'])->assertOk()->assertJsonPath('imported', 1);
+
+    $invoice = CardInvoice::query()->where('credit_card_id', $this->card->id)->sole();
+    expect($invoice->status)->toBe(CardInvoiceStatus::Closed);
 });
 
 test('reimportar uma fatura que se sobrepõe não duplica parcelas', function () {

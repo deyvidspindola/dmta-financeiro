@@ -6,6 +6,7 @@ namespace App\UseCases\CreditCard;
 
 use App\Exceptions\Domain\CardInvoicePdfPasswordRequiredException;
 use App\Exceptions\Domain\InvalidCardInvoiceImportRowException;
+use App\Models\CreditCard;
 use App\Services\CardInvoiceImportRowParser;
 use App\Services\CardInvoiceRowReader;
 use Illuminate\Http\UploadedFile;
@@ -37,6 +38,7 @@ final class ImportCardInvoice
         private readonly CardInvoiceRowReader $reader,
         private readonly CardInvoiceImportRowParser $parser,
         private readonly RegisterImportedCardInvoiceRow $registerRow,
+        private readonly CloseCardInvoices $closeInvoices,
     ) {}
 
     /**
@@ -66,6 +68,16 @@ final class ImportCardInvoice
                 $failed[] = ['row' => $item['line'], 'reason' => $e->getMessage()];
             } catch (Throwable $e) {
                 $failed[] = ['row' => $item['line'], 'reason' => 'Erro inesperado: '.$e->getMessage()];
+            }
+        }
+
+        // A importação costuma criar faturas de meses já fechados — fecha as
+        // que passaram do fechamento pra não ficarem "abertas" na tela.
+        if ($imported > 0) {
+            $card = CreditCard::query()->find($creditCardId);
+
+            if ($card !== null) {
+                $this->closeInvoices->execute($card);
             }
         }
 
