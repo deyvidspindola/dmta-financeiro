@@ -632,6 +632,12 @@ export const strings = {
     pdfNoText:
       '(nenhum texto — o PDF pode ser um scan/imagem, sem camada de texto)',
     pdfExtractedText: 'Ver texto extraído do PDF',
+    installmentNote: (n: number, m: number, future: number) =>
+      future > 0
+        ? `· parcela ${n}/${m} (+${future} ${future === 1 ? 'futura' : 'futuras'})`
+        : `· parcela ${n}/${m}`,
+    cardInvoiceInstallmentsHint:
+      'Compras parceladas (N/M) criam a parcela do mês e projetam as futuras nas faturas seguintes. Reimportar faturas que se sobrepõem é seguro — parcelas repetidas são puladas.',
     downloadTemplate: 'Baixar modelo',
     upload: 'Enviar CSV',
     file: 'Arquivo',
