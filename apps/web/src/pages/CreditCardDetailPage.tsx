@@ -1,5 +1,5 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Plus } from 'lucide-react'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { consolidatedApi, creditCardsApi } from '@/api'
@@ -22,6 +22,7 @@ import {
   ProgressBar,
   Td,
   Tr,
+  useConfirm,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
 import { strings } from '@/i18n/pt-BR'
@@ -33,6 +34,7 @@ import {
 import { getErrorMessage } from '@/lib/errors'
 import { formatDate, formatMoney } from '@/lib/format'
 import { cn } from '@/lib/cn'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import type { CardPurchase } from '@/types/models'
 
@@ -63,6 +65,7 @@ export function CreditCardDetailPage() {
   const [selectedMonthOverride, setSelectedMonthOverride] = useState<string | null>(
     null,
   )
+  const confirm = useConfirm()
   const [editModal, setEditModal] = useState(false)
   const [purchaseModal, setPurchaseModal] = useState(false)
   const [editingPurchase, setEditingPurchase] = useState<CardPurchase | null>(null)
@@ -135,6 +138,32 @@ export function CreditCardDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     void queryClient.invalidateQueries({ queryKey: ['accounts'] })
     void queryClient.invalidateQueries({ queryKey: ['budgets'] })
+  }
+
+  const removePurchase = useMutation({
+    mutationFn: ({ purchase, group }: { purchase: CardPurchase; group: boolean }) =>
+      creditCardsApi.deleteCardPurchase(
+        cardContextId as string,
+        id as string,
+        purchase.id,
+        group ? 'group' : undefined,
+      ),
+    onSuccess: () => {
+      invalidate()
+      toastSuccess(t.purchaseDeleted)
+    },
+    onError: (error) => toastError(getErrorMessage(error)),
+  })
+
+  async function handleDeletePurchase(purchase: CardPurchase) {
+    const group = (purchase.installment_total ?? 0) > 1
+    const message = group
+      ? t.confirmDeletePurchaseGroup(purchase.installment_total ?? 0)
+      : t.confirmDeletePurchase
+    if (!(await confirm({ message, tone: 'danger', confirmLabel: strings.common.delete }))) {
+      return
+    }
+    removePurchase.mutate({ purchase, group })
   }
 
   const selectedIdx = timeline.findIndex(
@@ -284,6 +313,8 @@ export function CreditCardDetailPage() {
 
       {invoices.isLoading ? (
         <LoadingBlock label={strings.common.loading} />
+      ) : invoices.isError ? (
+        <ErrorBanner message={getErrorMessage(invoices.error)} />
       ) : (
         <>
           <InvoiceChipStrip
@@ -330,6 +361,8 @@ export function CreditCardDetailPage() {
             {realInvoice ? (
               purchases.isLoading ? (
                 <LoadingBlock label={strings.common.loading} />
+              ) : purchases.isError ? (
+                <ErrorBanner message={getErrorMessage(purchases.error)} />
               ) : (purchases.data ?? []).length === 0 ? (
                 <EmptyState message={t.noPurchases} />
               ) : (
@@ -367,26 +400,38 @@ export function CreditCardDetailPage() {
                         </Td>
                         {canMutate ? (
                           <Td right>
-                            {editable ? (
-                              <IconButton
-                                label={strings.common.edit}
-                                icon={Pencil}
-                                size="sm"
-                                onClick={() => setEditingPurchase(purchase)}
-                              />
-                            ) : (
-                              <span
-                                className="inline-flex"
-                                title={t.editPurchaseBlocked}
-                              >
+                            <div className="inline-flex items-center gap-1">
+                              {editable ? (
                                 <IconButton
-                                  label={t.editPurchaseBlocked}
+                                  label={strings.common.edit}
                                   icon={Pencil}
                                   size="sm"
-                                  disabled
+                                  onClick={() => setEditingPurchase(purchase)}
                                 />
-                              </span>
-                            )}
+                              ) : (
+                                <span
+                                  className="inline-flex"
+                                  title={t.editPurchaseBlocked}
+                                >
+                                  <IconButton
+                                    label={t.editPurchaseBlocked}
+                                    icon={Pencil}
+                                    size="sm"
+                                    disabled
+                                  />
+                                </span>
+                              )}
+                              {realInvoice?.status !== 'paid' ? (
+                                <IconButton
+                                  label={strings.common.delete}
+                                  icon={Trash2}
+                                  size="sm"
+                                  variant="danger"
+                                  disabled={removePurchase.isPending}
+                                  onClick={() => handleDeletePurchase(purchase)}
+                                />
+                              ) : null}
+                            </div>
                           </Td>
                         ) : null}
                       </Tr>

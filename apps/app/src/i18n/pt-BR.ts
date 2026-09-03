@@ -256,6 +256,10 @@ export const strings = {
       'Excluir este cartão? Some com ele as faturas e compras. Pagamentos de fatura já feitos continuam nos lançamentos da conta.',
     confirmDeletePaid:
       'Este cartão tem fatura paga. Excluir apaga o histórico do cartão, mas os pagamentos continuam nos lançamentos. Excluir mesmo assim?',
+    purchaseDeleted: 'Compra excluída.',
+    confirmDeletePurchase: 'Excluir esta compra da fatura?',
+    confirmDeletePurchaseGroup: (n: number) =>
+      `Esta compra é parcelada. Excluir apaga as ${n} parcelas, em todas as faturas.`,
     available: 'Disponível',
     used: 'Usado',
     usedLabel: 'usado',
