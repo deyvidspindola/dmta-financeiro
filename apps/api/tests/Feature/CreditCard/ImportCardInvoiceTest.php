@@ -117,6 +117,28 @@ test('importar parcela N/M cria a parcela atual e projeta as futuras nas faturas
         ->map(fn ($p) => $p->cardInvoice->reference_month->format('Y-m'))
         ->sort()->values()->all();
     expect($months)->toBe(['2026-08', '2026-09', '2026-10']);
+
+    // total materializado de cada fatura bate com a parcela dela
+    expect(CardInvoice::query()->pluck('total_amount')->map(fn ($v) => (float) $v)->all())
+        ->toBe([300.0, 300.0, 300.0]);
+});
+
+test('a importação realinha o total_amount da fatura com as compras', function () {
+    $this->post($this->base, [
+        'file' => invoiceCsv(
+            "data,descricao,valor,categoria,parcela\n"
+            ."04/08/2026,Mercado,50.00,,\n"
+            ."05/08/2026,Farmácia,20.00,,\n"
+        ),
+    ], ['Accept' => 'application/json'])->assertOk();
+
+    // desalinha o total de propósito e reimporta — a reconciliação corrige
+    CardInvoice::query()->update(['total_amount' => 999.99]);
+    $this->post($this->base, [
+        'file' => invoiceCsv("data,descricao,valor,categoria,parcela\n06/08/2026,Uber,30.00,,\n"),
+    ], ['Accept' => 'application/json'])->assertOk();
+
+    expect((float) CardInvoice::query()->sole()->total_amount)->toBe(100.0);
 });
 
 test('importação fecha as faturas de meses já passados', function () {

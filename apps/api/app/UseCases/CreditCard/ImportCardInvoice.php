@@ -9,6 +9,7 @@ use App\Exceptions\Domain\InvalidCardInvoiceImportRowException;
 use App\Models\CreditCard;
 use App\Services\CardInvoiceImportRowParser;
 use App\Services\CardInvoiceRowReader;
+use App\Services\ReconcileCardInvoiceTotals;
 use Illuminate\Http\UploadedFile;
 use Throwable;
 
@@ -39,6 +40,7 @@ final class ImportCardInvoice
         private readonly CardInvoiceImportRowParser $parser,
         private readonly RegisterImportedCardInvoiceRow $registerRow,
         private readonly CloseCardInvoices $closeInvoices,
+        private readonly ReconcileCardInvoiceTotals $reconcile,
     ) {}
 
     /**
@@ -71,12 +73,14 @@ final class ImportCardInvoice
             }
         }
 
-        // A importação costuma criar faturas de meses já fechados — fecha as
-        // que passaram do fechamento pra não ficarem "abertas" na tela.
         if ($imported > 0) {
             $card = CreditCard::query()->find($creditCardId);
 
             if ($card !== null) {
+                // Realinha o total materializado das faturas com as compras...
+                $this->reconcile->forCard($card);
+                // ...e fecha as faturas de meses já vencidos (a importação cria
+                // faturas de meses passados que ficariam "abertas" na tela).
                 $this->closeInvoices->execute($card);
             }
         }

@@ -284,6 +284,10 @@ export const strings = {
     purchaseUpdated: 'Compra atualizada.',
     editPurchaseBlocked:
       'Compra parcelada ou em fatura paga não pode ser editada.',
+    purchaseDeleted: 'Compra excluída.',
+    confirmDeletePurchase: 'Excluir esta compra da fatura?',
+    confirmDeletePurchaseGroup: (n: number) =>
+      `Esta compra é parcelada. Excluir apaga as ${n} parcelas, em todas as faturas.`,
     purchaseDate: 'Data da compra',
     installments: 'Parcelas',
     pay: 'Pagar',

@@ -99,3 +99,15 @@ export async function updateCardPurchase(
   });
   return mapCardPurchase(creditCardId, unwrapData(payload));
 }
+
+export async function deleteCardPurchase(
+  contextId: string,
+  creditCardId: string,
+  purchaseId: string,
+  scope?: 'group',
+): Promise<void> {
+  const query = scope ? '?scope=group' : '';
+  await http.delete(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/purchases/${purchaseId}${query}`,
+  );
+}

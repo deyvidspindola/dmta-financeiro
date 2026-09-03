@@ -2,13 +2,15 @@ import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Feather } from '@expo/vector-icons';
 import { accountsApi, creditCardsApi } from '@/api';
 import { ApiError } from '@/api/http';
-import { Badge, Button, ConfirmSheet, ListRow, Money, MoneyValue, SelectField, Sheet, Skeleton, Text } from '@/components/ui';
+import { toastError, toastSuccess } from '@/store/toastStore';
+import { Badge, Button, ConfirmSheet, Money, MoneyValue, SelectField, Sheet, Skeleton, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { formatDateShort, formatMonthLabel } from '@/lib/dates';
-import type { CreditCard, InvoiceStatus } from '@/types/models';
+import type { CardPurchase, CreditCard, InvoiceStatus } from '@/types/models';
 
 const INVOICE_TONE: Record<InvoiceStatus, 'neutral' | 'accent' | 'brand'> = {
   open: 'brand',
@@ -22,6 +24,7 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
   const [payingId, setPayingId] = useState<string | null>(null);
   const [payAccountId, setPayAccountId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<'none' | 'first' | 'paid'>('none');
+  const [toDeletePurchase, setToDeletePurchase] = useState<CardPurchase | null>(null);
   const [openInvoiceId, setOpenInvoiceId] = useState<string | null>(null);
 
   const invoicesQuery = useQuery({
@@ -70,21 +73,54 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
     onSuccess: () => {
       invalidate();
       setConfirmDelete('none');
+      toastSuccess(t.creditCards.deleted);
       onClose();
     },
     onError: (err) => {
-      setConfirmDelete(err instanceof ApiError && err.status === 422 ? 'paid' : 'none');
+      if (err instanceof ApiError && err.status === 422) {
+        setConfirmDelete('paid');
+        return;
+      }
+      setConfirmDelete('none');
+      toastError(t.common.error);
     },
   });
 
-  function openPurchaseForm(purchaseId?: string) {
+  const removePurchase = useMutation({
+    mutationFn: (purchase: CardPurchase) =>
+      creditCardsApi.deleteCardPurchase(
+        card!.context_id,
+        card!.id,
+        purchase.id,
+        (purchase.installment_total ?? 0) > 1 ? 'group' : undefined,
+      ),
+    onSuccess: () => {
+      invalidate();
+      setToDeletePurchase(null);
+      toastSuccess(t.creditCards.purchaseDeleted);
+    },
+    onError: (err) => {
+      setToDeletePurchase(null);
+      toastError(err instanceof ApiError && err.message ? err.message : t.common.error);
+    },
+  });
+
+  function openPurchaseForm(purchase?: CardPurchase) {
     if (!card) return;
     router.push({
       pathname: '/card-purchase',
       params: {
         cardId: card.id,
         contextId: card.context_id,
-        ...(purchaseId ? { purchaseId } : {}),
+        ...(purchase
+          ? {
+              purchaseId: purchase.id,
+              description: purchase.description,
+              amount: String(purchase.amount),
+              categoryId: purchase.category_id ?? '',
+              occurredAt: purchase.occurred_at,
+            }
+          : {}),
       },
     });
     onClose();
@@ -144,17 +180,32 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
                       </Text>
                     ) : (
                       (purchasesQuery.data ?? []).map((p) => (
-                        <ListRow key={p.id} onPress={() => openPurchaseForm(p.id)}>
-                          <View className="flex-row items-center justify-between gap-3">
+                        <View
+                          key={p.id}
+                          className="flex-row items-center gap-2 border-b border-line py-2.5"
+                        >
+                          <Pressable
+                            onPress={() => openPurchaseForm(p)}
+                            className="min-w-0 flex-1 flex-row items-center justify-between gap-3 active:opacity-60"
+                          >
                             <Text numberOfLines={1} className="flex-1">
                               {p.description}
-                              {p.installment_total
+                              {(p.installment_total ?? 0) > 1
                                 ? ` (${p.installment_number}/${p.installment_total})`
                                 : ''}
                             </Text>
                             <MoneyValue amount={p.amount} direction="debit" size="sm" />
-                          </View>
-                        </ListRow>
+                          </Pressable>
+                          {invoice.status !== 'paid' ? (
+                            <Pressable
+                              onPress={() => setToDeletePurchase(p)}
+                              hitSlop={8}
+                              className="p-1 active:opacity-60"
+                            >
+                              <Feather name="trash-2" size={16} color="#ef4444" />
+                            </Pressable>
+                          ) : null}
+                        </View>
                       ))
                     )}
 
@@ -232,6 +283,21 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
         loading={remove.isPending}
         onConfirm={() => remove.mutate(true)}
         onClose={() => setConfirmDelete('none')}
+      />
+
+      <ConfirmSheet
+        open={toDeletePurchase !== null}
+        title={t.common.delete}
+        message={
+          (toDeletePurchase?.installment_total ?? 0) > 1
+            ? t.creditCards.confirmDeletePurchaseGroup(toDeletePurchase?.installment_total ?? 0)
+            : t.creditCards.confirmDeletePurchase
+        }
+        confirmLabel={t.common.delete}
+        tone="danger"
+        loading={removePurchase.isPending}
+        onConfirm={() => toDeletePurchase && removePurchase.mutate(toDeletePurchase)}
+        onClose={() => setToDeletePurchase(null)}
       />
     </>
   );

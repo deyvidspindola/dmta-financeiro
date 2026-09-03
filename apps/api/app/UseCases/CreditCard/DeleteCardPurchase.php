@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\UseCases\CreditCard;
 
+use App\Enums\CardInvoiceStatus;
+use App\Exceptions\Domain\CardPurchaseNotEditableException;
 use App\Models\CardInvoice;
 use App\Models\CardPurchase;
 use Illuminate\Support\Facades\DB;
@@ -31,6 +33,7 @@ use Illuminate\Support\Facades\DB;
  */
 final class DeleteCardPurchase
 {
+    /** @throws CardPurchaseNotEditableException Se a compra está numa fatura já paga. */
     public function execute(CardPurchase $purchase, bool $entireGroup = false): void
     {
         DB::transaction(function () use ($purchase, $entireGroup): void {
@@ -39,9 +42,15 @@ final class DeleteCardPurchase
                 : collect([$purchase]);
 
             $targets->each(function (CardPurchase $target): void {
-                CardInvoice::query()->whereKey($target->card_invoice_id)->lockForUpdate()
-                    ->decrement('total_amount', (float) $target->amount);
+                /** @var CardInvoice $invoice */
+                $invoice = CardInvoice::query()->whereKey($target->card_invoice_id)->lockForUpdate()->firstOrFail();
 
+                // @phpstan-ignore-next-line identical.alwaysFalse (cast CardInvoiceStatus confirmado em runtime)
+                if ($invoice->status === CardInvoiceStatus::Paid) {
+                    throw new CardPurchaseNotEditableException;
+                }
+
+                $invoice->decrement('total_amount', (float) $target->amount);
                 $target->delete();
             });
         });
