@@ -59,7 +59,7 @@ final class StatementImportClassifier
     {
         return StatementEntry::query()
             ->where('account_id', $data->accountId)
-            ->where('occurred_at', $data->occurredAt)
+            ->whereDate('occurred_at', $data->occurredAt)
             ->where('amount', $data->amount)
             ->where('type', $data->type->value)
             ->where('description', $data->description)

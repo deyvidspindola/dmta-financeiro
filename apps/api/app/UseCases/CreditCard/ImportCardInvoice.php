@@ -4,33 +4,34 @@ declare(strict_types=1);
 
 namespace App\UseCases\CreditCard;
 
+use App\Exceptions\Domain\CardInvoicePdfPasswordRequiredException;
 use App\Exceptions\Domain\InvalidCardInvoiceImportRowException;
 use App\Services\CardInvoiceImportClassifier;
 use App\Services\CardInvoiceImportRowParser;
-use App\Services\CsvImportReader;
+use App\Services\CardInvoiceRowReader;
 use Illuminate\Http\UploadedFile;
 use Throwable;
 
 /**
- * Importa compras de uma fatura de cartão via CSV. Com `$onlyLines` nulo,
- * duplicatas são puladas. Com `$onlyLines`, a seleção ignora dedup.
+ * Importa compras de uma fatura de cartão (CSV ou PDF). Com `$onlyLines`
+ * nulo, duplicatas são puladas; com `$onlyLines`, a seleção do usuário
+ * manda e a dedup é ignorada. PDF protegido → precisa de `$pdfPassword`
+ * (a mesma que abriu no preview).
  *
  * @package App\UseCases\CreditCard
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   03/09/2026
  *
  * @updated 03/09/2026
  */
-final class ImportCardInvoiceFromCsv
+final class ImportCardInvoice
 {
-    private const REQUIRED_COLUMNS = ['data', 'descricao', 'valor'];
-
     public function __construct(
-        private readonly CsvImportReader $csvReader,
+        private readonly CardInvoiceRowReader $reader,
         private readonly CardInvoiceImportRowParser $parser,
         private readonly CardInvoiceImportClassifier $classifier,
         private readonly RegisterCardPurchase $registerCardPurchase,
@@ -39,15 +40,17 @@ final class ImportCardInvoiceFromCsv
     /**
      * @param  list<int>|null  $onlyLines
      * @return array{imported: int, duplicates: int, failed: list<array{row: int, reason: string}>}
+     *
+     * @throws CardInvoicePdfPasswordRequiredException
      */
-    public function execute(UploadedFile $file, int $contextId, int $creditCardId, ?array $onlyLines = null): array
+    public function execute(UploadedFile $file, int $contextId, int $creditCardId, ?array $onlyLines = null, ?string $pdfPassword = null): array
     {
         $allow = $onlyLines === null ? null : array_flip($onlyLines);
         $imported = 0;
         $duplicates = 0;
         $failed = [];
 
-        foreach ($this->csvReader->eachRow($file, self::REQUIRED_COLUMNS, InvalidCardInvoiceImportRowException::class) as $item) {
+        foreach ($this->reader->rows($file, $pdfPassword) as $item) {
             if ($allow !== null && ! isset($allow[$item['line']])) {
                 continue;
             }

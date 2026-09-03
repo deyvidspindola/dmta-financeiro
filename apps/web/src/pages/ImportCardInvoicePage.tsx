@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { creditCardsApi } from '@/api'
+import { billCapturesApi, creditCardsApi } from '@/api'
 import { CsvFileField, ImportResult } from '@/components/imports/ImportFields'
 import {
   ImportPreviewTable,
@@ -14,12 +14,14 @@ import {
   ErrorBanner,
   Field,
   PageHeader,
+  SwitchField,
+  TextInput,
   TextSelect,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastSuccess } from '@/store/toastStore'
+import { toastError, toastSuccess } from '@/store/toastStore'
 import type {
   CardInvoiceImportPreview,
   CardInvoiceImportPreviewRow,
@@ -60,6 +62,8 @@ export function ImportCardInvoicePage() {
   const contextId = activeScope === CONSOLIDATED ? null : activeScope
   const [cardId, setCardId] = useState('')
   const [file, setFile] = useState<File | null>(null)
+  const [password, setPassword] = useState('')
+  const [savePassword, setSavePassword] = useState(false)
   const [preview, setPreview] = useState<CardInvoiceImportPreview | null>(null)
   const [summary, setSummary] = useState<CardInvoiceImportSummary | null>(null)
 
@@ -75,32 +79,53 @@ export function ImportCardInvoicePage() {
   })
 
   const previewMutation = useMutation({
-    mutationFn: (csv: File) =>
-      creditCardsApi.previewInvoiceCsv(contextId!, cardId, csv),
-    onSuccess: (result) => {
+    mutationFn: (pwd: string) =>
+      creditCardsApi.previewInvoice(contextId!, cardId, file!, pwd || undefined),
+    onSuccess: async (result, pwd) => {
       setPreview(result)
       setSummary(null)
+      if (!result.needs_password && pwd && savePassword) {
+        await billCapturesApi
+          .saveBoletoPasswordRule({
+            sender_domain: '*',
+            rule_type: 'fixed',
+            rule_params: { password: pwd },
+          })
+          .then(() => toastSuccess(i.passwordRuleSaved))
+          .catch(() => undefined)
+        setSavePassword(false)
+      }
     },
   })
 
   const importMutation = useMutation({
     mutationFn: (lines: number[]) =>
-      creditCardsApi.importInvoiceCsv(contextId!, cardId, file!, lines),
+      creditCardsApi.importInvoice(
+        contextId!,
+        cardId,
+        file!,
+        lines,
+        password || undefined,
+      ),
     onSuccess: (result) => {
       setSummary(result)
       setPreview(null)
       toastSuccess(i.done)
     },
+    onError: (err) => toastError(getErrorMessage(err)),
   })
 
   useEffect(() => {
     if (!contextId || !cardId || !file || summary) return
-    previewMutation.mutate(file)
+    setPassword('')
+    previewMutation.mutate('')
     // eslint-disable-next-line react-hooks/exhaustive-deps -- dispara só quando arquivo/cartão mudam
   }, [contextId, cardId, file])
 
   function resetForAnother(): void {
     setFile(null)
+    setPassword('')
+    setSavePassword(false)
     setPreview(null)
     setSummary(null)
     previewMutation.reset()
@@ -108,6 +133,7 @@ export function ImportCardInvoicePage() {
   }
 
   const cards = cardsQuery.data ?? []
+  const needsPassword = preview?.needs_password ?? false
 
   return (
     <div className="space-y-6 bg-canvas text-fg">
@@ -150,6 +176,8 @@ export function ImportCardInvoicePage() {
             </Field>
             <CsvFileField
               file={file}
+              accept=".csv,text/csv,.pdf,application/pdf"
+              hint={i.cardInvoiceFileHint}
               onChange={(next) => {
                 setFile(next)
                 setPreview(null)
@@ -158,6 +186,37 @@ export function ImportCardInvoicePage() {
             />
             {previewMutation.isPending ? (
               <p className="text-sm text-fg-muted">{i.loadingPreview}</p>
+            ) : null}
+
+            {needsPassword ? (
+              <div className="space-y-3 rounded-xl border border-line bg-surface-2 p-4">
+                <p className="text-sm text-fg">
+                  {preview?.unsupported ? i.pdfUnsupported : i.pdfNeedsPassword}
+                </p>
+                {!preview?.unsupported ? (
+                  <>
+                    <Field label={i.pdfPassword}>
+                      <TextInput
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        autoComplete="off"
+                      />
+                    </Field>
+                    <SwitchField
+                      checked={savePassword}
+                      onChange={setSavePassword}
+                      label={i.pdfSavePassword}
+                    />
+                    <Button
+                      onClick={() => previewMutation.mutate(password)}
+                      disabled={!password || previewMutation.isPending}
+                    >
+                      {i.pdfUnlock}
+                    </Button>
+                  </>
+                ) : null}
+              </div>
             ) : null}
           </div>
         </Card>
@@ -170,7 +229,7 @@ export function ImportCardInvoicePage() {
         <ErrorBanner message={getErrorMessage(importMutation.error)} />
       ) : null}
 
-      {preview && !summary ? (
+      {preview && !needsPassword && !summary ? (
         <Card>
           <CardHeader title={i.previewTitle} />
           <ImportPreviewTable

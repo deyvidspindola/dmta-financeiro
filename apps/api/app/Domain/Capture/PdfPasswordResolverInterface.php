@@ -27,4 +27,13 @@ interface PdfPasswordResolverInterface
      * @return list<string> Senhas candidatas, na ordem de prioridade (pode ser vazia).
      */
     public function resolveCandidates(?string $senderEmail): array;
+
+    /**
+     * Todas as candidatas de todas as regras, sem filtrar por remetente —
+     * para quando não há e-mail de origem (ex.: fatura de cartão enviada
+     * à mão).
+     *
+     * @return list<string>
+     */
+    public function resolveAllCandidates(): array;
 }

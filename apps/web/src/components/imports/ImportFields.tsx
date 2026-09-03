@@ -43,16 +43,22 @@ export function CsvFileField({
   file,
   onChange,
   disabled,
+  accept = '.csv,text/csv',
+  label,
+  hint,
 }: {
   file: File | null
   onChange: (file: File | null) => void
   disabled?: boolean
+  accept?: string
+  label?: string
+  hint?: string
 }) {
   const i = strings.imports
   const id = 'csv-file-input'
 
   return (
-    <FieldLike label={i.file}>
+    <FieldLike label={label ?? i.file}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <label
           htmlFor={id}
@@ -62,7 +68,7 @@ export function CsvFileField({
           <input
             id={id}
             type="file"
-            accept=".csv,text/csv"
+            accept={accept}
             className="sr-only"
             disabled={disabled}
             onChange={(event) => onChange(event.target.files?.[0] ?? null)}
@@ -72,6 +78,7 @@ export function CsvFileField({
           {file?.name ?? i.noFileSelected}
         </span>
       </div>
+      {hint ? <span className="text-xs text-fg-subtle">{hint}</span> : null}
     </FieldLike>
   )
 }
