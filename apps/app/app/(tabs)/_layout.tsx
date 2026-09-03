@@ -3,6 +3,7 @@ import { Redirect, Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNotificationCaptureSync } from '@/hooks/useNotificationCaptureSync';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { t } from '@/i18n';
 
@@ -33,6 +34,8 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+
+  useNotificationCaptureSync();
 
   if (sessionRoute !== '/(tabs)') {
     return <Redirect href={sessionRoute} />;

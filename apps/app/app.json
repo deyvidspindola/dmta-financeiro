@@ -49,7 +49,14 @@
           }
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "O app usa a câmera para ler o código de barras do boleto e o QR do PIX."
+        }
+      ],
+      "expo-notification-listener"
     ],
     "experiments": {
       "typedRoutes": true

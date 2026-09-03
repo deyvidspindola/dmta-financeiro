@@ -27,6 +27,9 @@ enum CaptureOrigin: string
     case Scanner = 'scanner';
     case Aggregator = 'aggregator';
 
+    /** Notificação de app de banco/carteira lida pelo app (inbox de notificações). */
+    case Notification = 'notification';
+
     /** Planilha de extrato bancário enviada pelo usuário (fallback manual, capítulo 05.3). */
     case Import = 'import';
 }

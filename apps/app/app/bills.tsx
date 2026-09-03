@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, billsApi, categoriesApi } from '@/api';
 import { ApiError } from '@/api/http';
@@ -24,6 +24,7 @@ import { formatDateShort, formatMonthLabel, monthDateRange } from '@/lib/dates';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import { useMonthStore } from '@/store/monthStore';
+import { useScanStore } from '@/store/scanStore';
 import type { Bill, BillKind, BillStatus } from '@/types/models';
 
 const STATUS_TONE: Record<BillStatus, 'neutral' | 'accent' | 'brand'> = {
@@ -138,6 +139,24 @@ export default function BillsScreen() {
     onError: () => setToDelete(null),
   });
 
+  const consumeScan = useScanStore((s) => s.consume);
+
+  useFocusEffect(
+    useCallback(() => {
+      const scan = consumeScan();
+      if (!scan) return;
+      setForm({
+        id: null,
+        description: scan.description ?? '',
+        amount: scan.amount ?? 0,
+        dueDate: scan.dueDate ?? new Date().toISOString().slice(0, 10),
+        kind: 'payable',
+        categoryId: null,
+        barcode: scan.barcode ?? scan.pixCode ?? '',
+      });
+    }, [consumeScan]),
+  );
+
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
   return (
@@ -219,20 +238,27 @@ export default function BillsScreen() {
             </View>
           )}
 
-          <Button
-            label={t.bills.create}
-            onPress={() =>
-              setForm({
-                id: null,
-                description: '',
-                amount: 0,
-                dueDate: new Date().toISOString().slice(0, 10),
-                kind: 'payable',
-                categoryId: null,
-                barcode: '',
-              })
-            }
-          />
+          <View className="gap-2">
+            <Button
+              label={t.bills.create}
+              onPress={() =>
+                setForm({
+                  id: null,
+                  description: '',
+                  amount: 0,
+                  dueDate: new Date().toISOString().slice(0, 10),
+                  kind: 'payable',
+                  categoryId: null,
+                  barcode: '',
+                })
+              }
+            />
+            <Button
+              label={t.bills.scan}
+              variant="ghost"
+              onPress={() => router.push('/scan-boleto')}
+            />
+          </View>
         </View>
       )}
 
@@ -283,6 +309,18 @@ export default function BillsScreen() {
               options={categoryOptions}
               onChange={(v) => setForm({ ...form, categoryId: v || null })}
             />
+            <TextField
+              label={t.bills.barcode}
+              value={form.barcode}
+              onChangeText={(v) => setForm({ ...form, barcode: v })}
+              autoCapitalize="none"
+            />
+
+            {form.barcode.trim() && !form.id ? (
+              <Text variant="muted" className="text-xs">
+                {t.bills.scanFilled}
+              </Text>
+            ) : null}
 
             {formError ? <Text variant="error">{formError}</Text> : null}
 
