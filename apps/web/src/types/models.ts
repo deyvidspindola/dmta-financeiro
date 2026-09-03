@@ -377,6 +377,10 @@ export interface CardInvoiceImportPreviewRow {
 export interface CardInvoiceImportPreview {
   rows: CardInvoiceImportPreviewRow[]
   summary: ImportPreviewSummary
+  /** PDF protegido: nenhuma senha cadastrada abriu — pedir a senha ao usuário. */
+  needs_password: boolean
+  /** PDF cifrado num formato que o servidor não sabe abrir. */
+  unsupported: boolean
 }
 
 export interface CardInvoiceImportSummary {

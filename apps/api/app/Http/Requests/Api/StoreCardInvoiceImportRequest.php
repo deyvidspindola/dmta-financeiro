@@ -30,7 +30,8 @@ final class StoreCardInvoiceImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:4096'],
+            'file' => ['required', 'file', 'mimes:csv,txt,pdf', 'max:15360'],
+            'password' => ['sometimes', 'nullable', 'string', 'max:200'],
             'lines' => ['sometimes', 'array', 'distinct'],
             'lines.*' => ['integer', 'min:2'],
         ];

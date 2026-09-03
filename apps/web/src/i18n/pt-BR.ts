@@ -614,9 +614,19 @@ export const strings = {
     statementTitle: 'Importar extrato (CSV)',
     statementHint:
       'Escolha a conta, envie o CSV e revise o preview. Duplicatas ficam desmarcadas; reenviar sem seleção continua seguro.',
-    cardInvoiceTitle: 'Importar fatura de cartão (CSV)',
+    cardInvoiceTitle: 'Importar fatura de cartão (CSV ou PDF)',
     cardInvoiceHint:
-      'Escolha o cartão, envie o CSV da fatura e revise o preview. Parcelas N/M com N>1 só anotam na descrição.',
+      'Escolha o cartão, envie a fatura (CSV ou o PDF do banco) e revise o preview. Parcelas N/M com N>1 só anotam na descrição.',
+    cardInvoiceFileHint:
+      'PDF do banco: se vier com senha, tentamos as senhas de boleto cadastradas; se nenhuma abrir, você digita.',
+    pdfNeedsPassword:
+      'A fatura veio num PDF protegido e nenhuma senha cadastrada abriu. Digite a senha do PDF.',
+    pdfUnsupported:
+      'Esse PDF está protegido num formato que não sabemos abrir. Exporte a fatura em CSV ou remova a senha antes de enviar.',
+    pdfPassword: 'Senha do PDF',
+    pdfSavePassword: 'Salvar essa senha para as próximas faturas',
+    pdfUnlock: 'Abrir fatura',
+    passwordRuleSaved: 'Senha salva — nas próximas faturas ela é tentada sozinha.',
     downloadTemplate: 'Baixar modelo',
     upload: 'Enviar CSV',
     file: 'Arquivo',

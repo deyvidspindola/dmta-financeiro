@@ -1595,11 +1595,22 @@ export const mockApi = {
     await delay()
   },
 
-  async previewCardInvoiceCsv(
-    _file: File,
+  async previewCardInvoice(
+    file: File,
+    password?: string,
   ): Promise<import('@/types/models').CardInvoiceImportPreview> {
     await delay()
+    if (/\.pdf$/i.test(file.name) && !password) {
+      return {
+        rows: [],
+        summary: { total: 0, ok: 0, duplicates: 0, invalid: 0 },
+        needs_password: true,
+        unsupported: false,
+      }
+    }
     return {
+      needs_password: false,
+      unsupported: false,
       rows: [
         {
           line: 2,
@@ -1642,7 +1653,7 @@ export const mockApi = {
     }
   },
 
-  async importCardInvoiceCsv(_file: File, _lines?: number[]) {
+  async importCardInvoice(_file: File, _lines?: number[], _password?: string) {
     await delay()
     return { imported: 1, duplicates: 0, failed: [] }
   },

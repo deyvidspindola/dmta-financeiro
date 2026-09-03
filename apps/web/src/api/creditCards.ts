@@ -257,30 +257,34 @@ export async function downloadInvoiceTemplate(
   )
 }
 
-export async function previewInvoiceCsv(
+export async function previewInvoice(
   contextId: string,
   creditCardId: string,
   file: File,
+  password?: string,
 ): Promise<CardInvoiceImportPreview> {
-  if (useMocks) return mockApi.previewCardInvoiceCsv(file)
+  if (useMocks) return mockApi.previewCardInvoice(file, password)
   const body = new FormData()
   body.append('file', file)
+  if (password) body.append('password', password)
   return http.postForm<CardInvoiceImportPreview>(
     `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import/preview`,
     body,
   )
 }
 
-export async function importInvoiceCsv(
+export async function importInvoice(
   contextId: string,
   creditCardId: string,
   file: File,
   lines?: number[],
+  password?: string,
 ): Promise<CardInvoiceImportSummary> {
-  if (useMocks) return mockApi.importCardInvoiceCsv(file, lines)
+  if (useMocks) return mockApi.importCardInvoice(file, lines, password)
   const body = new FormData()
   body.append('file', file)
   appendLines(body, lines)
+  if (password) body.append('password', password)
   return http.postForm<CardInvoiceImportSummary>(
     `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import`,
     body,

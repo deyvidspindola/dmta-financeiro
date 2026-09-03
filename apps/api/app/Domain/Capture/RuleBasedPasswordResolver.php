@@ -34,10 +34,23 @@ final class RuleBasedPasswordResolver implements PdfPasswordResolverInterface
 {
     public function resolveCandidates(?string $senderEmail): array
     {
-        $domain = $this->senderDomain($senderEmail);
+        return $this->fromRules($this->matchingRules($this->senderDomain($senderEmail)));
+    }
+
+    public function resolveAllCandidates(): array
+    {
+        return $this->fromRules(BoletoPasswordRule::query()->get());
+    }
+
+    /**
+     * @param  Collection<int, BoletoPasswordRule>  $rules
+     * @return list<string>
+     */
+    private function fromRules(Collection $rules): array
+    {
         $candidates = [];
 
-        foreach ($this->matchingRules($domain) as $rule) {
+        foreach ($rules as $rule) {
             array_push($candidates, ...$this->expand($rule));
         }
 

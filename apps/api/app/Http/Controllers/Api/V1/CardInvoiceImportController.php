@@ -8,19 +8,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCardInvoiceImportRequest;
 use App\Models\Context;
 use App\Models\CreditCard;
-use App\UseCases\CreditCard\ImportCardInvoiceFromCsv;
-use App\UseCases\CreditCard\PreviewCardInvoiceFromCsv;
+use App\UseCases\CreditCard\ImportCardInvoice;
+use App\UseCases\CreditCard\PreviewCardInvoice;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 /**
- * Importação de fatura de cartão via CSV — preview + store seletivo.
+ * Importação de fatura de cartão (CSV ou PDF) — preview + store seletivo.
+ * PDF protegido é decifrado com as senhas de boleto cadastradas ou a que
+ * o usuário informa (`password`).
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   03/09/2026
  *
@@ -32,24 +34,28 @@ final class CardInvoiceImportController extends Controller
         StoreCardInvoiceImportRequest $request,
         Context $context,
         CreditCard $creditCard,
-        PreviewCardInvoiceFromCsv $useCase,
+        PreviewCardInvoice $useCase,
     ): JsonResponse {
-        return response()->json(
-            $useCase->execute($request->file('file'), $context->id, $creditCard->id),
-        );
+        return response()->json($useCase->execute(
+            $request->file('file'),
+            $context->id,
+            $creditCard->id,
+            $request->input('password'),
+        ));
     }
 
     public function store(
         StoreCardInvoiceImportRequest $request,
         Context $context,
         CreditCard $creditCard,
-        ImportCardInvoiceFromCsv $useCase,
+        ImportCardInvoice $useCase,
     ): JsonResponse {
         return response()->json($useCase->execute(
             $request->file('file'),
             $context->id,
             $creditCard->id,
             $request->onlyLines(),
+            $request->input('password'),
         ));
     }
 

@@ -58,7 +58,7 @@ final class CardInvoiceImportClassifier
     {
         return CardPurchase::query()
             ->where('credit_card_id', $data->creditCardId)
-            ->where('occurred_at', $data->occurredAt)
+            ->whereDate('occurred_at', $data->occurredAt)
             ->where('amount', $data->amount)
             ->where('description', $data->description)
             ->exists();

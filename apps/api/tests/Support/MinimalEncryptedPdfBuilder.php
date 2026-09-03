@@ -44,7 +44,7 @@ final class MinimalEncryptedPdfBuilder
      * @param  'RC4'|'AESV2'  $cipher  Cifra do stream de conteúdo — só usada quando `$r === 4`.
      * @return array{bytes: string, contentText: string} PDF completo e o texto (não cifrado) que o stream de conteúdo contém — o teste confere que a decifragem devolve exatamente isso.
      */
-    public function build(int $r, string $userPassword, string $cipher = 'RC4'): array
+    public function build(int $r, string $userPassword, string $cipher = 'RC4', ?string $contentStream = null): array
     {
         $keyLengthBytes = $r === 2 ? 5 : 16;
         $v = $r === 4 ? 4 : ($r === 3 ? 2 : 1);
@@ -55,7 +55,7 @@ final class MinimalEncryptedPdfBuilder
         $o = $this->computeO($userPassword, $userPassword, $keyLengthBytes, $r);
         $u = $this->computeU($fileKey, $fileId, $r);
 
-        $contentText = 'BT /F1 12 Tf (linha digitavel 12345) Tj ET';
+        $contentText = $contentStream ?? 'BT /F1 12 Tf (linha digitavel 12345) Tj ET';
         $objectKey = $this->deriveObjectKey($fileKey, 4, 0, $cipher, $keyLengthBytes);
         $encryptedStream = $cipher === 'AESV2'
             ? $this->encryptAes128($objectKey, $contentText)
@@ -180,7 +180,7 @@ final class MinimalEncryptedPdfBuilder
         $objects = [
             1 => '<< /Type /Catalog /Pages 2 0 R >>',
             2 => '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-            3 => '<< /Type /Page /Parent 2 0 R /Contents 4 0 R /Resources << >> >>',
+            3 => '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 6 0 R >> >> >>',
         ];
 
         foreach ($objects as $number => $dict) {
@@ -194,16 +194,19 @@ final class MinimalEncryptedPdfBuilder
         $offsets[5] = strlen($buffer);
         $buffer .= "5 0 obj\n{$encryptDict}\nendobj\n";
 
+        $offsets[6] = strlen($buffer);
+        $buffer .= "6 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n";
+
         $xrefOffset = strlen($buffer);
-        $buffer .= "xref\n0 6\n";
+        $buffer .= "xref\n0 7\n";
         $buffer .= sprintf("%010d %05d f\r\n", 0, 65535);
 
-        for ($i = 1; $i <= 5; $i++) {
+        for ($i = 1; $i <= 6; $i++) {
             $buffer .= sprintf("%010d %05d n\r\n", $offsets[$i], 0);
         }
 
         $idHex = bin2hex($fileId);
-        $buffer .= "trailer\n<< /Size 6 /Root 1 0 R /Encrypt 5 0 R /ID [<{$idHex}> <{$idHex}>] >>\n";
+        $buffer .= "trailer\n<< /Size 7 /Root 1 0 R /Encrypt 5 0 R /ID [<{$idHex}> <{$idHex}>] >>\n";
         $buffer .= "startxref\n{$xrefOffset}\n%%EOF";
 
         return $buffer;
