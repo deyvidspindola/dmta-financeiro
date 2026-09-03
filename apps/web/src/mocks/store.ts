@@ -1606,11 +1606,15 @@ export const mockApi = {
         summary: { total: 0, ok: 0, duplicates: 0, invalid: 0 },
         needs_password: true,
         unsupported: false,
+        raw_text: null,
       }
     }
     return {
       needs_password: false,
       unsupported: false,
+      raw_text: /\.pdf$/i.test(file.name)
+        ? '05/09/2026 MERCADO 50,00\n08/09/2026 NOTEBOOK 2/6 499,90'
+        : null,
       rows: [
         {
           line: 2,

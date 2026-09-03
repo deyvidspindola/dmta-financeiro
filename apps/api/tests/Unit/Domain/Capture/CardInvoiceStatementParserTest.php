@@ -67,3 +67,25 @@ test('limpa câmbio internacional da descrição', function () {
     expect($rows[0]['descricao'])->toBe('AMAZON MARKETPLACE')
         ->and($rows[0]['valor'])->toBe('65,40');
 });
+
+test('cola o valor que veio numa linha própria (layout com valor à direita)', function () {
+    $rows = $this->parser->parse(implode("\n", [
+        '05/09 SUPERMERCADO BOM PRECO',
+        '189,90',
+        '08/09 POSTO SHELL',
+        'AV BRASIL 500',
+        '250,00',
+        '10/09 FARMACIA SEM VALOR AQUI',
+        '11/09 PADARIA 12,00',
+    ]));
+
+    expect(array_column($rows, 'valor'))->toBe(['189,90', '250,00', '12,00'])
+        ->and($rows[1]['descricao'])->toBe('POSTO SHELL AV BRASIL 500');
+});
+
+test('não cola linhas de compras diferentes (próxima começa com data)', function () {
+    $rows = $this->parser->parse("05/09 LOJA A\n06/09 LOJA B 30,00");
+
+    expect($rows)->toHaveCount(1)
+        ->and($rows[0]['descricao'])->toBe('LOJA B');
+});

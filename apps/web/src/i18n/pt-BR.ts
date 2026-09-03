@@ -627,6 +627,11 @@ export const strings = {
     pdfSavePassword: 'Salvar essa senha para as próximas faturas',
     pdfUnlock: 'Abrir fatura',
     passwordRuleSaved: 'Senha salva — nas próximas faturas ela é tentada sozinha.',
+    pdfNoRows:
+      'Abri o PDF, mas não consegui identificar as compras automaticamente (cada banco tem um layout). Confira o texto extraído abaixo. Enquanto isso, o CSV da fatura é o caminho mais confiável.',
+    pdfNoText:
+      '(nenhum texto — o PDF pode ser um scan/imagem, sem camada de texto)',
+    pdfExtractedText: 'Ver texto extraído do PDF',
     downloadTemplate: 'Baixar modelo',
     upload: 'Enviar CSV',
     file: 'Arquivo',

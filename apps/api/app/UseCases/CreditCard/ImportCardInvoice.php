@@ -50,7 +50,7 @@ final class ImportCardInvoice
         $duplicates = 0;
         $failed = [];
 
-        foreach ($this->reader->rows($file, $pdfPassword) as $item) {
+        foreach ($this->reader->read($file, $pdfPassword)['rows'] as $item) {
             if ($allow !== null && ! isset($allow[$item['line']])) {
                 continue;
             }

@@ -8,13 +8,11 @@ use App\Services\CardInvoiceImportRowParser;
 use Illuminate\Support\Carbon;
 
 /**
- * Extrai as compras do **texto** de uma fatura de cartão em PDF (o texto
- * que o `smalot/pdfparser` devolve depois de decifrar, se precisou de
- * senha). Melhor esforço: cada banco tem um layout, então a heurística
- * pega o que consegue e o resto o usuário revê no preview (mesma ideia
- * do {@see PdfBoletoReader}). Devolve linhas no formato cru
- * (`data,descricao,valor`) que o {@see CardInvoiceImportRowParser} já
- * sabe interpretar.
+ * Extrai as compras do **texto** de uma fatura de cartão em PDF (o que o
+ * `smalot/pdfparser` devolve, depois de decifrar). Melhor esforço: cada
+ * banco tem um layout, então pega o que dá e o resto o usuário revê no
+ * preview. Devolve linhas cruas (`data,descricao,valor`) que o
+ * {@see CardInvoiceImportRowParser} já sabe interpretar.
  *
  * @package App\Domain\Capture
  *
@@ -51,12 +49,10 @@ final class CardInvoiceStatementParser
     {
         $year = $this->statementYear($text);
         $lines = $this->splitLines($text);
-        $rows = $this->rowsFrom($lines, $year);
+        $rows = $this->rowsFrom($this->stitchWrapped($lines), $year);
 
-        // Extractor não achou quebra de linha (PDF concatenou tudo em 1–2
-        // linhas): fatia antes de cada data e fica com o que rende mais.
-        // Só nesse caso — o caminho linha-a-linha lida melhor com ruído
-        // grudado ("... TOTAL DA FATURA 10,00") e com parcela "N/M".
+        // PDF concatenado em 1–2 linhas: fatia antes de cada data e fica
+        // com o que rende mais (linha-a-linha lida melhor com ruído grudado).
         if (count($lines) <= 2) {
             $sliced = $this->rowsFrom($this->sliceBeforeDates($lines), $year);
 
@@ -93,6 +89,51 @@ final class CardInvoiceStatementParser
         $lines = preg_split('/\r\n|\r|\n/', $text) ?: [];
 
         return array_values(array_filter(array_map('trim', $lines), fn (string $l): bool => $l !== ''));
+    }
+
+    /**
+     * Junta "data + descrição" com a(s) linha(s) seguinte(s) até aparecer
+     * um valor — extrato costuma jogar o valor (à direita) numa linha
+     * própria. No máximo 2 linhas; para se a próxima já começa com data.
+     *
+     * @param  list<string>  $lines
+     * @return list<string>
+     */
+    private function stitchWrapped(array $lines): array
+    {
+        $out = [];
+        $count = count($lines);
+
+        for ($i = 0; $i < $count; $i++) {
+            $line = $lines[$i];
+
+            if ($this->extractAmount($line) !== null || ! $this->hasDate($line)) {
+                $out[] = $line;
+
+                continue;
+            }
+
+            $j = $i;
+
+            while ($j + 1 < $count && $j - $i < 2 && ! $this->hasDate($lines[$j + 1])) {
+                $j++;
+                $line .= ' '.$lines[$j];
+
+                if ($this->extractAmount($lines[$j]) !== null) {
+                    break;
+                }
+            }
+
+            $i = $j;
+            $out[] = $line;
+        }
+
+        return $out;
+    }
+
+    private function hasDate(string $line): bool
+    {
+        return preg_match(self::DATE_SLASH, $line) === 1 || preg_match(self::DATE_NAMED, $line) === 1;
     }
 
     /**
@@ -181,8 +222,7 @@ final class CardInvoiceStatementParser
         $description = str_replace([$dateMatch, $amountMatch], ' ', $line);
         $description = preg_replace('/\s{2,}/', ' ', $description) ?? $description;
         $description = trim($description, " \t-–—|·.");
-
-        // Câmbio internacional deixa um "USD 12,00" / "EUR 3,50" antes do valor final.
+        // Câmbio internacional ("USD 12,00") sobra antes do valor em reais.
         $description = preg_replace('/\b(USD|EUR|GBP|ARS|CLP)\s*\d[\d.,]*/i', '', $description) ?? $description;
 
         return trim(preg_replace('/\s{2,}/', ' ', $description) ?? $description);
@@ -193,12 +233,7 @@ final class CardInvoiceStatementParser
         return $year < 100 ? 2000 + $year : $year;
     }
 
-    /**
-     * Ano da fatura: tenta achar no texto ("vencimento 10/03/2026",
-     * "fatura de março de 2026"); senão usa o ano atual, recuando um ano
-     * se isso jogaria a compra muito pro futuro (fatura de dezembro
-     * aberta em janeiro).
-     */
+    /** Ano da fatura: do "vencimento .../.../AAAA" ou "fatura de mês de AAAA"; senão, o ano atual. */
     private function statementYear(string $text): int
     {
         if (preg_match('/vencimento[:\s]*\d{1,2}\/\d{1,2}\/(\d{4})/iu', $text, $m) === 1) {
