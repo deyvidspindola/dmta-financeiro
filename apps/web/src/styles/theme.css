@@ -7,7 +7,7 @@
 /* Preline UI (open source) */
 @source '../../node_modules/preline/dist/*.js';
 @import 'preline/variants.css';
-@import 'preline/datepicker-styles-utility.css';
+/* Datepicker Preline removido — DatePickerField usa vanilla-calendar-pro. */
 
 /* Dark mode por classe no <html> (padrão do Preline), não por media query */
 @custom-variant dark (&:where(.dark, .dark *));
@@ -122,5 +122,117 @@
     color: var(--fg);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* -------------------------------------------------------------------------
+ * DatePicker (vanilla-calendar-pro) — painel em portal, acima de modais.
+ * Tokens alinhados à marca (seleção = brand).
+ * ---------------------------------------------------------------------- */
+@layer components {
+  .dmta-datepicker-panel {
+    --vc-bg: var(--surface);
+    --vc-color: var(--fg);
+    --vc-header-color: var(--fg);
+    --vc-title-color: var(--fg);
+    --vc-months-years-bg: var(--surface);
+    --vc-months-years-color: var(--fg-muted);
+    --vc-months-years-bg-hover: var(--surface-2);
+    --vc-months-years-bg-selected: var(--color-brand-600);
+    --vc-months-years-color-selected: #fff;
+    --vc-week-day-color: var(--fg-muted);
+    --vc-date-bg: var(--surface);
+    --vc-date-color: var(--fg);
+    --vc-date-bg-hover: var(--surface-2);
+    --vc-date-today-bg: var(--surface-2);
+    --vc-date-today-color: var(--color-brand-600);
+    --vc-date-selected-bg: var(--color-brand-600);
+    --vc-date-selected-color: #fff;
+    --vc-date-outside-color: var(--fg-subtle);
+    --vc-focus-outline-color: var(--color-brand-500);
+    border-radius: 0.875rem;
+    box-shadow: var(--shadow-pop);
+    overflow: hidden;
+  }
+
+  .dmta-datepicker-panel .vc {
+    border: 1px solid var(--line);
+    background-color: var(--surface);
+    color: var(--fg);
+  }
+
+  .dmta-datepicker-panel .vc-date[data-vc-date-selected] .vc-date__btn,
+  .dmta-datepicker-panel .vc-date[data-vc-date-selected] .vc-date__btn:hover {
+    background-color: var(--color-brand-600) !important;
+    color: #fff !important;
+  }
+
+  .dmta-datepicker-panel .vc-date[data-vc-date-today] .vc-date__btn {
+    color: var(--color-brand-600);
+  }
+
+  /* SweetAlert2 — alinhado ao tema (claro/escuro via CSS vars). */
+  .dmta-swal-popup {
+    background: var(--surface) !important;
+    color: var(--fg) !important;
+    border: 1px solid var(--line);
+    border-radius: 1rem !important;
+    box-shadow: var(--shadow-pop) !important;
+    font-family: var(--font-sans) !important;
+    padding: 1.25rem !important;
+  }
+
+  .dmta-swal-title {
+    color: var(--fg) !important;
+    font-family: var(--font-display) !important;
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+  }
+
+  .dmta-swal-body {
+    color: var(--fg-muted) !important;
+    font-size: 0.875rem !important;
+  }
+
+  .dmta-swal-actions {
+    gap: 0.5rem !important;
+    margin-top: 1.25rem !important;
+  }
+
+  .dmta-swal-confirm,
+  .dmta-swal-confirm-danger,
+  .dmta-swal-cancel {
+    border-radius: 0.75rem !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    margin: 0 !important;
+    padding: 0.5rem 1rem !important;
+  }
+
+  .dmta-swal-confirm {
+    background: var(--color-brand-600) !important;
+    color: #fff !important;
+  }
+
+  .dmta-swal-confirm-danger {
+    background: var(--negative) !important;
+    color: #fff !important;
+  }
+
+  .dmta-swal-cancel {
+    background: transparent !important;
+    color: var(--fg-muted) !important;
+    border: 1px solid var(--line) !important;
+  }
+
+  .dmta-swal-icon {
+    margin-top: 0.5rem !important;
+  }
+
+  .dark .dmta-swal-popup .swal2-success-circular-line-left,
+  .dark .dmta-swal-popup .swal2-success-circular-line-right,
+  .dark .dmta-swal-popup .swal2-success-fix,
+  .dark .dmta-swal-popup .swal2-icon-content {
+    background-color: transparent !important;
   }
 }

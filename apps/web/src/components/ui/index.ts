@@ -18,7 +18,6 @@ export { SwitchField } from './SwitchField'
 export { DatePickerField, DateRangeField } from './DatePickerField'
 export type { DateRangeValue } from './DatePickerField'
 
-export { ConfirmDialogHost } from './ConfirmDialog'
 export { useConfirm } from '@/hooks/useConfirm'
 export type { ConfirmOptions, ConfirmTone } from '@/hooks/useConfirm'
 

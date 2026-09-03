@@ -423,8 +423,10 @@ export const strings = {
     },
     recurringBadge: 'Recorrente',
     pendingBadge: 'Previsto',
-    settled: 'Já caiu na conta?',
-    settledHint: 'Desligado = lançamento previsto (não move o saldo agora).',
+    /** Switch UI: ligado = previsão (`settled: false`); desligado = efetivado. */
+    settled: 'É uma previsão?',
+    settledHint:
+      'Ligado = previsto (não move o saldo agora). Desligado = já efetivado.',
   },
 
   transfers: {

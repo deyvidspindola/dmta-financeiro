@@ -20,9 +20,8 @@ import 'preline/plugins/tabs'
 import 'preline/plugins/tooltip'
 import 'preline/plugins/accordion'
 import 'preline/plugins/collapse'
-// lodash global ANTES do datepicker (ele usa `_.mergeWith`).
-import './preline-lodash'
-import 'preline/plugins/datepicker'
+// Datepicker: wrapper próprio em DatePickerField (vanilla-calendar-pro).
+// Não importar preline/plugins/datepicker — problemático em modal.
 
 type HSWindow = Window & {
   HSStaticMethods?: { autoInit: (collection?: string | string[]) => void }

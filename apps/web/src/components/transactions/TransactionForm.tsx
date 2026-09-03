@@ -60,9 +60,15 @@ export function TransactionForm({
   const watchedType = form.watch('type')
   const isRecurring = form.watch('is_recurring')
 
+  const showGoalField = showGoal && watchedType === 'income'
+
   useEffect(() => {
     if (!isEdit) form.setValue('category_id', null)
   }, [watchedType, form, isEdit])
+
+  useEffect(() => {
+    if (watchedType !== 'income') form.setValue('goal_id', null)
+  }, [watchedType, form])
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', contextId],
@@ -79,7 +85,7 @@ export function TransactionForm({
   const goalsQuery = useQuery({
     queryKey: ['goals', contextId],
     queryFn: () => goalsApi.listGoals(contextId),
-    enabled: Boolean(contextId) && showGoal,
+    enabled: Boolean(contextId) && showGoalField,
   })
 
   const accounts = accountsQuery.data ?? []
@@ -237,7 +243,7 @@ export function TransactionForm({
           </Field>
         </div>
 
-        {showGoal ? (
+        {showGoalField ? (
           <div className="sm:col-span-2">
             <Field label={t.goal}>
               <TextSelect
@@ -265,8 +271,8 @@ export function TransactionForm({
                 <SwitchField
                   label={t.settled}
                   description={t.settledHint}
-                  checked={field.value}
-                  onChange={field.onChange}
+                  checked={!field.value}
+                  onChange={(isForecast) => field.onChange(!isForecast)}
                 />
               )}
             />
