@@ -92,6 +92,12 @@ export const MORE_GROUPS: MoreGroup[] = [
         label: n.importBills,
         icon: FileDown,
       },
+      {
+        kind: 'link',
+        to: '/import-card-invoice',
+        label: n.importCardInvoice,
+        icon: CreditCard,
+      },
     ],
   },
   {

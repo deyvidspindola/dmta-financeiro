@@ -11,6 +11,10 @@ import {
 } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
 import type { CardInvoice, CardPurchase, CreditCard } from '@/types/models'
+import type {
+  CardInvoiceImportPreview,
+  CardInvoiceImportSummary,
+} from '@/types/models'
 
 export type CreateCreditCardInput = Omit<
   CreditCard,
@@ -232,5 +236,53 @@ export async function payCardInvoice(
       account_id: asApiId(accountId),
       ...(occurredAt ? { occurred_at: occurredAt } : {}),
     },
+  )
+}
+
+function appendLines(body: FormData, lines?: number[]): void {
+  if (!lines) return
+  for (const line of lines) {
+    body.append('lines[]', String(line))
+  }
+}
+
+export async function downloadInvoiceTemplate(
+  contextId: string,
+  creditCardId: string,
+): Promise<void> {
+  if (useMocks) return mockApi.downloadCardInvoiceTemplate()
+  await http.download(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import/template`,
+    'modelo-importacao-fatura-cartao.csv',
+  )
+}
+
+export async function previewInvoiceCsv(
+  contextId: string,
+  creditCardId: string,
+  file: File,
+): Promise<CardInvoiceImportPreview> {
+  if (useMocks) return mockApi.previewCardInvoiceCsv(file)
+  const body = new FormData()
+  body.append('file', file)
+  return http.postForm<CardInvoiceImportPreview>(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import/preview`,
+    body,
+  )
+}
+
+export async function importInvoiceCsv(
+  contextId: string,
+  creditCardId: string,
+  file: File,
+  lines?: number[],
+): Promise<CardInvoiceImportSummary> {
+  if (useMocks) return mockApi.importCardInvoiceCsv(file, lines)
+  const body = new FormData()
+  body.append('file', file)
+  appendLines(body, lines)
+  return http.postForm<CardInvoiceImportSummary>(
+    `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import`,
+    body,
   )
 }
