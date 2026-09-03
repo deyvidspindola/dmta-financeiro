@@ -608,9 +608,11 @@ export const strings = {
 
   imports: {
     billsTitle: 'Importar boletos (CSV)',
-    billsHint: 'Baixe o modelo, preencha e envie. Linhas inválidas não derrubam o lote.',
+    billsHint:
+      'Baixe o modelo, preencha e revise o preview antes de importar. Linhas inválidas não entram na seleção.',
     statementTitle: 'Importar extrato (CSV)',
-    statementHint: 'Mesmo arquivo pode ser reenviado — duplicatas são ignoradas.',
+    statementHint:
+      'Escolha a conta, envie o CSV e revise o preview. Duplicatas ficam desmarcadas; reenviar sem seleção continua seguro.',
     downloadTemplate: 'Baixar modelo',
     upload: 'Enviar CSV',
     file: 'Arquivo',
@@ -626,6 +628,27 @@ export const strings = {
     instructions: 'Instruções',
     chooseFile: 'Escolher arquivo CSV',
     noFileSelected: 'Nenhum arquivo selecionado',
+    previewTitle: 'Revisão do arquivo',
+    importSelected: 'Importar selecionados',
+    selectAll: 'Marcar todos',
+    deselectAll: 'Desmarcar todos',
+    selectRow: 'Selecionar linha',
+    willImport: (selected: number, total: number) =>
+      `${selected} de ${total} linhas serão importadas`,
+    status: 'Status',
+    statusOk: 'Pronto',
+    statusDuplicate: 'Duplicado',
+    statusInvalid: 'Inválido',
+    importAnother: 'Importar outro arquivo',
+    colDate: 'Data',
+    colDueDate: 'Vencimento',
+    colDescription: 'Descrição',
+    colAmount: 'Valor',
+    colType: 'Tipo',
+    colDirection: 'Direção',
+    colCategory: 'Categoria',
+    colBeneficiary: 'Beneficiário',
+    loadingPreview: 'Gerando preview…',
   },
 
   billCaptures: {

@@ -9,37 +9,51 @@ use App\Http\Requests\Api\StoreStatementImportRequest;
 use App\Models\Account;
 use App\Models\Context;
 use App\UseCases\Transaction\ImportStatementFromCsv;
+use App\UseCases\Transaction\PreviewStatementFromCsv;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 /**
- * Importação de extrato bancário via planilha CSV — fallback manual do
- * capítulo 05.3 (D-06), disponível independente do Pluggy (F2) estar
- * ligado ou não. Ver {@see ImportStatementFromCsv} pra regra de
- * conversão/deduplicação/tolerância a erro por linha.
+ * Importação de extrato bancário via CSV — preview + store seletivo.
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   22/08/2026
  *
- * @updated 22/08/2026
+ * @updated 03/09/2026
  */
 final class StatementImportController extends Controller
 {
+    public function preview(
+        StoreStatementImportRequest $request,
+        Context $context,
+        Account $account,
+        PreviewStatementFromCsv $useCase,
+    ): JsonResponse {
+        return response()->json(
+            $useCase->execute($request->file('file'), $context->id, $account->id),
+        );
+    }
+
     public function store(
         StoreStatementImportRequest $request,
         Context $context,
         Account $account,
         ImportStatementFromCsv $useCase,
     ): JsonResponse {
-        return response()->json($useCase->execute($request->file('file'), $context->id, $account->id));
+        return response()->json($useCase->execute(
+            $request->file('file'),
+            $context->id,
+            $account->id,
+            $request->onlyLines(),
+        ));
     }
 
-    /** Planilha modelo pra preencher e enviar em `store()` — mesmo cabeçalho que o parser espera. */
+    /** Planilha modelo — mesmo cabeçalho que o parser espera. */
     public function template(Context $context, Account $account): Response
     {
         $csv = "data,descricao,valor,categoria\n"

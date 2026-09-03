@@ -297,6 +297,7 @@ export interface ImportFailure {
 
 export interface BillImportSummary {
   imported: number
+  duplicates?: number
   failed: ImportFailure[]
 }
 
@@ -304,6 +305,58 @@ export interface StatementImportSummary {
   imported: number
   duplicates: number
   failed: ImportFailure[]
+}
+
+export type ImportPreviewStatus = 'ok' | 'duplicate' | 'invalid'
+
+export interface ImportPreviewSummary {
+  total: number
+  ok: number
+  duplicates: number
+  invalid: number
+}
+
+export interface StatementImportParsed {
+  occurred_at: string
+  description: string
+  amount: number
+  type: 'income' | 'expense'
+  category_name: string | null
+}
+
+export interface StatementImportPreviewRow {
+  line: number
+  raw: Record<string, string>
+  parsed: StatementImportParsed | null
+  status: ImportPreviewStatus
+  reason: string | null
+}
+
+export interface StatementImportPreview {
+  rows: StatementImportPreviewRow[]
+  summary: ImportPreviewSummary
+}
+
+export interface BillImportParsed {
+  description: string
+  amount: number
+  due_date: string
+  direction: 'payable' | 'receivable'
+  category_name: string | null
+  beneficiary: string | null
+}
+
+export interface BillImportPreviewRow {
+  line: number
+  raw: Record<string, string>
+  parsed: BillImportParsed | null
+  status: ImportPreviewStatus
+  reason: string | null
+}
+
+export interface BillImportPreview {
+  rows: BillImportPreviewRow[]
+  summary: ImportPreviewSummary
 }
 
 export interface LoginCredentials {
