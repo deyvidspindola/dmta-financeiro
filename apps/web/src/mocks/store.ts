@@ -1074,15 +1074,30 @@ export const mockApi = {
 
   async listBillCaptures(
     status: BillCaptureStatus | 'all' = 'pending',
+    month: string | null = null,
   ): Promise<BillCapture[]> {
     await delay()
-    if (status === 'all') return [...billCaptures]
+    const inMonth = (row: BillCapture) =>
+      !month || (row.due_date?.slice(0, 7) ?? '') === month
+    if (status === 'all') return billCaptures.filter(inMonth)
     if (status === 'pending') {
       return billCaptures.filter(
-        (row) => row.status === 'pending' || row.status === 'password_required',
+        (row) =>
+          (row.status === 'pending' || row.status === 'password_required') &&
+          inMonth(row),
       )
     }
-    return billCaptures.filter((row) => row.status === status)
+    return billCaptures.filter((row) => row.status === status && inMonth(row))
+  },
+
+  async deleteBillCapture(captureId: string): Promise<void> {
+    await delay()
+    const index = billCaptures.findIndex((row) => row.id === captureId)
+    if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
+    if (billCaptures[index]!.status === 'confirmed') {
+      throw Object.assign(new Error('Captura já processada.'), { status: 422 })
+    }
+    billCaptures = billCaptures.filter((row) => row.id !== captureId)
   },
 
   async confirmBillCapture(

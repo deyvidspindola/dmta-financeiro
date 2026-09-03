@@ -17,6 +17,7 @@ import {
   Field,
   LoadingBlock,
   PageHeader,
+  TextInput,
   TextSelect,
   useConfirm,
 } from '@/components/ui'
@@ -37,6 +38,7 @@ export function BillCapturesPage() {
   const activeScope = useAuthStore((s) => s.activeScope)
   const [statusFilter, setStatusFilter] =
     useState<BillCaptureListStatus>('pending')
+  const [monthFilter, setMonthFilter] = useState('')
   const [confirming, setConfirming] = useState<BillCapture | null>(null)
   const [unlocking, setUnlocking] = useState<BillCapture | null>(null)
   const [saveRule, setSaveRule] = useState<{
@@ -61,8 +63,9 @@ export function BillCapturesPage() {
       : (orderedContexts[0]?.id ?? '')
 
   const listQuery = useQuery({
-    queryKey: ['bill-captures', statusFilter],
-    queryFn: () => billCapturesApi.listBillCaptures(statusFilter),
+    queryKey: ['bill-captures', statusFilter, monthFilter],
+    queryFn: () =>
+      billCapturesApi.listBillCaptures(statusFilter, monthFilter || null),
   })
 
   const confirmMutation = useMutation({
@@ -106,6 +109,29 @@ export function BillCapturesPage() {
       return
     }
     rejectMutation.mutate(captureId)
+  }
+
+  const deleteMutation = useMutation({
+    mutationFn: (captureId: string) =>
+      billCapturesApi.deleteBillCapture(captureId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['bill-captures'] })
+      toastSuccess(t.deleted)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
+  async function handleDelete(captureId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmDelete,
+        tone: 'danger',
+        confirmLabel: t.delete,
+      }))
+    ) {
+      return
+    }
+    deleteMutation.mutate(captureId)
   }
 
   const unlockMutation = useMutation({
@@ -184,22 +210,39 @@ export function BillCapturesPage() {
         }
       />
 
-      <Field label={t.statusFilter}>
-        <TextSelect
-          value={statusFilter}
-          onChange={(event) =>
-            setStatusFilter(event.target.value as BillCaptureListStatus)
-          }
-        >
-          <option value="pending">{t.statuses.pending}</option>
-          <option value="password_required">
-            {t.statuses.password_required}
-          </option>
-          <option value="confirmed">{t.statuses.confirmed}</option>
-          <option value="rejected">{t.statuses.rejected}</option>
-          <option value="all">{t.statuses.all}</option>
-        </TextSelect>
-      </Field>
+      <div className="flex flex-wrap gap-4">
+        <Field label={t.statusFilter}>
+          <TextSelect
+            value={statusFilter}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as BillCaptureListStatus)
+            }
+          >
+            <option value="pending">{t.statuses.pending}</option>
+            <option value="password_required">
+              {t.statuses.password_required}
+            </option>
+            <option value="confirmed">{t.statuses.confirmed}</option>
+            <option value="rejected">{t.statuses.rejected}</option>
+            <option value="all">{t.statuses.all}</option>
+          </TextSelect>
+        </Field>
+
+        <Field label={t.monthFilter}>
+          <div className="flex items-center gap-2">
+            <TextInput
+              type="month"
+              value={monthFilter}
+              onChange={(event) => setMonthFilter(event.target.value)}
+            />
+            {monthFilter ? (
+              <Button variant="ghost" onClick={() => setMonthFilter('')}>
+                {t.allMonths}
+              </Button>
+            ) : null}
+          </div>
+        </Field>
+      </div>
 
       {listQuery.isLoading ? (
         <LoadingBlock label={strings.common.loading} />
@@ -221,7 +264,9 @@ export function BillCapturesPage() {
             unlockMutation.reset()
             setUnlocking(capture)
           }}
+          onDelete={handleDelete}
           rejectPending={rejectMutation.isPending}
+          deletePending={deleteMutation.isPending}
         />
       ) : null}
 

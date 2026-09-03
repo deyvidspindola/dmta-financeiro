@@ -99,6 +99,7 @@ Route::prefix('v1')->group(function () {
         Route::post('bill-captures/poll', [PollBillCapturesController::class, 'store']);
         Route::post('bill-captures/{capture}/confirm', [BillCaptureController::class, 'confirm']);
         Route::post('bill-captures/{capture}/reject', [BillCaptureController::class, 'reject']);
+        Route::delete('bill-captures/{capture}', [BillCaptureController::class, 'destroy']);
         // Boleto com PDF protegido por senha (DT-07) — resolve manualmente
         // uma pendência password_required, e o cadastro das regras que
         // tentam abrir sozinho da próxima vez.
