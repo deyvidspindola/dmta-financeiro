@@ -12,9 +12,11 @@ use App\Http\Requests\Api\UpdateCreditCardRequest;
 use App\Http\Resources\CreditCardResource;
 use App\Models\Context;
 use App\Models\CreditCard;
+use App\UseCases\CreditCard\DeleteCreditCard;
 use App\UseCases\CreditCard\RegisterCreditCard;
 use App\UseCases\CreditCard\UpdateCreditCard;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
 /**
@@ -75,10 +77,10 @@ final class CreditCardController extends Controller
         return new CreditCardResource($updated);
     }
 
-    /** Apaga o cartão e, em cascata (FK), as faturas dele. */
-    public function destroy(Context $context, CreditCard $creditCard): JsonResponse
+    /** Apaga o cartão e, em cascata, faturas e compras. `force=1` para cartão com fatura paga. */
+    public function destroy(Request $request, Context $context, CreditCard $creditCard, DeleteCreditCard $useCase): JsonResponse
     {
-        $creditCard->delete();
+        $useCase->execute($creditCard, $request->boolean('force'));
 
         return response()->json(status: 204);
     }

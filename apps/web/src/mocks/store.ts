@@ -991,6 +991,7 @@ export const mockApi = {
   async deleteCreditCard(
     contextId: string,
     creditCardId: string,
+    _force = false,
   ): Promise<void> {
     await delay()
     creditCards = creditCards.filter(

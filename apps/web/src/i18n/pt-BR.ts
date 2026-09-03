@@ -269,7 +269,11 @@ export const strings = {
     updated: 'Cartão atualizado.',
     invoiceCreated: 'Fatura registrada.',
     deleted: 'Cartão excluído.',
-    confirmDelete: 'Excluir este cartão?',
+    delete: 'Excluir cartão',
+    confirmDelete:
+      'Excluir este cartão? Some com ele todas as faturas e compras. Os pagamentos de fatura já feitos continuam nos lançamentos da conta.',
+    confirmDeletePaid:
+      'Este cartão tem fatura paga. Excluir apaga o histórico do cartão, mas os pagamentos continuam nos lançamentos. Excluir mesmo assim?',
     available: 'Disponível',
     used: 'Usado',
     usedLabel: 'usado',

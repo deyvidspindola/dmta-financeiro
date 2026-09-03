@@ -1,6 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { useState } from 'react'
 import { accountsApi, creditCardsApi } from '@/api'
+import { ApiError } from '@/api/http'
 import { CardPurchaseForm } from '@/components/creditCards/CardPurchaseForm'
 import {
   Button,
@@ -10,6 +11,7 @@ import {
   MoneyInput,
   TextInput,
   TextSelect,
+  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { currentMonthKey } from '@/lib/dates'
@@ -28,17 +30,45 @@ export function CardFormModal({
   editing,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   contextId: string
   editing: CreditCard | null
   onClose: () => void
   onSaved: () => void
+  onDeleted?: () => void
 }) {
+  const confirm = useConfirm()
   const [name, setName] = useState(editing?.name ?? '')
   const [brand, setBrand] = useState(editing?.brand ?? '')
   const [limit, setLimit] = useState(editing?.limit ?? 0)
   const [closingDay, setClosingDay] = useState(String(editing?.closing_day ?? 5))
   const [dueDay, setDueDay] = useState(String(editing?.due_day ?? 12))
+
+  const remove = useMutation({
+    mutationFn: (force: boolean) =>
+      creditCardsApi.deleteCreditCard(contextId, editing!.id, force),
+    onSuccess: () => {
+      toastSuccess(t.deleted)
+      onDeleted?.()
+    },
+    onError: (error) => toastError(getErrorMessage(error)),
+  })
+
+  async function handleDelete() {
+    if (!editing) return
+    if (!(await confirm({ message: t.confirmDelete, tone: 'danger', confirmLabel: t.delete }))) {
+      return
+    }
+    try {
+      await remove.mutateAsync(false)
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 422) return
+      if (await confirm({ message: t.confirmDeletePaid, tone: 'danger', confirmLabel: t.delete })) {
+        remove.mutate(true)
+      }
+    }
+  }
 
   const save = useMutation({
     mutationFn: () => {
@@ -92,17 +122,32 @@ export function CardFormModal({
             />
           </Field>
         </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button variant="ghost" onClick={onClose}>
-            {strings.common.cancel}
-          </Button>
-          <Button
-            onClick={() => save.mutate()}
-            disabled={!name.trim() || save.isPending}
-            loading={save.isPending}
-          >
-            {strings.common.save}
-          </Button>
+        <div className="flex items-center justify-between gap-2 pt-2">
+          {editing && onDeleted ? (
+            <Button
+              variant="ghost"
+              className="text-negative hover:text-negative"
+              onClick={handleDelete}
+              disabled={remove.isPending}
+              loading={remove.isPending}
+            >
+              {t.delete}
+            </Button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <Button variant="ghost" onClick={onClose}>
+              {strings.common.cancel}
+            </Button>
+            <Button
+              onClick={() => save.mutate()}
+              disabled={!name.trim() || save.isPending}
+              loading={save.isPending}
+            >
+              {strings.common.save}
+            </Button>
+          </div>
         </div>
       </div>
     </Modal>

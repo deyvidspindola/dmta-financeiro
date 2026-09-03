@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { ArrowLeft, Pencil, Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { consolidatedApi, creditCardsApi } from '@/api'
 import {
   CardFormModal,
@@ -54,6 +54,7 @@ function isPurchaseEditable(
 export function CreditCardDetailPage() {
   const { id } = useParams<{ id: string }>()
   const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const writableContextId = useWritableContextId()
   const activeScope = useAuthStore((s) => s.activeScope)
@@ -408,6 +409,10 @@ export function CreditCardDetailPage() {
           onSaved={() => {
             invalidate()
             setEditModal(false)
+          }}
+          onDeleted={() => {
+            setEditModal(false)
+            void navigate('/credit-cards')
           }}
         />
       ) : null}
