@@ -17,7 +17,7 @@ const MANAGE: Item[] = [
   { label: t.nav.categories, icon: 'tag', href: '/categories' },
   { label: t.nav.budgets, icon: 'pie-chart', href: '/budgets' },
   { label: t.nav.goals, icon: 'target', href: '/goals' },
-  { label: t.nav.debts, icon: 'users' },
+  { label: t.nav.debts, icon: 'users', href: '/debts' },
   { label: t.nav.bills, icon: 'file-text' },
 ];
 
