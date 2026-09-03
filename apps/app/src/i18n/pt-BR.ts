@@ -94,6 +94,10 @@ export const strings = {
     remaining: 'Restante',
     over: 'Estourou',
     pickContext: 'Selecione um contexto para ver os orçamentos.',
+    of: 'de',
+    save: 'Salvar orçamento',
+    editBudget: 'Editar orçamento',
+    spentEffective: (v: string) => `${v} já efetivado`,
   },
 
   auth: {
