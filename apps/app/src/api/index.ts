@@ -10,5 +10,6 @@ export * as transactionsApi from './transactions';
 export * as consolidatedApi from './consolidated';
 export * as categoriesApi from './categories';
 export * as creditCardsApi from './creditCards';
+export * as budgetsApi from './budgets';
 export { bindAuthToken, ApiError, http, unwrapData } from './http';
 export { API_BASE_URL } from './config';
