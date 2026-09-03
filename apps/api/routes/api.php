@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
 use App\Http\Controllers\Api\V1\MoveTransactionController;
+use App\Http\Controllers\Api\V1\NotificationCaptureController;
 use App\Http\Controllers\Api\V1\PayBillController;
 use App\Http\Controllers\Api\V1\PayCardInvoiceController;
 use App\Http\Controllers\Api\V1\PollBillCapturesController;
@@ -104,6 +105,14 @@ Route::prefix('v1')->group(function () {
         Route::get('boleto-password-rules', [BoletoPasswordRuleController::class, 'index']);
         Route::post('boleto-password-rules', [BoletoPasswordRuleController::class, 'store']);
         Route::delete('boleto-password-rules/{boletoPasswordRule}', [BoletoPasswordRuleController::class, 'destroy']);
+
+        // Inbox de notificações de banco/carteira lidas pelo app Android —
+        // sem contexto até salvar (o app escolhe PF/PJ), por isso fora do
+        // grupo /contexts/{context} abaixo.
+        Route::get('notification-captures', [NotificationCaptureController::class, 'index']);
+        Route::post('notification-captures', [NotificationCaptureController::class, 'ingest']);
+        Route::post('notification-captures/{capture}/save', [NotificationCaptureController::class, 'save']);
+        Route::post('notification-captures/{capture}/ignore', [NotificationCaptureController::class, 'ignore']);
 
         Route::prefix('contexts/{context}')->middleware('can:view,context')->scopeBindings()->group(function () {
             Route::get('dashboard', [DashboardController::class, 'show']);

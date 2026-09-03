@@ -29,6 +29,7 @@ export const strings = {
     more: 'Mais',
     quickAdd: 'Lançar',
     budgets: 'Orçamentos',
+    notifications: 'Notificações',
     groups: {
       overview: 'Visão geral',
       planning: 'Planejamento',
@@ -331,6 +332,34 @@ export const strings = {
       overdue: 'Vencido',
       cancelled: 'Cancelado',
     },
+    scan: 'Escanear boleto/PIX',
+    scanFilled: 'Dados do boleto preenchidos. Confira e salve.',
+  },
+
+  scanBoleto: {
+    title: 'Escanear',
+    aim: 'Aponte para o código de barras ou o QR do PIX',
+    permissionHint: 'Precisamos da câmera para ler o código de barras do boleto ou o QR do PIX.',
+    grant: 'Permitir câmera',
+    notRecognized: 'Não reconheci esse código. Tente de novo ou digite manualmente.',
+  },
+
+  notifications: {
+    title: 'Notificações capturadas',
+    empty: 'Nada por aqui. Quando um app de banco avisar de um gasto ou receita, ele aparece aqui.',
+    permissionTitle: 'Ativar leitura de notificações',
+    permissionHint:
+      'Libere o acesso às notificações para o app capturar os avisos de gasto/receita dos seus apps de banco. Nada sai do aparelho sem você mandar.',
+    grant: 'Abrir configurações',
+    save: 'Virar lançamento',
+    saveTitle: 'Salvar como lançamento',
+    ignoreTitle: 'Ignorar notificação',
+    ignoreMessage: 'Some da lista e não vira lançamento. Não dá pra desfazer.',
+    ignore: 'Ignorar',
+    duplicateTitle: 'Já existe um lançamento igual',
+    duplicateMessage:
+      'Mesma conta, valor e data de um lançamento que já está no seu controle. Salvar mesmo assim?',
+    saveAnyway: 'Salvar mesmo assim',
   },
 
   transactions: {

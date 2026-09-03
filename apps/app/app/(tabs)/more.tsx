@@ -19,6 +19,7 @@ const MANAGE: Item[] = [
   { label: t.nav.goals, icon: 'target', href: '/goals' },
   { label: t.nav.debts, icon: 'users', href: '/debts' },
   { label: t.nav.bills, icon: 'file-text', href: '/bills' },
+  { label: t.nav.notifications, icon: 'bell', href: '/notifications' },
 ];
 
 const THEMES: { value: ThemePref; label: string }[] = [
@@ -54,9 +55,7 @@ export default function MoreTab() {
               key={item.label}
               onPress={item.href ? () => router.push(item.href!) : undefined}
             >
-              <View
-                className={cn('flex-row items-center gap-3', !item.href && 'opacity-40')}
-              >
+              <View className={cn('flex-row items-center gap-3', !item.href && 'opacity-40')}>
                 <Feather name={item.icon} size={18} color="#7c918b" />
                 <Text className="flex-1">{item.label}</Text>
                 {item.href ? (
