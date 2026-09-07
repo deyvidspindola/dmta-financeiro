@@ -220,6 +220,11 @@ export function DateRangeField({
   useEffect(() => {
     if (!open || !panelRef.current) return
 
+    // Semeia a seleção só na abertura. Depois disso o vanilla-calendar
+    // controla o próprio estado via `onClickDate` — remontar a cada
+    // `onChange` (o 1º clique de um range dispara `onChange({from,to:''})`)
+    // recriava o calendário no meio da seleção: piscada + volta pro mês do
+    // `from`, forçando o usuário a navegar de novo pro 2º clique.
     const selected = [value.from, value.to].filter(Boolean)
     const calendar = new Calendar(panelRef.current, {
       inputMode: false,
@@ -244,7 +249,8 @@ export function DateRangeField({
       destroy()
       calendar.destroy()
     }
-  }, [open, value.from, value.to])
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- semeia na abertura; o calendário controla o próprio estado depois
+  }, [open])
 
   useEffect(() => {
     if (!open) return
