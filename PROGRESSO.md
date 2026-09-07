@@ -1,5 +1,70 @@
 # Progresso do monorepo
 
+## Onde o projeto está — 07/09/2026
+
+Última leva de trabalho: **02–03/09/2026** (PRs #68–#117). Depois disso o
+projeto entrou em fase de **validação de uso** pelo dono.
+
+### Estado por trilho
+
+- **`apps/api` (backend F0 + F1) — completo e no ar em homologação.**
+  Suíte com **231 testes** verde no MySQL. F0 100%. F1: simulador de
+  compromisso, metas, motor de obrigações recorrentes e bot do Telegram
+  (código) **prontos e mergeados**. Waves pós-Mobills entregues: dashboard
+  aceita `?month=YYYY-MM` (#71), provisionamento previsto × real com
+  `status`/`cleared_at` em `statement_entries` (#86), recorrentes aparecem
+  como `pending` nos meses futuros (#90), saldo "como o mês fechou" ao
+  retroceder (#91), detalhe de consumo do orçamento (#78), reset de dados
+  por conta/contexto (#68, #81), edição de compra de cartão consumindo
+  orçamento (#88).
+- **Motor de cartão de crédito (A2 + extensões).** Importação de fatura em
+  **CSV** (#109) e **PDF com desbloqueio por senha** (#112, #113),
+  projeção de parcelas futuras na importação (#114), fechamento de faturas
+  passadas na importação (#115), `ReconcileCardInvoiceTotals` realinha o
+  `total_amount` materializado pela soma real das compras (#117), excluir
+  cartão com `?force=1` (#116), excluir compra da fatura — bloqueada em
+  fatura paga (#117).
+- **Captura (F1, canais gratuitos).** Scanner de boleto/PIX e captura de
+  notificação de banco no app (#107); fila de capturas com reset, exclusão
+  de item preso e filtro de mês (#110). **Ainda não ativados de verdade:**
+  caixa IMAP dedicada e bot no @BotFather dependem de ação manual do dono
+  (credenciais + config) — o código está pronto e testado, mas nunca rodou
+  contra dado real, então o parser de e-mail/fatura ainda não foi calibrado.
+- **`apps/web` — reforma visual concluída (Preline + Tailwind v4, D-17).**
+  Todas as telas no design system. Detalhe em `apps/web/PROGRESSO.md`.
+  Telas novas desta leva: importadores (extrato, boletos, fatura de cartão)
+  com preview e checkbox por linha, detalhe do cartão com faixa de faturas,
+  provisionamento na dashboard, cartões no modo consolidado.
+- **`apps/app` (Expo, trilho B / D-18) — B0 a B6 entregues.** Abas
+  (Início / Lançamentos / Cartões / Mais), FAB, navegador de mês + contexto,
+  dados reais na Início (B1); Lançamentos com detalhe em sheet + form de
+  novo lançamento + provisionamento (B2); Cartões — limite, faturas,
+  compras, pagar, lançar/editar compra (B3); gaveta "Mais" com Contas,
+  Categorias, Orçamento (B4), Metas, Dívidas, Boletos (B5); scanner de
+  boleto/PIX + sync de notificações (parte do #107). **Falta (B7+):**
+  aposentar o `apps/web`, biometria pós-login, build EAS de preview
+  verificado no Android, PWA no target web (B8). Build nativo (EAS) **nunca
+  foi verificado de ponta a ponta** — só `expo export -p web`.
+
+### O que falta / precisa do dono
+
+- **Ativar e-mail (IMAP) e Telegram** — criar a caixa `boletos@…`, criar o
+  bot no @BotFather, preencher as envs. Sem isso os dois canais ficam de pé
+  mas inertes.
+- **Calibrar o parser de fatura PDF** com pelo menos uma fatura real —
+  o regex de layout nunca foi validado contra um PDF de verdade.
+- **Importação em Excel (.xlsx)** e **extrato bancário em PDF** — só CSV
+  existe. (Backlog 22/08, ainda aberto.)
+- **Auditoria de performance de carregamento** — pedido antigo, nunca feito;
+  precisa de profiling real (Network + Debugbar) no ambiente do dono.
+- **Exportação / backup** (JSON + CSV, capítulo 10 da concepção) — não existe.
+- **F2 — Open Finance / Pluggy** — adiada de propósito (opt-in, D-05).
+- **D-07 — e-CNPJ / Integra Contador** — segue ABERTA por decisão.
+- **Relatório de QA do #117** (20+ achados P1–P3) — endereçado na rodada
+  07/09 (ver `claude/qa-*`).
+
+---
+
 ## Reestruturação "tipo Mobills" (01–02/09/2026)
 
 Roadmap completo em `~/.claude/plans/adaptive-twirling-gizmo.md`. Decisões:
