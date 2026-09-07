@@ -633,6 +633,7 @@ export const strings = {
       'Esse PDF está protegido num formato que não sabemos abrir. Exporte a fatura em CSV ou remova a senha antes de enviar.',
     pdfPassword: 'Senha do PDF',
     pdfSavePassword: 'Salvar essa senha para as próximas faturas',
+    pdfSavePasswordLabel: 'Senha de fatura de cartão (PDF)',
     pdfUnlock: 'Abrir fatura',
     passwordRuleSaved: 'Senha salva — nas próximas faturas ela é tentada sozinha.',
     pdfNoRows:

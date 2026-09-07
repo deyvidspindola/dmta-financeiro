@@ -98,11 +98,16 @@ export function ImportCardInvoicePage() {
       setPreview(result)
       setSummary(null)
       if (!result.needs_password && pwd && savePassword) {
+        // `card-invoice` é um domínio sentinela: a importação de fatura
+        // tenta TODAS as regras (`resolveAllCandidates`), então a senha
+        // volta a ser usada aqui — mas sem cair no `*`, que faria o motor
+        // de e-mail tentar essa senha em todo boleto recebido.
         await billCapturesApi
           .saveBoletoPasswordRule({
-            sender_domain: '*',
+            sender_domain: 'card-invoice',
             rule_type: 'fixed',
             rule_params: { password: pwd },
+            label: i.pdfSavePasswordLabel,
           })
           .then(() => toastSuccess(i.passwordRuleSaved))
           .catch(() => undefined)

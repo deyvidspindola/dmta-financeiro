@@ -89,7 +89,7 @@ export function ImportPreviewTable<T extends SelectableRow>({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-fg-muted">
-          {i.willImport(selectedCount, rows.length)}
+          {i.willImport(selectedCount, selectableLines.length)}
         </p>
         <div className="flex flex-wrap gap-2">
           <Button
