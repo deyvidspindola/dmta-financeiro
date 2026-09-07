@@ -41,6 +41,9 @@ final class IntegrationSettingsResource extends JsonResource
                 'webhook_secret_set' => filled($this->telegram_webhook_secret) || filled(config('services.telegram.webhook_secret')),
                 'allowed_chat_id' => $this->telegram_allowed_chat_id ?? config('services.telegram.allowed_chat_id'),
                 'user_email' => $this->telegram_user_email ?? config('services.telegram.user_email'),
+                // O e-mail da conta de quem está vendo a tela — a tela usa
+                // como valor padrão (o caso comum: o bot lança pra você).
+                'suggested_user_email' => $request->user()?->email,
                 // @phpstan-ignore-next-line method.nonObject (cast 'datetime' — larastan não infere casts() aqui)
                 'webhook_registered_at' => $this->telegram_webhook_registered_at?->toIso8601String(),
                 'webhook_url' => url('/api/v1/webhooks/telegram'),

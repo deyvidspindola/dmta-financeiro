@@ -14,6 +14,7 @@ export type IntegrationSettings = {
     webhook_secret_set: boolean
     allowed_chat_id: string | null
     user_email: string | null
+    suggested_user_email: string | null
     webhook_registered_at: string | null
     webhook_url: string
   }
