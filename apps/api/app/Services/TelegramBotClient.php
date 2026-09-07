@@ -44,13 +44,45 @@ final class TelegramBotClient
         }
 
         try {
-            Http::timeout(5)->post(self::BASE."/bot{$token}/sendMessage", [
+            $response = Http::timeout(5)->post(self::BASE."/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,
                 'text' => $text,
             ]);
+
+            if (($response->json('ok') ?? false) !== true) {
+                Log::warning('Telegram: sendMessage recusado.', [
+                    'channel' => 'telegram',
+                    'chat_id' => $chatId,
+                    'description' => $response->json('description'),
+                ]);
+            }
         } catch (\Throwable $e) {
             Log::warning('Telegram: falha ao enviar mensagem.', ['chat_id' => $chatId, 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * `getWebhookInfo` — o que o Telegram sabe do webhook agora: URL
+     * registrada, updates pendentes e, o mais útil, o último erro de
+     * entrega (`last_error_message`). Devolve o `result` cru.
+     *
+     * @return array{ok: bool, description?: string, result?: array<string, mixed>}
+     */
+    public function getWebhookInfo(string $token): array
+    {
+        try {
+            $response = Http::timeout(8)->get(self::BASE."/bot{$token}/getWebhookInfo");
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
+
+        $body = $response->json();
+
+        if (! is_array($body) || ($body['ok'] ?? false) !== true) {
+            return ['ok' => false, 'description' => is_array($body) ? ($body['description'] ?? 'Resposta inesperada.') : 'Resposta inesperada.'];
+        }
+
+        return ['ok' => true, 'result' => $body['result'] ?? []];
     }
 
     /**

@@ -12,6 +12,7 @@ use App\Models\Category;
 use App\Models\Context;
 use App\Models\TelegramConversation;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Implementação de produção de {@see QuickEntryChannelInterface} —
@@ -76,8 +77,16 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
     private function owner(): ?User
     {
         $email = config('services.telegram.user_email');
+        $user = $email ? User::query()->where('email', $email)->first() : null;
 
-        return $email ? User::query()->where('email', $email)->first() : null;
+        if ($user === null) {
+            Log::warning('telegram: sem dono — user_email vazio ou sem usuário correspondente.', [
+                'channel' => 'telegram',
+                'configured_email' => $email ?: null,
+            ]);
+        }
+
+        return $user;
     }
 
     private function handleAmount(TelegramConversation $conversation, string $message, User $user): ?TransactionDraftData
