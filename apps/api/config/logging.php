@@ -52,9 +52,16 @@ return [
 
     'channels' => [
 
+        // O canal `sentry` entra SEMPRE no stack, independente do LOG_STACK
+        // do .env — "todo Log::warning()/error() tem que aparecer no Sentry"
+        // é regra, não configuração opcional. Sem SENTRY_LARAVEL_DSN é um
+        // no-op (não envia nada), então é seguro no local também.
         'stack' => [
             'driver' => 'stack',
-            'channels' => explode(',', (string) env('LOG_STACK', 'single')),
+            'channels' => array_values(array_unique([
+                ...explode(',', (string) env('LOG_STACK', 'single')),
+                'sentry',
+            ])),
             'ignore_exceptions' => false,
         ],
 

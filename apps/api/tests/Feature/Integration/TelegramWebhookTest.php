@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Models\TelegramConversation;
 use App\Models\TelegramWebhookEvent;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Tests\Feature\Support\FinanceScenario;
 
 /**
@@ -44,8 +45,9 @@ test('sem allowed_chat_id → devolve o chat ID pro usuário colar na tela', fun
         && str_contains($r['text'], '777'));
 });
 
-test('chat errado → 200, avisa e grava chat_not_authorized', function () {
+test('chat errado → 200, avisa, grava chat_not_authorized e loga (Sentry)', function () {
     config(['services.telegram.webhook_secret' => null, 'services.telegram.allowed_chat_id' => '999']);
+    Log::spy();
 
     $this->postJson('/api/v1/webhooks/telegram', [
         'message' => ['chat' => ['id' => 111], 'text' => 'gastei 45'],
@@ -54,6 +56,7 @@ test('chat errado → 200, avisa e grava chat_not_authorized', function () {
     $event = TelegramWebhookEvent::query()->latest('id')->first();
     expect($event->outcome)->toBe('chat_not_authorized');
     Http::assertSent(fn ($r) => str_contains($r->url(), '/sendMessage'));
+    Log::shouldHaveReceived('warning')->withArgs(fn ($m) => str_contains($m, 'chat_not_authorized'))->once();
 });
 
 test('user_email não encontrado → avisa e grava owner_not_found', function () {
