@@ -8,31 +8,31 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Envia mensagem de volta pro chat via Telegram Bot API — um único
- * endpoint (`sendMessage`), então `Http::post` direto em vez de instalar
- * `irazasyed/telegram-bot-sdk` (sugestão do capítulo 6.4): a exceção da
- * regra "não reimplemente cliente de API de terceiro" é pra clientes com
- * muitos endpoints — aqui é uma chamada HTTP, o SDK seria superfície
- * maior que o problema.
+ * Cliente do Telegram Bot API — só os poucos endpoints que o projeto usa
+ * (`sendMessage`, `getMe`, `setWebhook`), com `Http` direto em vez de
+ * instalar `irazasyed/telegram-bot-sdk`: a exceção da regra "não
+ * reimplemente cliente de API de terceiro" é pra clientes com muitos
+ * endpoints — aqui são três chamadas HTTP.
  *
- * Sem `TELEGRAM_BOT_TOKEN` configurado, não tenta a chamada — só loga em
- * debug (mesmo padrão de "desligado até configurar" da F1). Falha de
- * rede/API nunca propaga pro caller: perder a resposta ao usuário é
- * ruim, mas não deve derrubar o webhook nem impedir o lançamento de ter
- * sido registrado.
+ * `sendMessage` nunca propaga falha (perder a resposta ao usuário não
+ * pode derrubar o webhook). `getMe` / `setWebhook` são acionados pela
+ * tela de integrações e devolvem o resultado cru pra tela mostrar — a
+ * falha ali é informação, não erro fatal.
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   25/08/2026
  *
- * @updated 25/08/2026
+ * @updated 07/09/2026
  */
 final class TelegramBotClient
 {
+    private const BASE = 'https://api.telegram.org';
+
     public function sendMessage(string $chatId, string $text): void
     {
         $token = config('services.telegram.bot_token');
@@ -44,12 +44,65 @@ final class TelegramBotClient
         }
 
         try {
-            Http::timeout(5)->post("https://api.telegram.org/bot{$token}/sendMessage", [
+            Http::timeout(5)->post(self::BASE."/bot{$token}/sendMessage", [
                 'chat_id' => $chatId,
                 'text' => $text,
             ]);
         } catch (\Throwable $e) {
             Log::warning('Telegram: falha ao enviar mensagem.', ['chat_id' => $chatId, 'error' => $e->getMessage()]);
         }
+    }
+
+    /**
+     * Valida o token e devolve os dados do bot (`getMe`).
+     *
+     * @return array{ok: bool, description?: string, username?: string, name?: string}
+     */
+    public function getMe(string $token): array
+    {
+        try {
+            $response = Http::timeout(8)->get(self::BASE."/bot{$token}/getMe");
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
+
+        $body = $response->json();
+
+        if (! is_array($body) || ($body['ok'] ?? false) !== true) {
+            return ['ok' => false, 'description' => is_array($body) ? ($body['description'] ?? 'Token inválido.') : 'Resposta inesperada do Telegram.'];
+        }
+
+        return [
+            'ok' => true,
+            'username' => $body['result']['username'] ?? null,
+            'name' => $body['result']['first_name'] ?? null,
+        ];
+    }
+
+    /**
+     * Registra a URL do webhook no Telegram, com o `secret_token` que o
+     * `TelegramWebhookController` confere em cada chamada.
+     *
+     * @return array{ok: bool, description?: string}
+     */
+    public function setWebhook(string $token, string $url, string $secret): array
+    {
+        try {
+            $response = Http::timeout(8)->post(self::BASE."/bot{$token}/setWebhook", [
+                'url' => $url,
+                'secret_token' => $secret,
+                'allowed_updates' => ['message'],
+            ]);
+        } catch (\Throwable $e) {
+            return ['ok' => false, 'description' => $e->getMessage()];
+        }
+
+        $body = $response->json();
+
+        if (! is_array($body) || ($body['ok'] ?? false) !== true) {
+            return ['ok' => false, 'description' => is_array($body) ? ($body['description'] ?? 'Falha ao registrar o webhook.') : 'Resposta inesperada do Telegram.'];
+        }
+
+        return ['ok' => true, 'description' => $body['description'] ?? 'Webhook registrado.'];
     }
 }

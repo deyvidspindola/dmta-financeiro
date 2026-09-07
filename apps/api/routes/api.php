@@ -114,6 +114,9 @@ Route::prefix('v1')->group(function () {
         // só como booleano "configurado".
         Route::get('integrations', [IntegrationSettingsController::class, 'show']);
         Route::put('integrations', [IntegrationSettingsController::class, 'update']);
+        Route::post('integrations/telegram/test', [IntegrationSettingsController::class, 'testTelegram']);
+        Route::post('integrations/telegram/webhook', [IntegrationSettingsController::class, 'registerTelegramWebhook']);
+        Route::post('integrations/boleto-mailbox/test', [IntegrationSettingsController::class, 'testBoletoMailbox']);
 
         // Inbox de notificações de banco/carteira lidas pelo app Android —
         // sem contexto até salvar (o app escolhe PF/PJ), por isso fora do
