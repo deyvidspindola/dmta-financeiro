@@ -100,6 +100,11 @@ const ImportCardInvoicePage = lazy(() =>
 const SecurityPage = lazy(() =>
   import('@/pages/SecurityPage').then((m) => ({ default: m.SecurityPage })),
 )
+const IntegrationsPage = lazy(() =>
+  import('@/pages/IntegrationsPage').then((m) => ({
+    default: m.IntegrationsPage,
+  })),
+)
 const KitPage = lazy(() =>
   import('@/pages/KitPage').then((m) => ({ default: m.KitPage })),
 )
@@ -182,6 +187,7 @@ export default function App() {
                 element={<ImportCardInvoicePage />}
               />
               <Route path="security" element={<SecurityPage />} />
+              <Route path="integrations" element={<IntegrationsPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
