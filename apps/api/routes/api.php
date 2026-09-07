@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\V1\CreditCardController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DebtController;
 use App\Http\Controllers\Api\V1\GoalController;
+use App\Http\Controllers\Api\V1\IntegrationSettingsController;
 use App\Http\Controllers\Api\V1\InvestmentContributionController;
 use App\Http\Controllers\Api\V1\InvestmentController;
 use App\Http\Controllers\Api\V1\MfaController;
@@ -107,6 +108,12 @@ Route::prefix('v1')->group(function () {
         Route::get('boleto-password-rules', [BoletoPasswordRuleController::class, 'index']);
         Route::post('boleto-password-rules', [BoletoPasswordRuleController::class, 'store']);
         Route::delete('boleto-password-rules/{boletoPasswordRule}', [BoletoPasswordRuleController::class, 'destroy']);
+
+        // Configuração das integrações da F1 (Telegram, caixa IMAP de
+        // boletos) por tela — recurso global, sem contexto. Segredo sai
+        // só como booleano "configurado".
+        Route::get('integrations', [IntegrationSettingsController::class, 'show']);
+        Route::put('integrations', [IntegrationSettingsController::class, 'update']);
 
         // Inbox de notificações de banco/carteira lidas pelo app Android —
         // sem contexto até salvar (o app escolhe PF/PJ), por isso fora do

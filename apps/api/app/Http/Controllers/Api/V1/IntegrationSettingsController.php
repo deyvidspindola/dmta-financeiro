@@ -1,0 +1,42 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Http\Controllers\Api\V1;
+
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\UpdateIntegrationSettingsRequest;
+use App\Http\Resources\IntegrationSettingsResource;
+use App\Models\IntegrationSettings;
+use App\UseCases\Settings\UpdateIntegrationSettings;
+
+/**
+ * Configuração das integrações da F1 (bot do Telegram e caixa IMAP de
+ * boletos) por tela — antes só dava por `.env` / secret do deploy.
+ * Recurso global, sem contexto PF/PJ. Segredo nunca sai em claro (ver
+ * {@see IntegrationSettingsResource}).
+ *
+ * @package App\Http\Controllers\Api\V1
+ *
+ * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
+ *
+ * @version 1.0.0
+ *
+ * @since   07/09/2026
+ *
+ * @updated 07/09/2026
+ */
+final class IntegrationSettingsController extends Controller
+{
+    public function show(): IntegrationSettingsResource
+    {
+        return new IntegrationSettingsResource(IntegrationSettings::current());
+    }
+
+    public function update(
+        UpdateIntegrationSettingsRequest $request,
+        UpdateIntegrationSettings $useCase,
+    ): IntegrationSettingsResource {
+        return new IntegrationSettingsResource($useCase->execute($request->validated()));
+    }
+}
