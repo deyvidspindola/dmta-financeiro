@@ -798,6 +798,20 @@ export const strings = {
       webhookInfoLastError: 'Último erro',
       webhookInfoNoError: 'Sem erro de entrega registrado.',
       webhookInfoNoUrl: 'O Telegram não tem webhook registrado para este bot. Clique em "Registrar webhook".',
+      eventsTitle: 'Últimas mensagens recebidas',
+      eventsRefresh: 'Atualizar',
+      eventsEmpty: 'Nenhuma mensagem chegou no webhook ainda. Se você mandou e não aparece nada aqui, o Telegram não está entregando — veja o status do webhook acima.',
+      eventOutcome: (o: string): string =>
+        ({
+          not_configured: 'Sem chat autorizado — respondi com seu chat ID',
+          chat_not_authorized: 'Chat não autorizado',
+          owner_not_found: 'E-mail do dono não encontrado',
+          secret_mismatch: 'Secret do webhook não confere',
+          help_sent: 'Não entendi — mandei a ajuda',
+          awaiting_reply: 'Conversa em andamento (perguntei o que falta)',
+          registered: 'Lançamento registrado',
+          ignored: 'Ignorado (sem texto)',
+        })[o] ?? o,
       testOk: (bot: string | null | undefined) =>
         bot ? `Conectado como @${bot}.` : 'Token válido.',
       testOkWithMessage: (bot: string | null | undefined) =>

@@ -9,28 +9,26 @@ use App\DTOs\RegisterTransactionData;
 use App\DTOs\TransactionDraftData;
 use App\Enums\CaptureOrigin;
 use App\Models\TelegramConversation;
+use App\Models\User;
 use App\Services\TelegramBotClient;
+use App\Services\TelegramWebhookRecorder;
 use App\UseCases\Transaction\RegisterTransaction;
-use Illuminate\Support\Facades\Log;
 
 /**
- * Ponto de entrada de uma mensagem do bot do Telegram (capítulo 6.4) —
- * delega a interpretação pra {@see QuickEntryChannelInterface}, e decide
- * o que fazer com o resultado: perguntar o que falta, registrar o
- * lançamento (mesmo {@see RegisterTransaction} de qualquer canal,
- * `origin: telegram`), ou responder ajuda. Chamado pelo Controller fino
- * do webhook — nunca lê o payload cru do Telegram, só `chatId`/`message`
- * já extraídos.
+ * Uma mensagem recebida do bot do Telegram (capítulo 6.4). Sempre
+ * responde alguma coisa pro chat (mesmo em erro de configuração — é a
+ * única forma de o dono saber o que está errado) e grava o desfecho em
+ * {@see TelegramWebhookRecorder} pra tela de integrações mostrar.
  *
  * @package App\UseCases\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 2.0.0
  *
  * @since   25/08/2026
  *
- * @updated 25/08/2026
+ * @updated 07/09/2026
  */
 final class HandleTelegramMessage
 {
@@ -38,36 +36,53 @@ final class HandleTelegramMessage
         private readonly QuickEntryChannelInterface $channel,
         private readonly TelegramBotClient $bot,
         private readonly RegisterTransaction $registerTransaction,
+        private readonly TelegramWebhookRecorder $recorder,
     ) {}
 
     public function execute(string $chatId, string $message): void
     {
+        [$outcome, $detail, $reply] = $this->resolve($chatId, $message);
+
+        $this->bot->sendMessage($chatId, $reply);
+        $this->recorder->record($chatId, $message, $outcome, $detail, replySent: true);
+    }
+
+    /** @return array{0: string, 1: ?string, 2: string} outcome, detalhe, texto da resposta */
+    private function resolve(string $chatId, string $message): array
+    {
         $allowed = config('services.telegram.allowed_chat_id');
 
-        if (! $allowed || (string) $allowed !== $chatId) {
-            Log::warning('telegram: chat não autorizado — mensagem ignorada.', [
-                'channel' => 'telegram',
-                'received_chat_id' => $chatId,
-                'allowed_chat_id' => $allowed ? (string) $allowed : null,
-            ]);
+        if (! $allowed) {
+            return ['not_configured', null, "Seu chat ID é {$chatId}. Cole ele em Integrações → Telegram → \"Chat ID autorizado\" pra ativar o bot."];
+        }
 
-            return;
+        if ((string) $allowed !== $chatId) {
+            return ['chat_not_authorized', "recebido {$chatId}, autorizado {$allowed}", "Este chat (ID {$chatId}) não é o autorizado. Ajuste em Integrações → Telegram."];
+        }
+
+        $email = config('services.telegram.user_email');
+
+        if (blank($email) || ! User::query()->where('email', $email)->exists()) {
+            return ['owner_not_found', $email ? "email: {$email}" : 'sem email', 'Configuração incompleta: o e-mail do dono das contas não bate com nenhum usuário. Ajuste em Integrações → Telegram.'];
         }
 
         $draft = $this->channel->parseMessage($chatId, $message);
 
         if ($draft === null) {
-            $this->bot->sendMessage($chatId, $this->helpText());
-
-            return;
+            return ['help_sent', null, $this->helpText()];
         }
 
         if (! $draft->isComplete()) {
-            $this->bot->sendMessage($chatId, $this->nextQuestion($chatId, $draft));
-
-            return;
+            return ['awaiting_reply', null, $this->nextQuestion($chatId, $draft)];
         }
 
+        $this->register($draft);
+
+        return ['registered', "{$draft->description} — R$ {$draft->amount}", "✅ Lançamento registrado: {$draft->description} — R$ {$draft->amount}"];
+    }
+
+    private function register(TransactionDraftData $draft): void
+    {
         $this->registerTransaction->execute(new RegisterTransactionData(
             contextId: (int) $draft->contextId,
             accountId: (int) $draft->accountId,
@@ -78,8 +93,6 @@ final class HandleTelegramMessage
             categoryId: $draft->categoryId,
             origin: CaptureOrigin::Telegram,
         ));
-
-        $this->bot->sendMessage($chatId, "✅ Lançamento registrado: {$draft->description} — R$ {$draft->amount}");
     }
 
     private function helpText(): string

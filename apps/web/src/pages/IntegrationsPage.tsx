@@ -71,6 +71,48 @@ function ResultBanner({ result }: { result: ActionResult | null }) {
   return null
 }
 
+function TelegramEventsView() {
+  const events = useQuery({
+    queryKey: ['telegram-events'],
+    queryFn: integrationsApi.getTelegramEvents,
+    enabled: false,
+  })
+
+  return (
+    <div className="rounded-xl border border-line bg-surface-2 p-3">
+      <div className="flex items-center justify-between">
+        <span className="text-sm font-medium text-fg">{t.telegram.eventsTitle}</span>
+        <button
+          type="button"
+          className="text-xs font-medium text-brand-600 hover:underline"
+          onClick={() => events.refetch()}
+        >
+          {t.telegram.eventsRefresh}
+        </button>
+      </div>
+      {events.data && events.data.length === 0 ? (
+        <p className="mt-2 text-xs text-fg-muted">{t.telegram.eventsEmpty}</p>
+      ) : null}
+      {events.data && events.data.length > 0 ? (
+        <ul className="mt-2 space-y-1.5 text-xs">
+          {events.data.map((e) => (
+            <li key={e.id} className="border-b border-line pb-1.5 last:border-0">
+              <div className="flex justify-between gap-2 text-fg-muted">
+                <span className="truncate">
+                  {e.message_text ? `"${e.message_text}"` : '—'}
+                </span>
+                <span className="shrink-0">{formatDate(e.created_at)}</span>
+              </div>
+              <div className="font-medium text-fg">{t.telegram.eventOutcome(e.outcome)}</div>
+              {e.detail ? <div className="text-fg-subtle">{e.detail}</div> : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  )
+}
+
 function WebhookInfoView({ result }: { result: WebhookInfo['result'] }) {
   if (!result?.url) {
     return (
@@ -222,6 +264,8 @@ function TelegramSection({ data }: { data: IntegrationSettings }) {
             {t.telegram.registerWebhook}
           </Button>
         </div>
+
+        <TelegramEventsView />
       </div>
     </Card>
   )

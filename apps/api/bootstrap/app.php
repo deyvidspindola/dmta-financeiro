@@ -29,7 +29,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         // Violação de regra de negócio (app/Exceptions/Domain/*) é erro do
         // cliente, não do servidor — 422, igual a uma falha de validação,
-        // nunca 500.
+        // nunca 500. E não vai pro Sentry: "lançamento duplicado", "fatura
+        // já paga", "captura já processada" são fluxo normal, não incidente.
+        $exceptions->dontReport(DomainException::class);
         $exceptions->render(fn (DomainException $e) => new JsonResponse(['message' => $e->getMessage()], 422));
 
         // Sentry desde o primeiro bloco de código (F0), mesmo sem DSN
