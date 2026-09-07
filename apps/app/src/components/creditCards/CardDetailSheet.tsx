@@ -18,6 +18,11 @@ const INVOICE_TONE: Record<InvoiceStatus, 'neutral' | 'accent' | 'brand'> = {
   paid: 'neutral',
 };
 
+/** Mesma regra do `apps/web`: o backend recusa editar parcela ou compra em fatura paga. */
+function isPurchaseEditable(purchase: CardPurchase, invoiceStatus: InvoiceStatus): boolean {
+  return purchase.installment_number == null && invoiceStatus !== 'paid';
+}
+
 export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; onClose: () => void }) {
   const router = useRouter();
   const queryClient = useQueryClient();
@@ -185,8 +190,15 @@ export function CardDetailSheet({ card, onClose }: { card: CreditCard | null; on
                           className="flex-row items-center gap-2 border-b border-line py-2.5"
                         >
                           <Pressable
-                            onPress={() => openPurchaseForm(p)}
-                            className="min-w-0 flex-1 flex-row items-center justify-between gap-3 active:opacity-60"
+                            onPress={() =>
+                              isPurchaseEditable(p, invoice.status)
+                                ? openPurchaseForm(p)
+                                : toastError(t.creditCards.editPurchaseBlocked)
+                            }
+                            className={cn(
+                              'min-w-0 flex-1 flex-row items-center justify-between gap-3',
+                              isPurchaseEditable(p, invoice.status) && 'active:opacity-60',
+                            )}
                           >
                             <Text numberOfLines={1} className="flex-1">
                               {p.description}
