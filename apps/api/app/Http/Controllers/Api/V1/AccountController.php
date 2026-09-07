@@ -25,17 +25,23 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 07/09/2026
  */
 final class AccountController extends Controller
 {
     public function index(Context $context): AnonymousResourceCollection
     {
         return AccountResource::collection($context->accounts()->get());
+    }
+
+    /** Uma conta do contexto. `scopeBindings` garante 404 para conta de outro contexto. */
+    public function show(Context $context, Account $account): AccountResource
+    {
+        return new AccountResource($account);
     }
 
     public function store(StoreAccountRequest $request, Context $context, RegisterAccount $useCase): AccountResource
