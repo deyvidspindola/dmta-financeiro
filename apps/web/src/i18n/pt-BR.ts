@@ -792,6 +792,12 @@ export const strings = {
       webhookRegistered: (when: string) => `Webhook registrado em ${when}.`,
       webhookNotRegistered: 'Webhook ainda não registrado.',
       webhookUrl: 'URL do webhook',
+      webhookStatus: 'Ver status do webhook',
+      webhookInfoUrl: 'URL no Telegram',
+      webhookInfoPending: 'Updates pendentes',
+      webhookInfoLastError: 'Último erro',
+      webhookInfoNoError: 'Sem erro de entrega registrado.',
+      webhookInfoNoUrl: 'O Telegram não tem webhook registrado para este bot. Clique em "Registrar webhook".',
       testOk: (bot: string | null | undefined) =>
         bot ? `Conectado como @${bot}.` : 'Token válido.',
       testOkWithMessage: (bot: string | null | undefined) =>

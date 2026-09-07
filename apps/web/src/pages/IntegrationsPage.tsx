@@ -5,6 +5,7 @@ import type {
   ActionResult,
   IntegrationSettings,
   UpdateIntegrationsInput,
+  WebhookInfo,
 } from '@/api/integrations'
 import {
   Alert,
@@ -70,6 +71,34 @@ function ResultBanner({ result }: { result: ActionResult | null }) {
   return null
 }
 
+function WebhookInfoView({ result }: { result: WebhookInfo['result'] }) {
+  if (!result?.url) {
+    return (
+      <div className="mt-2 rounded-lg bg-negative/10 p-2 text-negative">
+        {t.telegram.webhookInfoNoUrl}
+      </div>
+    )
+  }
+  return (
+    <dl className="mt-2 space-y-0.5">
+      <div>
+        <dt className="inline font-medium">{t.telegram.webhookInfoUrl}: </dt>
+        <dd className="inline break-all">{result.url}</dd>
+      </div>
+      <div>
+        <dt className="inline font-medium">{t.telegram.webhookInfoPending}: </dt>
+        <dd className="inline">{result.pending_update_count ?? 0}</dd>
+      </div>
+      <div>
+        <dt className="inline font-medium">{t.telegram.webhookInfoLastError}: </dt>
+        <dd className={result.last_error_message ? 'inline text-negative' : 'inline'}>
+          {result.last_error_message ?? t.telegram.webhookInfoNoError}
+        </dd>
+      </div>
+    </dl>
+  )
+}
+
 function TelegramSection({ data }: { data: IntegrationSettings }) {
   const tg = data.telegram
   const save = useSave()
@@ -96,6 +125,16 @@ function TelegramSection({ data }: { data: IntegrationSettings }) {
     onSuccess: (r) => {
       setResult(r)
       if (r.ok) toastSuccess(t.telegram.webhookOk)
+    },
+    onError: (error) => setResult({ ok: false, error: getErrorMessage(error) }),
+  })
+
+  const [webhookInfo, setWebhookInfo] = useState<WebhookInfo | null>(null)
+  const info = useMutation({
+    mutationFn: integrationsApi.getTelegramWebhookInfo,
+    onSuccess: (r) => {
+      setWebhookInfo(r)
+      if (!r.ok) setResult({ ok: false, error: r.error })
     },
     onError: (error) => setResult({ ok: false, error: getErrorMessage(error) }),
   })
@@ -147,6 +186,17 @@ function TelegramSection({ data }: { data: IntegrationSettings }) {
               ? t.telegram.webhookRegistered(formatDate(tg.webhook_registered_at))
               : t.telegram.webhookNotRegistered}
           </div>
+          <button
+            type="button"
+            className="mt-2 font-medium text-brand-600 hover:underline disabled:opacity-50"
+            onClick={() => info.mutate()}
+            disabled={!tg.configured || info.isPending}
+          >
+            {t.telegram.webhookStatus}
+          </button>
+          {webhookInfo?.ok ? (
+            <WebhookInfoView result={webhookInfo.result} />
+          ) : null}
         </div>
 
         <ResultBanner result={result} />

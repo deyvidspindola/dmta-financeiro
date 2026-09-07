@@ -50,6 +50,18 @@ export type ActionResult = {
   unseen?: number
 }
 
+export type WebhookInfo = {
+  ok: boolean
+  error?: string
+  result?: {
+    url?: string
+    pending_update_count?: number
+    last_error_message?: string
+    last_error_date?: number
+    ip_address?: string
+  }
+}
+
 export async function getIntegrations(): Promise<IntegrationSettings> {
   return unwrapData(
     await http.get<IntegrationSettings | { data: IntegrationSettings }>(
@@ -75,6 +87,10 @@ export async function testTelegram(): Promise<ActionResult> {
 
 export async function registerTelegramWebhook(): Promise<ActionResult> {
   return http.post<ActionResult>('/integrations/telegram/webhook')
+}
+
+export async function getTelegramWebhookInfo(): Promise<WebhookInfo> {
+  return http.get<WebhookInfo>('/integrations/telegram/webhook-info')
 }
 
 export async function testBoletoMailbox(): Promise<ActionResult> {
