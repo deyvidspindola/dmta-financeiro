@@ -17,17 +17,28 @@ export type ParsedBoleto = {
 /** 07/10/1997 — base do fator de vencimento FEBRABAN. */
 const FACTOR_BASE = Date.UTC(1997, 9, 7);
 const DAY_MS = 86_400_000;
-/** Fator 1000 = 22/02/2025 (novo ciclo, após o estouro de 9999). */
-const FACTOR_ROLLOVER_CUTOFF = Date.UTC(2025, 1, 22);
+/**
+ * Em 22/02/2025 o fator estourou 9999 e voltou pra 1000. A FEBRABAN
+ * definiu que o novo "1000" continua a contagem como se fosse 10000 —
+ * ou seja, fator do novo ciclo = fator + 9000 dias sobre a base.
+ */
+const FACTOR_NEW_CYCLE_OFFSET = 9000;
 
 function onlyDigits(raw: string): string {
   return raw.replace(/\D+/g, '');
 }
 
-function dueDateFromFactor(factor: number): string | null {
+function dueDateFromFactor(factor: number, now: number = Date.now()): string | null {
   if (factor <= 0) return null;
-  let ms = FACTOR_BASE + factor * DAY_MS;
-  if (ms < FACTOR_ROLLOVER_CUTOFF) ms += 9000 * DAY_MS;
+  // O mesmo fator de 4 dígitos serve pro ciclo antigo e pro novo. Um
+  // boleto que se escaneia está vencendo perto de hoje (atrasado ou a
+  // vencer) — então fica com a interpretação mais próxima de agora, em
+  // vez de assumir cegamente um dos ciclos por um corte de data fixo
+  // (que datava errado todo boleto atrasado de antes de 22/02/2025).
+  const oldCycle = FACTOR_BASE + factor * DAY_MS;
+  const newCycle = FACTOR_BASE + (factor + FACTOR_NEW_CYCLE_OFFSET) * DAY_MS;
+  const ms =
+    Math.abs(oldCycle - now) <= Math.abs(newCycle - now) ? oldCycle : newCycle;
   const d = new Date(ms);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
     d.getUTCDate(),

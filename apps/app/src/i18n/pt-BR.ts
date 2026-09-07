@@ -257,6 +257,7 @@ export const strings = {
     confirmDeletePaid:
       'Este cartão tem fatura paga. Excluir apaga o histórico do cartão, mas os pagamentos continuam nos lançamentos. Excluir mesmo assim?',
     purchaseDeleted: 'Compra excluída.',
+    editPurchaseBlocked: 'Compra parcelada ou em fatura paga não pode ser editada.',
     confirmDeletePurchase: 'Excluir esta compra da fatura?',
     confirmDeletePurchaseGroup: (n: number) =>
       `Esta compra é parcelada. Excluir apaga as ${n} parcelas, em todas as faturas.`,

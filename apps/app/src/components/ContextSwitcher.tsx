@@ -66,12 +66,14 @@ export function ContextSwitcher() {
         <Pressable className="flex-1 bg-black/40" onPress={() => setOpen(false)}>
           <View className="mt-14 px-4">
             <Pressable
-              // 2 seções + N contextos: mostra tudo, só rola se passar de ~metade da tela.
+              // 2 seções + N contextos: cap na altura; a ScrollView rola
+              // sozinha quando o conteúdo passa disso (não dá pra amarrar
+              // no nº de contextos — em tela baixa 5 já não cabem).
               style={{ maxHeight: screenH * 0.72 }}
               className="ml-auto w-72 overflow-hidden rounded-xl border border-line bg-surface"
               onPress={(e) => e.stopPropagation()}
             >
-              <ScrollView scrollEnabled={ordered.length > 6}>
+              <ScrollView>
                 <View className="px-3 py-2">
                   <Text
                     variant="muted"
