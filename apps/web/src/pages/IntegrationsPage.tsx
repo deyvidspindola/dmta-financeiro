@@ -146,7 +146,9 @@ function TelegramSection({ data }: { data: IntegrationSettings }) {
   const save = useSave()
   const [botToken, setBotToken] = useState('')
   const [chatId, setChatId] = useState(tg.allowed_chat_id ?? '')
-  const [email, setEmail] = useState(tg.user_email ?? '')
+  const [email, setEmail] = useState(
+    tg.user_email ?? tg.suggested_user_email ?? '',
+  )
   const [result, setResult] = useState<ActionResult | null>(null)
 
   const test = useMutation({

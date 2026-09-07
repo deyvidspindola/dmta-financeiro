@@ -63,7 +63,7 @@ final class HandleTelegramMessage
         $email = config('services.telegram.user_email');
 
         if (blank($email) || ! User::query()->where('email', $email)->exists()) {
-            return ['owner_not_found', $email ? "email: {$email}" : 'sem email', 'Configuração incompleta: o e-mail do dono das contas não bate com nenhum usuário. Ajuste em Integrações → Telegram.'];
+            return ['owner_not_found', $email ? "email: {$email}" : 'sem email', 'Configuração incompleta: em Integrações → Telegram, o campo "E-mail do dono" precisa ser o e-mail da SUA conta no app (o que você usa pra entrar). Está como '.($email ?: 'vazio').'.'];
         }
 
         $draft = $this->channel->parseMessage($chatId, $message);

@@ -17,15 +17,18 @@ describe('GET/PUT /api/v1/integrations', function () {
     });
 
     test('devolve o shape com segredo só como booleano', function () {
+        $user = actingAsApi();
+
         $this->getJson('/api/v1/integrations')
             ->assertOk()
             ->assertJsonPath('data.telegram.configured', false)
             ->assertJsonPath('data.telegram.bot_token_set', false)
+            ->assertJsonPath('data.telegram.suggested_user_email', $user->email)
             ->assertJsonPath('data.boleto_mailbox.enabled', false)
             ->assertJsonPath('data.boleto_mailbox.port', 993)
             ->assertJsonStructure([
                 'data' => [
-                    'telegram' => ['configured', 'bot_token_set', 'webhook_url', 'allowed_chat_id'],
+                    'telegram' => ['configured', 'bot_token_set', 'webhook_url', 'allowed_chat_id', 'suggested_user_email'],
                     'boleto_mailbox' => ['enabled', 'host', 'port', 'encryption', 'password_set'],
                 ],
             ]);
