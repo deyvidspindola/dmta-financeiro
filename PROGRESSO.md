@@ -48,8 +48,10 @@ projeto entrou em fase de **validação de uso** pelo dono.
 
 ### O que falta / precisa do dono
 
-- **Ativar e-mail (IMAP) e Telegram** — criar a caixa `boletos@…`, criar o
-  bot no @BotFather, preencher as envs. Sem isso os dois canais ficam de pé
+- **Ativar e-mail (IMAP) e Telegram** — criar a caixa `boletos@…` e o bot no
+  @BotFather, e preencher em **`/integrations`** (tela nova, #124–#126 —
+  token/host/senha/etc. saem do `.env` pra tela, com "testar conexão" e
+  "registrar webhook" embutidos). Sem preencher, os dois canais ficam de pé
   mas inertes.
 - **Calibrar o parser de fatura PDF** com pelo menos uma fatura real —
   o regex de layout nunca foi validado contra um PDF de verdade.

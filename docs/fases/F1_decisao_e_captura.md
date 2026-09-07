@@ -8,9 +8,10 @@ e Telegram. Pluggy continua fora (F2).
 > **Status:** todo o código está pronto e mergeado. Simulador, metas e motor
 > de obrigações recorrentes: **concluídos, com tela no `apps/web` e no
 > `apps/app`**. Motor de e-mail e bot do Telegram: **código pronto e
-> testado, mas nunca ativados** — dependem de ação manual do dono (criar a
-> caixa IMAP, criar o bot no @BotFather, preencher as envs). Enquanto não
-> ativados, os parsers de e-mail/boleto não foram calibrados contra dado
+> testado, com tela de configuração** (`apps/web` `/integrations`, #124–#126
+> — token, host, senha, "testar conexão", "registrar webhook") — falta só o
+> dono criar o bot no @BotFather / a caixa IMAP e preencher. Enquanto não
+> preenchido, os parsers de e-mail/boleto não foram calibrados contra dado
 > real. Ver `../../PROGRESSO.md`.
 
 ## Escopo
