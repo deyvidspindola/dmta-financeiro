@@ -1,6 +1,6 @@
 # Progresso — apps/web (F0 + F1 + reestruturação Mobills)
 
-Atualizado em 2026-09-01 (reforma visual F0 — Tailwind + Preline).
+Atualizado em 2026-09-07 (sync de status; última leva de código: 03/09).
 
 ## Reforma visual (D-17 / DT-10)
 
@@ -125,14 +125,31 @@ Plano por fases: `~/.claude/plans/reforma-visual-preline-apps-web.md`.
 
 ## Falta / pendências
 
-- IMAP real (caixa de e-mail)
-- `GET /accounts/{id}` dedicado (hoje resolve via listagem no cliente)
-- Dashboard API não recebe mês — métricas do topo são do mês corrente da API;
-  seções novas (lançamentos, orçamentos) respeitam `monthStore`
+- IMAP real (caixa de e-mail) — ação manual do dono, ver `docs/fases/F1`.
+- `GET /accounts/{id}` dedicado (hoje resolve via listagem no cliente).
+- Tela de `RecurringBill` (DARF/DAS) — backend #9 pronto, sem UI.
+- Exportação / backup (JSON + CSV, capítulo 10).
+- Importação `.xlsx` e extrato em PDF (só CSV existe).
+
+## Feito depois da reforma visual (02–03/09)
+
+- Dashboard passou a aceitar `?month=YYYY-MM` (#71) — o passador de mês rege
+  dashboard, lançamentos e boletos (#72).
+- Provisionamento previsto × real na dashboard + efetivar (#93).
+- "Despesas previstas do mês" na dashboard e nos orçamentos (#75).
+- Detalhe de consumo do orçamento — o que está consumindo o teto (#79).
+- Cartões visíveis no modo Consolidado (#85); listagens estilo extrato com
+  detalhe em modal (#87); editar compra de cartão com categoria (#89).
+- Primitivos de UI (`MoneyInput`, `DatePickerField`, `SwitchField`,
+  `ConfirmDialog`/`useConfirm`) fechados em todos os forms (#83, #96, #98).
+- Bug de categoria de receita corrigido (#82).
+- Importadores: extrato, boletos e **fatura de cartão** (CSV + PDF com
+  senha) com preview e checkbox por linha (#108, #109, #112, #113).
+- Detalhe do cartão: excluir cartão, excluir/editar compra da fatura,
+  tratamento de erro nas queries (#116, #117).
 
 ## Próximo passo concreto
 
-Reforma visual fechada. Backlog de features (não visual):
-- Unificar recorrência na UI, gaveta exportação/backup.
 - Consumir filtros de `GET /bills` server-side onde ainda falta.
-- `apps/app` (D-18) segue em trilho próprio (B1+).
+- Unificar recorrência na UI; gaveta de exportação/backup.
+- `apps/app` (D-18) segue em trilho próprio (B7: aposentar o `apps/web`).
