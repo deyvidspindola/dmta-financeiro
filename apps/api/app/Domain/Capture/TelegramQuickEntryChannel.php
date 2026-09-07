@@ -12,30 +12,28 @@ use App\Models\Category;
 use App\Models\Context;
 use App\Models\TelegramConversation;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 
 /**
  * Implementação de produção de {@see QuickEntryChannelInterface} —
  * conversa guiada em 2 ou 3 passos: valor → [contexto, só se houver mais
- * de um] → categoria. Contexto entra antes de categoria mesmo o
- * documento de concepção sugerindo a ordem "valor → categoria →
- * contexto": categoria é sempre de um contexto específico neste modelo
- * de dados (D-12), não dá pra resolver o nome sem saber antes qual
- * contexto — decisão registrada aqui, não uma divergência silenciosa.
+ * de um] → categoria. Contexto entra antes de categoria porque categoria
+ * é sempre de um contexto específico (D-12).
  *
  * Estado entre mensagens fica em {@see TelegramConversation} (webhook é
- * stateless). Sem `TELEGRAM_USER_EMAIL` configurado, não sabe de quem
- * são os contextos — devolve `null` sempre, mesmo espírito de
- * "desligado até configurar" do resto da F1.
+ * stateless). O nome de contexto/categoria é casado por "a resposta está
+ * contida no nome" (sem acento) — e quando não bate, o bot lista as
+ * opções válidas pro usuário copiar o nome exato, ou "cancelar" pra sair.
  *
  * @package App\Domain\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   25/08/2026
  *
- * @updated 25/08/2026
+ * @updated 07/09/2026
  */
 final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
 {
@@ -46,12 +44,17 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
         return CaptureOrigin::Telegram;
     }
 
+    public function cancel(string $chatId): void
+    {
+        TelegramConversation::query()->where('chat_id', $chatId)->delete();
+    }
+
     public function parseMessage(string $chatId, string $message): ?TransactionDraftData
     {
         $user = $this->owner();
 
         if ($user === null || str_starts_with(trim($message), '/')) {
-            TelegramConversation::query()->where('chat_id', $chatId)->delete();
+            $this->cancel($chatId);
 
             return null;
         }
@@ -61,8 +64,6 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
             ['stage' => TelegramConversationStage::AwaitingAmount->value, 'draft' => []],
         );
 
-        // stage já vem cast pra enum (casts() do model) — larastan não
-        // infere isso sozinho, então ajuda com @var em vez de suprimir.
         /** @var TelegramConversationStage $stage */
         $stage = $conversation->stage;
 
@@ -73,10 +74,27 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
         };
     }
 
+    public function describeExpectedReply(string $chatId): ?string
+    {
+        $conversation = TelegramConversation::query()->where('chat_id', $chatId)->first();
+
+        if ($conversation === null) {
+            return null;
+        }
+
+        /** @var TelegramConversationStage $stage */
+        $stage = $conversation->stage;
+
+        return match ($stage) {
+            TelegramConversationStage::AwaitingAmount => 'Manda o valor e uma descrição (ex.: "gastei 45 no mercado").',
+            TelegramConversationStage::AwaitingContext => 'Em qual contexto? '.$this->options($this->owner()?->contexts()->pluck('name')->all() ?? []),
+            TelegramConversationStage::AwaitingCategory => $this->categoryPrompt($conversation),
+        };
+    }
+
     private function owner(): ?User
     {
-        // O e-mail já foi validado por HandleTelegramMessage antes de
-        // chegar aqui — a checagem de null continua só por segurança.
+        // O e-mail já foi validado por HandleTelegramMessage antes de chegar aqui.
         $email = config('services.telegram.user_email');
 
         return $email ? User::query()->where('email', $email)->first() : null;
@@ -100,27 +118,28 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
 
         if ($contexts->count() === 1) {
             $draft = [...$draft, ...$this->contextFields($contexts->first())];
-            $conversation->update(['draft' => $draft, 'stage' => TelegramConversationStage::AwaitingCategory->value]);
+            $next = TelegramConversationStage::AwaitingCategory;
         } else {
-            $conversation->update(['draft' => $draft, 'stage' => TelegramConversationStage::AwaitingContext->value]);
+            $next = TelegramConversationStage::AwaitingContext;
         }
+
+        $conversation->update(['draft' => $draft, 'stage' => $next->value]);
 
         return $this->toDto($draft);
     }
 
     private function handleContext(TelegramConversation $conversation, string $message, User $user): ?TransactionDraftData
     {
-        $context = $user->contexts()
-            ->get()
-            ->first(fn (Context $c) => str_contains(mb_strtolower($c->name), mb_strtolower(trim($message))));
+        $context = $user->contexts()->get()
+            ->first(fn (Context $c) => $this->matches($c->name, $message));
 
         if ($context === null) {
             return null;
         }
 
-        /** @var array<string, mixed> $currentDraft */
-        $currentDraft = $conversation->draft;
-        $draft = [...$currentDraft, ...$this->contextFields($context)];
+        /** @var array<string, mixed> $current */
+        $current = $conversation->draft;
+        $draft = [...$current, ...$this->contextFields($context)];
         $conversation->update(['draft' => $draft, 'stage' => TelegramConversationStage::AwaitingCategory->value]);
 
         return $this->toDto($draft);
@@ -130,11 +149,8 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
     {
         /** @var array<string, mixed> $draft */
         $draft = $conversation->draft;
-        $category = Category::query()
-            ->where('context_id', $draft['context_id'])
-            ->where('type', $draft['type'])
-            ->get()
-            ->first(fn (Category $c) => str_contains(mb_strtolower($c->name), mb_strtolower(trim($message))));
+        $category = $this->categoriesFor($draft)
+            ->first(fn (Category $c) => $this->matches($c->name, $message));
 
         if ($category === null) {
             return null;
@@ -144,6 +160,65 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
         $conversation->delete();
 
         return $this->toDto($draft);
+    }
+
+    private function categoryPrompt(TelegramConversation $conversation): string
+    {
+        /** @var array<string, mixed> $draft */
+        $draft = $conversation->draft;
+
+        if (($draft['account_id'] ?? null) === null) {
+            $this->cancel((string) $conversation->chat_id);
+
+            return 'Esse contexto não tem conta cadastrada — cadastre uma no app antes de lançar por aqui.';
+        }
+
+        $names = $this->categoriesFor($draft)->pluck('name')->all();
+
+        if ($names === []) {
+            $this->cancel((string) $conversation->chat_id);
+
+            return 'Esse contexto não tem categoria cadastrada pra esse tipo — cadastre uma no app primeiro.';
+        }
+
+        return 'Qual categoria? '.$this->options($names);
+    }
+
+    /**
+     * @param  array<string, mixed>  $draft
+     * @return Collection<int, Category>
+     */
+    private function categoriesFor(array $draft): Collection
+    {
+        return Category::query()
+            ->where('context_id', $draft['context_id'] ?? 0)
+            ->where('type', $draft['type'] ?? '')
+            ->orderBy('name')
+            ->get();
+    }
+
+    /** A resposta do usuário (parte do) nome da opção, sem acento. Não o contrário — "gastei 100..." não pode casar com "gás". */
+    private function matches(string $name, string $message): bool
+    {
+        $b = $this->normalize($message);
+
+        return $b !== '' && str_contains($this->normalize($name), $b);
+    }
+
+    private function normalize(string $value): string
+    {
+        $value = mb_strtolower(trim($value));
+
+        return strtr($value, [
+            'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'é' => 'e', 'ê' => 'e',
+            'í' => 'i', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ú' => 'u', 'ç' => 'c',
+        ]);
+    }
+
+    /** @param  list<string>  $names */
+    private function options(array $names): string
+    {
+        return $names === [] ? 'Responda com o nome.' : 'Opções: '.implode(', ', $names).'.';
     }
 
     /** @return array{context_id: int, account_id: ?int} */
