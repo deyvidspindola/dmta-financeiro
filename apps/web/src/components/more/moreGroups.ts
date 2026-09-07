@@ -10,6 +10,7 @@ import {
   Landmark,
   ListPlus,
   LogOut,
+  Plug,
   PiggyBank,
   Receipt,
   Repeat,
@@ -125,6 +126,12 @@ export const MORE_GROUPS: MoreGroup[] = [
         to: '/investments',
         label: n.investments,
         icon: PiggyBank,
+      },
+      {
+        kind: 'link',
+        to: '/integrations',
+        label: n.integrations,
+        icon: Plug,
       },
       {
         kind: 'link',

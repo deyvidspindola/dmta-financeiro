@@ -27,6 +27,7 @@ export const strings = {
     context: 'Contexto',
     consolidated: 'Consolidado',
     security: 'Segurança',
+    integrations: 'Integrações',
     more: 'Mais',
     quickAdd: 'Lançar',
     budgets: 'Orçamentos',
@@ -768,6 +769,50 @@ export const strings = {
     telegram: 'Telegram',
     scanner: 'Scanner',
     aggregator: 'Open Finance',
+  },
+
+  integrations: {
+    title: 'Integrações',
+    hint: 'Bot do Telegram e caixa de e-mail para captura de boletos. O que você salvar aqui tem precedência sobre as variáveis de ambiente do servidor.',
+    save: 'Salvar',
+    saved: 'Configuração salva.',
+    testConnection: 'Testar conexão',
+    telegram: {
+      title: 'Bot do Telegram',
+      hint: 'Lançamento rápido por mensagem ("gastei 45 no mercado"). Crie o bot no @BotFather e cole o token aqui.',
+      botToken: 'Token do bot',
+      botTokenPlaceholderSet: '•••••••• (salvo — deixe em branco para manter)',
+      botTokenPlaceholderEnv: 'Vindo do ambiente — preencha para sobrescrever',
+      botTokenPlaceholderEmpty: 'Cole o token do @BotFather',
+      allowedChatId: 'Chat ID autorizado',
+      allowedChatIdHint: 'Só este chat é atendido (uso pessoal). Descubra o seu enviando /start pro @userinfobot.',
+      userEmail: 'E-mail do dono das contas',
+      userEmailHint: 'O lançamento é criado como se fosse deste usuário.',
+      registerWebhook: 'Registrar webhook',
+      webhookRegistered: (when: string) => `Webhook registrado em ${when}.`,
+      webhookNotRegistered: 'Webhook ainda não registrado.',
+      webhookUrl: 'URL do webhook',
+      testOk: (bot: string | null | undefined) =>
+        bot ? `Conectado como @${bot}.` : 'Token válido.',
+      testOkWithMessage: (bot: string | null | undefined) =>
+        `${bot ? `Conectado como @${bot}. ` : ''}Mandei uma mensagem de teste — confira no seu Telegram.`,
+      webhookOk: 'Webhook registrado no Telegram.',
+    },
+    mailbox: {
+      title: 'Caixa de boletos (e-mail)',
+      hint: 'Uma caixa IMAP dedicada (nunca a sua pessoal). Encaminhe boletos pra ela e eles viram pendências de confirmação.',
+      enabled: 'Ligada',
+      host: 'Servidor IMAP',
+      port: 'Porta',
+      encryption: 'Criptografia',
+      username: 'Usuário',
+      password: 'Senha',
+      passwordPlaceholderSet: '•••••••• (salva — deixe em branco para manter)',
+      passwordPlaceholderEnv: 'Vindo do ambiente — preencha para sobrescrever',
+      testOk: (unseen: number) =>
+        `Conectou. ${unseen} e-mail(s) não lido(s) na INBOX.`,
+    },
+    testFail: (error: string) => `Falhou: ${error}`,
   },
 
   categories: {
