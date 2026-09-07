@@ -121,6 +121,7 @@ Route::prefix('v1')->group(function () {
             Route::get('dashboard/evolution', [DashboardController::class, 'evolution']);
 
             Route::get('accounts', [AccountController::class, 'index']);
+            Route::get('accounts/{account}', [AccountController::class, 'show']);
             Route::post('accounts', [AccountController::class, 'store']);
             Route::patch('accounts/{account}', [AccountController::class, 'update']);
             Route::delete('accounts/{account}', [AccountController::class, 'destroy']);
