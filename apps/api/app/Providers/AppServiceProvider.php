@@ -10,9 +10,11 @@ use App\Domain\Capture\PdfPasswordResolverInterface;
 use App\Domain\Capture\QuickEntryChannelInterface;
 use App\Domain\Capture\RuleBasedPasswordResolver;
 use App\Domain\Capture\TelegramQuickEntryChannel;
+use App\Models\IntegrationSettings;
 use Illuminate\Support\ServiceProvider;
 use Smalot\PdfParser\Config as PdfParserConfig;
 use Smalot\PdfParser\Parser as PdfParser;
+use Throwable;
 
 /**
  * Provider padrão do Laravel para bindings e bootstrap da aplicação.
@@ -70,6 +72,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        $this->applyIntegrationSettingsFromDatabase();
+    }
+
+    /**
+     * Sobrepõe `config('services.telegram.*')` e
+     * `config('services.boleto_mailbox.*')` com o que estiver salvo em
+     * {@see IntegrationSettings} (tela de integrações). O `.env` continua
+     * sendo o fallback de cada chave não preenchida na tela.
+     *
+     * Falha em silêncio se a tabela ainda não existe (deploy antes da
+     * migration, CI de banco limpo) ou o banco não responde no boot — a
+     * app sobe igual, só sem o overlay.
+     */
+    private function applyIntegrationSettingsFromDatabase(): void
+    {
+        try {
+            $settings = IntegrationSettings::query()->first();
+        } catch (Throwable) {
+            return;
+        }
+
+        if ($settings !== null) {
+            config($settings->servicesConfigOverrides());
+        }
     }
 }
