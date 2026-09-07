@@ -94,6 +94,35 @@ describe('ações da tela de integrações', function () {
         expect(IntegrationSettings::query()->value('telegram_webhook_registered_at'))->toBeNull();
     });
 
+    test('status do webhook devolve o que o Telegram sabe', function () {
+        config(['services.telegram.bot_token' => 'TESTTOKEN']);
+
+        Http::fake([
+            'api.telegram.org/botTESTTOKEN/getWebhookInfo' => Http::response([
+                'ok' => true,
+                'result' => [
+                    'url' => 'https://financeiro.dmta.dev.br/api/v1/webhooks/telegram',
+                    'pending_update_count' => 3,
+                    'last_error_message' => 'Wrong response from the webhook: 401 Unauthorized',
+                ],
+            ]),
+        ]);
+
+        $this->getJson('/api/v1/integrations/telegram/webhook-info')
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('result.pending_update_count', 3)
+            ->assertJsonPath('result.last_error_message', 'Wrong response from the webhook: 401 Unauthorized');
+    });
+
+    test('status do webhook sem token devolve ok=false', function () {
+        config(['services.telegram.bot_token' => null]);
+
+        $this->getJson('/api/v1/integrations/telegram/webhook-info')
+            ->assertOk()
+            ->assertJsonPath('ok', false);
+    });
+
     test('testar caixa de boletos sem configuração devolve ok=false', function () {
         config([
             'services.boleto_mailbox.host' => null,
@@ -110,5 +139,6 @@ describe('ações da tela de integrações', function () {
 test('ações de integração exigem autenticação', function () {
     $this->postJson('/api/v1/integrations/telegram/test')->assertUnauthorized();
     $this->postJson('/api/v1/integrations/telegram/webhook')->assertUnauthorized();
+    $this->getJson('/api/v1/integrations/telegram/webhook-info')->assertUnauthorized();
     $this->postJson('/api/v1/integrations/boleto-mailbox/test')->assertUnauthorized();
 });

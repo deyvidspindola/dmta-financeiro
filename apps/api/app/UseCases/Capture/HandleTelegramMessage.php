@@ -11,6 +11,7 @@ use App\Enums\CaptureOrigin;
 use App\Models\TelegramConversation;
 use App\Services\TelegramBotClient;
 use App\UseCases\Transaction\RegisterTransaction;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Ponto de entrada de uma mensagem do bot do Telegram (capítulo 6.4) —
@@ -44,6 +45,12 @@ final class HandleTelegramMessage
         $allowed = config('services.telegram.allowed_chat_id');
 
         if (! $allowed || (string) $allowed !== $chatId) {
+            Log::warning('telegram: chat não autorizado — mensagem ignorada.', [
+                'channel' => 'telegram',
+                'received_chat_id' => $chatId,
+                'allowed_chat_id' => $allowed ? (string) $allowed : null,
+            ]);
+
             return;
         }
 
