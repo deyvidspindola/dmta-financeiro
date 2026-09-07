@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Models\IntegrationSettings;
+use App\Models\TelegramWebhookEvent;
 use Illuminate\Support\Facades\Http;
 
 /**
@@ -123,6 +124,17 @@ describe('ações da tela de integrações', function () {
             ->assertJsonPath('ok', false);
     });
 
+    test('lista os eventos recentes do webhook', function () {
+        TelegramWebhookEvent::query()->create([
+            'chat_id' => '42', 'message_text' => 'gastei 45', 'outcome' => 'awaiting_reply', 'reply_sent' => true,
+        ]);
+
+        $this->getJson('/api/v1/integrations/telegram/events')
+            ->assertOk()
+            ->assertJsonPath('data.0.outcome', 'awaiting_reply')
+            ->assertJsonPath('data.0.chat_id', '42');
+    });
+
     test('testar caixa de boletos sem configuração devolve ok=false', function () {
         config([
             'services.boleto_mailbox.host' => null,
@@ -140,5 +152,6 @@ test('ações de integração exigem autenticação', function () {
     $this->postJson('/api/v1/integrations/telegram/test')->assertUnauthorized();
     $this->postJson('/api/v1/integrations/telegram/webhook')->assertUnauthorized();
     $this->getJson('/api/v1/integrations/telegram/webhook-info')->assertUnauthorized();
+    $this->getJson('/api/v1/integrations/telegram/events')->assertUnauthorized();
     $this->postJson('/api/v1/integrations/boleto-mailbox/test')->assertUnauthorized();
 });

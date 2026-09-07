@@ -117,6 +117,7 @@ Route::prefix('v1')->group(function () {
         Route::post('integrations/telegram/test', [IntegrationSettingsController::class, 'testTelegram']);
         Route::post('integrations/telegram/webhook', [IntegrationSettingsController::class, 'registerTelegramWebhook']);
         Route::get('integrations/telegram/webhook-info', [IntegrationSettingsController::class, 'telegramWebhookInfo']);
+        Route::get('integrations/telegram/events', [IntegrationSettingsController::class, 'telegramEvents']);
         Route::post('integrations/boleto-mailbox/test', [IntegrationSettingsController::class, 'testBoletoMailbox']);
 
         // Inbox de notificações de banco/carteira lidas pelo app Android —

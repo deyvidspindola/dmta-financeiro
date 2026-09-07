@@ -93,6 +93,24 @@ export async function getTelegramWebhookInfo(): Promise<WebhookInfo> {
   return http.get<WebhookInfo>('/integrations/telegram/webhook-info')
 }
 
+export type TelegramEvent = {
+  id: number
+  chat_id: string | null
+  message_text: string | null
+  outcome: string
+  detail: string | null
+  reply_sent: boolean
+  created_at: string
+}
+
+export async function getTelegramEvents(): Promise<TelegramEvent[]> {
+  return unwrapData(
+    await http.get<TelegramEvent[] | { data: TelegramEvent[] }>(
+      '/integrations/telegram/events',
+    ),
+  )
+}
+
 export async function testBoletoMailbox(): Promise<ActionResult> {
   return http.post<ActionResult>('/integrations/boleto-mailbox/test')
 }

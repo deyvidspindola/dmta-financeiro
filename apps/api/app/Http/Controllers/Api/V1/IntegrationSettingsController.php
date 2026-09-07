@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\UpdateIntegrationSettingsRequest;
 use App\Http\Resources\IntegrationSettingsResource;
 use App\Models\IntegrationSettings;
+use App\Models\TelegramWebhookEvent;
 use App\UseCases\Settings\GetTelegramWebhookInfo;
 use App\UseCases\Settings\RegisterTelegramWebhook;
 use App\UseCases\Settings\TestBoletoMailboxConnection;
@@ -58,6 +59,17 @@ final class IntegrationSettingsController extends Controller
     public function telegramWebhookInfo(GetTelegramWebhookInfo $useCase): JsonResponse
     {
         return response()->json($useCase->execute());
+    }
+
+    /** Últimas mensagens que o webhook recebeu e o que foi feito com cada uma. */
+    public function telegramEvents(): JsonResponse
+    {
+        return response()->json([
+            'data' => TelegramWebhookEvent::query()
+                ->latest('id')
+                ->limit(40)
+                ->get(['id', 'chat_id', 'message_text', 'outcome', 'detail', 'reply_sent', 'created_at']),
+        ]);
     }
 
     public function testBoletoMailbox(TestBoletoMailboxConnection $useCase): JsonResponse
