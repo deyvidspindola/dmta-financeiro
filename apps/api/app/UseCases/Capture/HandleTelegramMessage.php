@@ -8,7 +8,6 @@ use App\Domain\Capture\QuickEntryChannelInterface;
 use App\DTOs\RegisterTransactionData;
 use App\DTOs\TransactionDraftData;
 use App\Enums\CaptureOrigin;
-use App\Models\TelegramConversation;
 use App\Models\User;
 use App\Services\TelegramBotClient;
 use App\Services\TelegramWebhookRecorder;
@@ -16,15 +15,18 @@ use App\UseCases\Transaction\RegisterTransaction;
 
 /**
  * Uma mensagem recebida do bot do Telegram (capítulo 6.4). Sempre
- * responde alguma coisa pro chat (mesmo em erro de configuração — é a
+ * responde alguma coisa pro chat (inclusive em erro de configuração — é a
  * única forma de o dono saber o que está errado) e grava o desfecho em
  * {@see TelegramWebhookRecorder} pra tela de integrações mostrar.
+ *
+ * A conversa guiada em si (o que perguntar, casar nome de categoria/
+ * contexto, "cancelar") é responsabilidade do {@see QuickEntryChannelInterface}.
  *
  * @package App\UseCases\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 2.1.0
  *
  * @since   25/08/2026
  *
@@ -32,6 +34,8 @@ use App\UseCases\Transaction\RegisterTransaction;
  */
 final class HandleTelegramMessage
 {
+    private const CANCEL_WORDS = ['cancelar', 'cancela', 'cancel', 'parar', 'sair'];
+
     public function __construct(
         private readonly QuickEntryChannelInterface $channel,
         private readonly TelegramBotClient $bot,
@@ -66,14 +70,26 @@ final class HandleTelegramMessage
             return ['owner_not_found', $email ? "email: {$email}" : 'sem email', 'Configuração incompleta: em Integrações → Telegram, o campo "E-mail do dono" precisa ser o e-mail da SUA conta no app (o que você usa pra entrar). Está como '.($email ?: 'vazio').'.'];
         }
 
+        if (in_array(mb_strtolower(trim($message)), self::CANCEL_WORDS, true)) {
+            $this->channel->cancel($chatId);
+
+            return ['cancelled', null, 'Ok, cancelei. Manda o valor e uma descrição pra começar de novo (ex.: "gastei 45 no mercado").'];
+        }
+
         $draft = $this->channel->parseMessage($chatId, $message);
 
         if ($draft === null) {
+            $expected = $this->channel->describeExpectedReply($chatId);
+
+            if ($expected !== null) {
+                return ['awaiting_reply', 'resposta não reconhecida', "Não peguei essa resposta.\n{$expected}\n\nOu responda \"cancelar\" pra recomeçar."];
+            }
+
             return ['help_sent', null, $this->helpText()];
         }
 
         if (! $draft->isComplete()) {
-            return ['awaiting_reply', null, $this->nextQuestion($chatId, $draft)];
+            return ['awaiting_reply', null, (string) $this->channel->describeExpectedReply($chatId)];
         }
 
         $this->register($draft);
@@ -98,20 +114,5 @@ final class HandleTelegramMessage
     private function helpText(): string
     {
         return 'Manda o valor e uma descrição (ex.: "gastei 45 no mercado" ou "recebi 200 de freela") pra lançar rápido.';
-    }
-
-    private function nextQuestion(string $chatId, TransactionDraftData $draft): string
-    {
-        if ($draft->contextId === null) {
-            return 'Em qual contexto? Responda com o nome (ex.: "Pessoal").';
-        }
-
-        if ($draft->accountId === null) {
-            TelegramConversation::query()->where('chat_id', $chatId)->delete();
-
-            return 'Esse contexto não tem conta cadastrada — cadastre uma no app antes de lançar por aqui.';
-        }
-
-        return 'Qual categoria? Responda com o nome (ex.: "Mercado").';
     }
 }
