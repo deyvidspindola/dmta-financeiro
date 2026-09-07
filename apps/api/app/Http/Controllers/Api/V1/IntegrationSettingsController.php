@@ -8,7 +8,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\UpdateIntegrationSettingsRequest;
 use App\Http\Resources\IntegrationSettingsResource;
 use App\Models\IntegrationSettings;
+use App\UseCases\Settings\RegisterTelegramWebhook;
+use App\UseCases\Settings\TestBoletoMailboxConnection;
+use App\UseCases\Settings\TestTelegramConnection;
 use App\UseCases\Settings\UpdateIntegrationSettings;
+use Illuminate\Http\JsonResponse;
 
 /**
  * Configuração das integrações da F1 (bot do Telegram e caixa IMAP de
@@ -38,5 +42,20 @@ final class IntegrationSettingsController extends Controller
         UpdateIntegrationSettings $useCase,
     ): IntegrationSettingsResource {
         return new IntegrationSettingsResource($useCase->execute($request->validated()));
+    }
+
+    public function testTelegram(TestTelegramConnection $useCase): JsonResponse
+    {
+        return response()->json($useCase->execute());
+    }
+
+    public function registerTelegramWebhook(RegisterTelegramWebhook $useCase): JsonResponse
+    {
+        return response()->json($useCase->execute());
+    }
+
+    public function testBoletoMailbox(TestBoletoMailboxConnection $useCase): JsonResponse
+    {
+        return response()->json($useCase->execute());
     }
 }

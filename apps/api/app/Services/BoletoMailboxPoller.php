@@ -12,7 +12,6 @@ use Illuminate\Support\Facades\Log;
 use Throwable;
 use Webklex\PHPIMAP\Address;
 use Webklex\PHPIMAP\Attachment;
-use Webklex\PHPIMAP\ClientManager;
 use Webklex\PHPIMAP\Message;
 
 /**
@@ -48,6 +47,7 @@ final class BoletoMailboxPoller
         private readonly EmailBoletoReaderInterface $reader,
         private readonly CaptureBillFromEmail $useCase,
         private readonly BoletoPdfUnlocker $unlocker,
+        private readonly BoletoMailboxClientFactory $clients,
     ) {}
 
     /**
@@ -57,15 +57,7 @@ final class BoletoMailboxPoller
      */
     public function poll(): array
     {
-        $client = (new ClientManager)->make([
-            'host' => config('services.boleto_mailbox.host'),
-            'port' => config('services.boleto_mailbox.port'),
-            'encryption' => config('services.boleto_mailbox.encryption'),
-            'validate_cert' => true,
-            'protocol' => 'imap',
-            'username' => config('services.boleto_mailbox.username'),
-            'password' => config('services.boleto_mailbox.password'),
-        ]);
+        $client = $this->clients->make();
 
         try {
             $client->connect();
