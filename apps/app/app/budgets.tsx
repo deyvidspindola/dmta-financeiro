@@ -168,6 +168,7 @@ export default function BudgetsScreen() {
                 value={form.categoryId}
                 options={categoryOptions}
                 onChange={(v) => setForm({ ...form, categoryId: v })}
+                searchable
               />
             ) : null}
             <MoneyField

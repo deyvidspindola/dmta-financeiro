@@ -226,6 +226,7 @@ export default function EditTransactionScreen() {
             value={categoryId ?? ''}
             options={categoryOptions}
             onChange={(v) => setCategoryId(v || null)}
+            searchable
           />
           <DateField
             label={t.newTransaction.date}

@@ -4,6 +4,7 @@ import { categoriesApi, creditCardsApi } from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
+  CategorySelect,
   DatePickerField,
   Field,
   MoneyInput,
@@ -139,30 +140,15 @@ export function CardPurchaseForm({
           />
         </Field>
 
-        <Field label={strings.quickAdd.category}>
-          <div className="flex gap-2">
-            <TextSelect
-              className="min-w-0 flex-1"
-              value={categoryId}
-              onChange={(e) => setCategoryId(e.target.value)}
-            >
-              <option value="">{strings.quickAdd.noCategory}</option>
-              {(categories.data ?? []).map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.parent_id ? `↳ ${category.name}` : category.name}
-                </option>
-              ))}
-            </TextSelect>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setCategoryOpen(true)}
-            >
-              {strings.categories.quickAdd}
-            </Button>
-          </div>
-        </Field>
+        <CategorySelect
+          label={strings.quickAdd.category}
+          categories={categories.data ?? []}
+          value={categoryId || null}
+          onChange={(value) => setCategoryId(value || '')}
+          placeholder={strings.quickAdd.noCategory}
+          onQuickAdd={() => setCategoryOpen(true)}
+          quickAddLabel={strings.categories.quickAdd}
+        />
 
         {!isEdit ? (
           <Field label={t.installments}>

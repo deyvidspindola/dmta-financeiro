@@ -31,6 +31,8 @@ export type { CreditDebit } from './Money'
 export { Badge, CategoryChip } from './Badge'
 export type { BadgeTone } from './Badge'
 
+export { CategorySelect } from './CategorySelect'
+
 export { DataTable, Tr, Td } from './Table'
 
 export { StatementList, StatementGroup, StatementRow } from './StatementList'

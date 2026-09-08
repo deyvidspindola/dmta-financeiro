@@ -155,6 +155,7 @@ export default function CardPurchaseScreen() {
           value={categoryId ?? ''}
           options={categoryOptions}
           onChange={(v) => setCategoryId(v || null)}
+          searchable
         />
         <DateField
           label={t.creditCards.purchaseDate}
