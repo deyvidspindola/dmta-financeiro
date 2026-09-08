@@ -348,9 +348,16 @@ export const strings = {
   scanBoleto: {
     title: 'Escanear',
     aim: 'Aponte para o código de barras ou o QR do PIX',
+    aimHint:
+      'Encoste bem no código, com boa luz. Código de barras de boleto é longo — preencha a largura da tela.',
     permissionHint: 'Precisamos da câmera para ler o código de barras do boleto ou o QR do PIX.',
     grant: 'Permitir câmera',
     notRecognized: 'Não reconheci esse código. Tente de novo ou digite manualmente.',
+    torch: 'Lanterna',
+    typeInstead: 'Digitar o código',
+    typePlaceholder: 'Linha digitável do boleto ou Pix Copia e Cola',
+    typeSubmit: 'Usar este código',
+    typeInvalid: 'Não parece um boleto nem um código Pix.',
   },
 
   notifications: {
@@ -360,6 +367,7 @@ export const strings = {
     permissionHint:
       'Libere o acesso às notificações para o app capturar os avisos de gasto/receita dos seus apps de banco. Nada sai do aparelho sem você mandar.',
     grant: 'Abrir configurações',
+    alreadyGranted: 'Já ativei — verificar de novo',
     save: 'Virar lançamento',
     saveTitle: 'Salvar como lançamento',
     ignoreTitle: 'Ignorar notificação',
