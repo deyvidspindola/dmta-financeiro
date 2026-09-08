@@ -883,6 +883,9 @@ export const strings = {
     dateFrom: 'De',
     dateTo: 'Até',
     dateRangePlaceholder: 'Selecione o período…',
+    categorySelectPlaceholder: 'Selecione ou busque',
+    categorySearchPlaceholder: 'Buscar categoria…',
+    categoryNoResults: 'Nenhuma categoria encontrada',
   },
 } as const
 

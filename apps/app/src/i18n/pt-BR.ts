@@ -734,6 +734,8 @@ export const strings = {
     close: 'Fechar',
     delete: 'Excluir',
     comingSoon: 'Em breve',
+    search: 'Buscar…',
+    noResults: 'Nenhuma opção encontrada',
   },
 
   newTransaction: {

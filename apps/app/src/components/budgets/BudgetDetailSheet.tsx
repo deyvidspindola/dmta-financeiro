@@ -88,7 +88,7 @@ export function BudgetDetailSheet({ budget, contextId, month, onClose, onEdit }:
   const spent = detail?.spent ?? budget?.spent ?? 0;
   const spentEffective = detail?.spent_effective ?? budget?.spent_effective ?? 0;
   const limit = detail?.limit ?? budget?.limit ?? 0;
-  const items = detail?.items ?? [];
+  const items = useMemo(() => detail?.items ?? [], [detail]);
 
   const spentItems = useMemo(() => items.filter((item) => item.effective), [items]);
   const forecastItems = useMemo(() => items.filter((item) => !item.effective), [items]);

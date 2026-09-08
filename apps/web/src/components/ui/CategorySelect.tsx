@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { Field, TextInput } from '@/components/ui'
 import { cn } from '@/lib/cn'
+import { strings } from '@/i18n/pt-BR'
 import type { Category } from '@/types/models'
 
 type Props = {
@@ -26,7 +27,7 @@ export function CategorySelect({
   value,
   onChange,
   label,
-  placeholder = 'Selecione ou busque',
+  placeholder = strings.common.categorySelectPlaceholder,
   error,
   onQuickAdd,
   quickAddLabel,
@@ -86,7 +87,7 @@ export function CategorySelect({
             <div className="border-b border-line p-2">
               <TextInput
                 type="text"
-                placeholder="Buscar categoria..."
+                placeholder={strings.common.categorySearchPlaceholder}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 autoFocus
@@ -109,7 +110,7 @@ export function CategorySelect({
                 {placeholder}
               </button>
               {filteredCategories.length === 0 ? (
-                <div className="px-3 py-4 text-center text-sm text-fg-muted">Nenhuma categoria encontrada</div>
+                <div className="px-3 py-4 text-center text-sm text-fg-muted">{strings.common.categoryNoResults}</div>
               ) : (
                 filteredCategories.map((cat) => (
                   <button

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
+import { t } from '@/i18n';
 import { Sheet } from '@/components/ui/Sheet';
 import { Text } from '@/components/ui/Text';
-import { TextField } from '@/components/ui/TextField';
 
 export type SelectOption = { value: string; label: string };
 
@@ -62,17 +62,19 @@ export function SelectField({ label, value, options, onChange, placeholder, erro
       <Sheet open={open} onClose={handleClose} title={label}>
         <View className="gap-3">
           {searchable ? (
-            <TextField
-              placeholder="Buscar..."
+            <TextInput
+              placeholder={t.common.search}
+              placeholderTextColor="#7c918b"
               value={search}
               onChangeText={setSearch}
-              autoFocus
+              autoCapitalize="none"
+              className="h-12 rounded-xl border border-line bg-surface px-3 text-base text-fg"
             />
           ) : null}
           <View>
             {filteredOptions.length === 0 ? (
               <Text variant="muted" className="py-4 text-center">
-                Nenhuma opção encontrada
+                {t.common.noResults}
               </Text>
             ) : (
               filteredOptions.map((option) => (
