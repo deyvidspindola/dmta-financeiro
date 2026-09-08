@@ -5,28 +5,27 @@ declare(strict_types=1);
 namespace App\UseCases\Capture;
 
 use App\Domain\Capture\QuickEntryChannelInterface;
+use App\Domain\Capture\QuickEntryStep;
 use App\DTOs\RegisterTransactionData;
 use App\DTOs\TransactionDraftData;
 use App\Enums\CaptureOrigin;
-use App\Models\User;
 use App\Services\TelegramBotClient;
+use App\Services\TelegramConfigGuard;
+use App\Services\TelegramReplyFormatter;
 use App\Services\TelegramWebhookRecorder;
 use App\UseCases\Transaction\RegisterTransaction;
 
 /**
- * Uma mensagem recebida do bot do Telegram (capítulo 6.4). Sempre
- * responde alguma coisa pro chat (inclusive em erro de configuração — é a
- * única forma de o dono saber o que está errado) e grava o desfecho em
- * {@see TelegramWebhookRecorder} pra tela de integrações mostrar.
- *
- * A conversa guiada em si (o que perguntar, casar nome de categoria/
- * contexto, "cancelar") é responsabilidade do {@see QuickEntryChannelInterface}.
+ * Uma mensagem do bot do Telegram: confere a config, trata "cancelar" /
+ * "desfazer", passa o resto pro assistente ({@see QuickEntryChannelInterface})
+ * e, quando o rascunho completa, registra o lançamento. Sempre responde
+ * algo e grava o desfecho em {@see TelegramWebhookRecorder}.
  *
  * @package App\UseCases\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.1.0
+ * @version 3.0.0
  *
  * @since   25/08/2026
  *
@@ -36,10 +35,15 @@ final class HandleTelegramMessage
 {
     private const CANCEL_WORDS = ['cancelar', 'cancela', 'cancel', 'parar', 'sair'];
 
+    private const UNDO_WORDS = ['desfazer', 'desfaz', 'apagar', 'errado'];
+
     public function __construct(
         private readonly QuickEntryChannelInterface $channel,
         private readonly TelegramBotClient $bot,
+        private readonly TelegramConfigGuard $guard,
         private readonly RegisterTransaction $registerTransaction,
+        private readonly UndoLastTelegramEntry $undoLast,
+        private readonly TelegramReplyFormatter $formatter,
         private readonly TelegramWebhookRecorder $recorder,
     ) {}
 
@@ -51,68 +55,49 @@ final class HandleTelegramMessage
         $this->recorder->record($chatId, $message, $outcome, $detail, replySent: true);
     }
 
-    /** @return array{0: string, 1: ?string, 2: string} outcome, detalhe, texto da resposta */
+    /** @return array{0: string, 1: ?string, 2: string} */
     private function resolve(string $chatId, string $message): array
     {
-        $allowed = config('services.telegram.allowed_chat_id');
-
-        if (! $allowed) {
-            return ['not_configured', null, "Seu chat ID é {$chatId}. Cole ele em Integrações → Telegram → \"Chat ID autorizado\" pra ativar o bot."];
+        if (($error = $this->guard->check($chatId)) !== null) {
+            return $error;
         }
 
-        if ((string) $allowed !== $chatId) {
-            return ['chat_not_authorized', "recebido {$chatId}, autorizado {$allowed}", "Este chat (ID {$chatId}) não é o autorizado. Ajuste em Integrações → Telegram."];
-        }
+        $word = mb_strtolower(trim($message));
 
-        $email = config('services.telegram.user_email');
-
-        if (blank($email) || ! User::query()->where('email', $email)->exists()) {
-            return ['owner_not_found', $email ? "email: {$email}" : 'sem email', 'Configuração incompleta: em Integrações → Telegram, o campo "E-mail do dono" precisa ser o e-mail da SUA conta no app (o que você usa pra entrar). Está como '.($email ?: 'vazio').'.'];
-        }
-
-        if (in_array(mb_strtolower(trim($message)), self::CANCEL_WORDS, true)) {
+        if (in_array($word, self::CANCEL_WORDS, true)) {
             $this->channel->cancel($chatId);
 
-            return ['cancelled', null, 'Ok, cancelei. Manda o valor e uma descrição pra começar de novo (ex.: "gastei 45 no mercado").'];
+            return ['cancelled', null, 'Cancelei. Manda o valor e uma descrição pra começar (ex.: "gastei 45 no mercado").'];
         }
 
-        $draft = $this->channel->parseMessage($chatId, $message);
-
-        if ($draft === null) {
-            $expected = $this->channel->describeExpectedReply($chatId);
-
-            if ($expected !== null) {
-                return ['awaiting_reply', 'resposta não reconhecida', "Não peguei essa resposta.\n{$expected}\n\nOu responda \"cancelar\" pra recomeçar."];
-            }
-
-            return ['help_sent', null, $this->helpText()];
+        if (in_array($word, self::UNDO_WORDS, true)) {
+            return $this->undoLast->execute($chatId)
+                ? ['undone', null, '↩️ Desfeito — o lançamento foi apagado.']
+                : ['undo_nothing', null, 'Nada recente pra desfazer aqui.'];
         }
 
-        if (! $draft->isComplete()) {
-            return ['awaiting_reply', null, (string) $this->channel->describeExpectedReply($chatId)];
-        }
+        $step = $this->channel->handle($chatId, $message);
 
-        $this->register($draft);
-
-        return ['registered', "{$draft->description} — R$ {$draft->amount}", "✅ Lançamento registrado: {$draft->description} — R$ {$draft->amount}"];
+        return match ($step->kind) {
+            'ready' => $this->register($chatId, $step),
+            'cancelled' => ['cancelled', null, $step->reply],
+            'not_understood' => ['help_sent', null, $step->reply],
+            default => ['awaiting_reply', null, $step->reply],
+        };
     }
 
-    private function register(TransactionDraftData $draft): void
+    /** @return array{0: string, 1: ?string, 2: string} */
+    private function register(string $chatId, QuickEntryStep $step): array
     {
-        $this->registerTransaction->execute(new RegisterTransactionData(
-            contextId: (int) $draft->contextId,
-            accountId: (int) $draft->accountId,
-            description: $draft->description,
-            amount: (float) $draft->amount,
-            type: $draft->type,
-            occurredAt: now()->toDateString(),
-            categoryId: $draft->categoryId,
-            origin: CaptureOrigin::Telegram,
-        ));
-    }
+        /** @var TransactionDraftData $draft */
+        $draft = $step->draft;
 
-    private function helpText(): string
-    {
-        return 'Manda o valor e uma descrição (ex.: "gastei 45 no mercado" ou "recebi 200 de freela") pra lançar rápido.';
+        $entry = $this->registerTransaction->execute(
+            RegisterTransactionData::fromDraft($draft, CaptureOrigin::Telegram),
+        );
+
+        $this->channel->markRegistered($chatId, $entry->id);
+
+        return ['registered', "txn:{$entry->id}", $this->formatter->registered($entry)];
     }
 }

@@ -6,30 +6,24 @@ namespace App\Domain\Capture;
 
 use App\DTOs\TransactionDraftData;
 use App\Enums\CaptureOrigin;
-use App\Enums\StatementEntryType;
 use App\Enums\TelegramConversationStage;
-use App\Models\Category;
-use App\Models\Context;
+use App\Models\Account;
 use App\Models\TelegramConversation;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 /**
- * Implementação de produção de {@see QuickEntryChannelInterface} —
- * conversa guiada em 2 ou 3 passos: valor → [contexto, só se houver mais
- * de um] → categoria. Contexto entra antes de categoria porque categoria
- * é sempre de um contexto específico (D-12).
- *
- * Estado entre mensagens fica em {@see TelegramConversation} (webhook é
- * stateless). O nome de contexto/categoria é casado por "a resposta está
- * contida no nome" (sem acento) — e quando não bate, o bot lista as
- * opções válidas pro usuário copiar o nome exato, ou "cancelar" pra sair.
+ * Assistente de lançamento rápido do bot do Telegram. O usuário manda
+ * "gastei 100 no mercado" e responde os passos seguintes só com números.
+ * Contexto e conta únicos são resolvidos sem perguntar; a categoria é
+ * palpitada pelo histórico ({@see TelegramCategorySuggester}). Estado
+ * entre mensagens em {@see TelegramConversation} (webhook é stateless).
  *
  * @package App\Domain\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 2.0.0
  *
  * @since   25/08/2026
  *
@@ -37,7 +31,12 @@ use Illuminate\Database\Eloquent\Collection;
  */
 final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
 {
-    public function __construct(private readonly TelegramMessageParser $parser) {}
+    private const MAX_OPTIONS = 12;
+
+    public function __construct(
+        private readonly TelegramMessageParser $parser,
+        private readonly TelegramCategorySuggester $suggester,
+    ) {}
 
     public function origin(): CaptureOrigin
     {
@@ -49,194 +48,202 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
         TelegramConversation::query()->where('chat_id', $chatId)->delete();
     }
 
-    public function parseMessage(string $chatId, string $message): ?TransactionDraftData
+    public function markRegistered(string $chatId, int $transactionId): void
     {
-        $user = $this->owner();
+        $conversation = TelegramConversation::query()->where('chat_id', $chatId)->first();
 
-        if ($user === null || str_starts_with(trim($message), '/')) {
-            $this->cancel($chatId);
-
-            return null;
+        if ($conversation !== null) {
+            $draft = $this->draftOf($conversation);
+            $draft['_txn'] = $transactionId;
+            unset($draft['_options'], $draft['_field']);
+            $conversation->update(['draft' => $draft, 'stage' => TelegramConversationStage::Confirmed->value]);
         }
+    }
 
+    public function handle(string $chatId, string $message): QuickEntryStep
+    {
+        $message = trim($message);
         $conversation = TelegramConversation::query()->firstOrCreate(
             ['chat_id' => $chatId],
             ['stage' => TelegramConversationStage::AwaitingAmount->value, 'draft' => []],
         );
 
-        /** @var TelegramConversationStage $stage */
-        $stage = $conversation->stage;
+        if (str_starts_with($message, '/')) {
+            $this->cancel($chatId);
 
-        return match ($stage) {
-            TelegramConversationStage::AwaitingAmount => $this->handleAmount($conversation, $message, $user),
-            TelegramConversationStage::AwaitingContext => $this->handleContext($conversation, $message, $user),
-            TelegramConversationStage::AwaitingCategory => $this->handleCategory($conversation, $message),
-        };
-    }
-
-    public function describeExpectedReply(string $chatId): ?string
-    {
-        $conversation = TelegramConversation::query()->where('chat_id', $chatId)->first();
-
-        if ($conversation === null) {
-            return null;
+            return QuickEntryStep::notUnderstood($this->help());
         }
 
         /** @var TelegramConversationStage $stage */
         $stage = $conversation->stage;
 
-        return match ($stage) {
-            TelegramConversationStage::AwaitingAmount => 'Manda o valor e uma descrição (ex.: "gastei 45 no mercado").',
-            TelegramConversationStage::AwaitingContext => 'Em qual contexto? '.$this->options($this->owner()?->contexts()->pluck('name')->all() ?? []),
-            TelegramConversationStage::AwaitingCategory => $this->categoryPrompt($conversation),
+        // Lançamento anterior já confirmado — qualquer mensagem começa um novo.
+        if ($stage === TelegramConversationStage::Confirmed) {
+            $conversation->update(['stage' => TelegramConversationStage::AwaitingAmount->value, 'draft' => []]);
+            $stage = TelegramConversationStage::AwaitingAmount;
+        }
+
+        $draft = $this->draftOf($conversation);
+
+        if (isset($draft['_options'])) {
+            return $this->answerOption($conversation, $message);
+        }
+
+        if ($stage === TelegramConversationStage::AwaitingAmount) {
+            $amount = $this->parser->extractAmount($message);
+
+            if ($amount === null) {
+                return QuickEntryStep::notUnderstood($this->help());
+            }
+
+            $conversation->update(['draft' => [
+                'amount' => $amount,
+                'type' => $this->parser->extractType($message)->value,
+                'description' => $message,
+            ]]);
+        }
+
+        return $this->advance($conversation->refresh());
+    }
+
+    private function answerOption(TelegramConversation $conversation, string $message): QuickEntryStep
+    {
+        $draft = $this->draftOf($conversation);
+        /** @var list<array{n: int, id: int, label: string}> $options */
+        $options = $draft['_options'];
+        $field = (string) $draft['_field'];
+
+        $chosen = ctype_digit($message)
+            ? collect($options)->firstWhere('n', (int) $message)
+            : collect($options)->first(fn (array $o): bool => $this->matches($o['label'], $message));
+
+        if ($chosen === null) {
+            return QuickEntryStep::needInput("Responde o número:\n".$this->numbered($options));
+        }
+
+        $draft[$field.'_id'] = $chosen['id'];
+        unset($draft['_options'], $draft['_field']);
+        $conversation->update(['draft' => $draft]);
+
+        return $this->advance($conversation->refresh());
+    }
+
+    private function advance(TelegramConversation $conversation): QuickEntryStep
+    {
+        $user = $this->owner();
+
+        if ($user === null) {
+            return QuickEntryStep::notUnderstood($this->help());
+        }
+
+        $draft = $this->draftOf($conversation);
+
+        if (! isset($draft['context_id'])) {
+            $contexts = $user->contexts()->orderBy('name')->get(['id', 'name']);
+            if ($contexts->count() > 1) {
+                return $this->ask($conversation, 'context', 'Em qual contexto?', $contexts->map(
+                    fn ($c): array => ['id' => (int) $c->id, 'label' => (string) $c->name],
+                )->all());
+            }
+
+            $draft['context_id'] = $contexts->first()?->id;
+            $conversation->update(['draft' => $draft]);
+        }
+
+        if (! isset($draft['account_id'])) {
+            $accounts = Account::query()->where('context_id', $draft['context_id'])->orderBy('name')->get(['id', 'name']);
+            if ($accounts->isEmpty()) {
+                $conversation->delete();
+
+                return QuickEntryStep::notUnderstood('Esse contexto não tem conta cadastrada — cadastra uma no app primeiro.');
+            }
+
+            if ($accounts->count() > 1) {
+                return $this->ask($conversation, 'account', 'Qual conta?', $accounts->map(
+                    fn ($a): array => ['id' => (int) $a->id, 'label' => (string) $a->name],
+                )->all());
+            }
+
+            $draft['account_id'] = $accounts->first()->id;
+            $conversation->update(['draft' => $draft]);
+        }
+
+        if (! isset($draft['category_id'])) {
+            $ranked = $this->suggester->rank((string) $draft['description'], (int) $draft['context_id'], (string) $draft['type']);
+            if ($ranked === []) {
+                $conversation->delete();
+
+                return QuickEntryStep::notUnderstood('Esse contexto não tem categoria pra esse tipo — cadastra uma no app primeiro.');
+            }
+
+            $strong = collect($ranked)->firstWhere('strong', true);
+
+            if ($strong === null) {
+                return $this->ask($conversation, 'category', 'Qual categoria?', array_map(
+                    fn (array $c): array => ['id' => $c['id'], 'label' => $c['name']],
+                    $ranked,
+                ));
+            }
+
+            $draft['category_id'] = $strong['id'];
+            $conversation->update(['draft' => $draft]);
+        }
+
+        return QuickEntryStep::ready(TransactionDraftData::fromDraft($this->draftOf($conversation->refresh())));
+    }
+
+    /** @param  list<array{id: int, label: string}>  $items */
+    private function ask(TelegramConversation $conversation, string $field, string $question, array $items): QuickEntryStep
+    {
+        $options = [];
+        foreach (array_slice($items, 0, self::MAX_OPTIONS) as $i => $item) {
+            $options[] = ['n' => $i + 1, 'id' => $item['id'], 'label' => $item['label']];
+        }
+
+        $draft = $this->draftOf($conversation);
+        $draft['_options'] = $options;
+        $draft['_field'] = $field;
+        $stage = match ($field) {
+            'context' => TelegramConversationStage::AwaitingContext,
+            'account' => TelegramConversationStage::AwaitingAccount,
+            default => TelegramConversationStage::AwaitingCategory,
         };
+        $conversation->update(['draft' => $draft, 'stage' => $stage->value]);
+
+        return QuickEntryStep::needInput($question."\n".$this->numbered($options)."\n\n(número, ou \"cancelar\")");
+    }
+
+    /** @param  list<array{n: int, id: int, label: string}>  $options */
+    private function numbered(array $options): string
+    {
+        return implode("\n", array_map(fn (array $o): string => "{$o['n']}) {$o['label']}", $options));
+    }
+
+    /** @return array<string, mixed> */
+    private function draftOf(TelegramConversation $conversation): array
+    {
+        /** @var array<string, mixed> $draft */
+        $draft = $conversation->draft;
+
+        return $draft;
     }
 
     private function owner(): ?User
     {
-        // O e-mail já foi validado por HandleTelegramMessage antes de chegar aqui.
         $email = config('services.telegram.user_email');
 
         return $email ? User::query()->where('email', $email)->first() : null;
     }
 
-    private function handleAmount(TelegramConversation $conversation, string $message, User $user): ?TransactionDraftData
+    private function matches(string $label, string $message): bool
     {
-        $amount = $this->parser->extractAmount($message);
+        $needle = Str::of($message)->lower()->ascii()->trim()->toString();
 
-        if ($amount === null) {
-            return null;
-        }
-
-        $draft = [
-            'amount' => $amount,
-            'type' => $this->parser->extractType($message)->value,
-            'description' => $this->parser->extractDescription($message),
-        ];
-
-        $contexts = $user->contexts()->get();
-
-        if ($contexts->count() === 1) {
-            $draft = [...$draft, ...$this->contextFields($contexts->first())];
-            $next = TelegramConversationStage::AwaitingCategory;
-        } else {
-            $next = TelegramConversationStage::AwaitingContext;
-        }
-
-        $conversation->update(['draft' => $draft, 'stage' => $next->value]);
-
-        return $this->toDto($draft);
+        return $needle !== '' && str_contains(Str::of($label)->lower()->ascii()->toString(), $needle);
     }
 
-    private function handleContext(TelegramConversation $conversation, string $message, User $user): ?TransactionDraftData
+    private function help(): string
     {
-        $context = $user->contexts()->get()
-            ->first(fn (Context $c) => $this->matches($c->name, $message));
-
-        if ($context === null) {
-            return null;
-        }
-
-        /** @var array<string, mixed> $current */
-        $current = $conversation->draft;
-        $draft = [...$current, ...$this->contextFields($context)];
-        $conversation->update(['draft' => $draft, 'stage' => TelegramConversationStage::AwaitingCategory->value]);
-
-        return $this->toDto($draft);
-    }
-
-    private function handleCategory(TelegramConversation $conversation, string $message): ?TransactionDraftData
-    {
-        /** @var array<string, mixed> $draft */
-        $draft = $conversation->draft;
-        $category = $this->categoriesFor($draft)
-            ->first(fn (Category $c) => $this->matches($c->name, $message));
-
-        if ($category === null) {
-            return null;
-        }
-
-        $draft['category_id'] = $category->id;
-        $conversation->delete();
-
-        return $this->toDto($draft);
-    }
-
-    private function categoryPrompt(TelegramConversation $conversation): string
-    {
-        /** @var array<string, mixed> $draft */
-        $draft = $conversation->draft;
-
-        if (($draft['account_id'] ?? null) === null) {
-            $this->cancel((string) $conversation->chat_id);
-
-            return 'Esse contexto não tem conta cadastrada — cadastre uma no app antes de lançar por aqui.';
-        }
-
-        $names = $this->categoriesFor($draft)->pluck('name')->all();
-
-        if ($names === []) {
-            $this->cancel((string) $conversation->chat_id);
-
-            return 'Esse contexto não tem categoria cadastrada pra esse tipo — cadastre uma no app primeiro.';
-        }
-
-        return 'Qual categoria? '.$this->options($names);
-    }
-
-    /**
-     * @param  array<string, mixed>  $draft
-     * @return Collection<int, Category>
-     */
-    private function categoriesFor(array $draft): Collection
-    {
-        return Category::query()
-            ->where('context_id', $draft['context_id'] ?? 0)
-            ->where('type', $draft['type'] ?? '')
-            ->orderBy('name')
-            ->get();
-    }
-
-    /** A resposta do usuário (parte do) nome da opção, sem acento. Não o contrário — "gastei 100..." não pode casar com "gás". */
-    private function matches(string $name, string $message): bool
-    {
-        $b = $this->normalize($message);
-
-        return $b !== '' && str_contains($this->normalize($name), $b);
-    }
-
-    private function normalize(string $value): string
-    {
-        $value = mb_strtolower(trim($value));
-
-        return strtr($value, [
-            'á' => 'a', 'à' => 'a', 'ã' => 'a', 'â' => 'a', 'é' => 'e', 'ê' => 'e',
-            'í' => 'i', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ú' => 'u', 'ç' => 'c',
-        ]);
-    }
-
-    /** @param  list<string>  $names */
-    private function options(array $names): string
-    {
-        return $names === [] ? 'Responda com o nome.' : 'Opções: '.implode(', ', $names).'.';
-    }
-
-    /** @return array{context_id: int, account_id: ?int} */
-    private function contextFields(Context $context): array
-    {
-        return ['context_id' => $context->id, 'account_id' => $context->accounts()->first()?->id];
-    }
-
-    /** @param  array<string, mixed>  $draft */
-    private function toDto(array $draft): TransactionDraftData
-    {
-        return new TransactionDraftData(
-            description: $draft['description'] ?? '',
-            amount: $draft['amount'] ?? null,
-            type: isset($draft['type']) ? StatementEntryType::from($draft['type']) : null,
-            categoryId: $draft['category_id'] ?? null,
-            contextId: $draft['context_id'] ?? null,
-            accountId: $draft['account_id'] ?? null,
-        );
+        return 'Manda o valor e a descrição, ex.: "gastei 45 no mercado" ou "recebi 200 de freela".';
     }
 }

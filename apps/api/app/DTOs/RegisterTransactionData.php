@@ -47,4 +47,19 @@ final readonly class RegisterTransactionData
          */
         public bool $settled = true,
     ) {}
+
+    /** A partir de um rascunho já completo da conversa guiada (bot do Telegram). */
+    public static function fromDraft(TransactionDraftData $draft, CaptureOrigin $origin): self
+    {
+        return new self(
+            contextId: (int) $draft->contextId,
+            accountId: (int) $draft->accountId,
+            description: $draft->description,
+            amount: (float) $draft->amount,
+            type: $draft->type ?? StatementEntryType::Expense,
+            occurredAt: now()->toDateString(),
+            categoryId: $draft->categoryId,
+            origin: $origin,
+        );
+    }
 }
