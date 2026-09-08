@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Domain\Capture\EmailBoletoReaderInterface;
+use App\Domain\Capture\ForwardedEmailSender;
 use App\Exceptions\Domain\BoletoMailboxConnectionException;
 use App\UseCases\Bill\CaptureBillFromEmail;
 use Illuminate\Support\Facades\File;
@@ -48,6 +49,7 @@ final class BoletoMailboxPoller
         private readonly CaptureBillFromEmail $useCase,
         private readonly BoletoPdfUnlocker $unlocker,
         private readonly BoletoMailboxClientFactory $clients,
+        private readonly ForwardedEmailSender $forwardedSender,
     ) {}
 
     /**
@@ -175,10 +177,23 @@ final class BoletoMailboxPoller
         }
     }
 
+    /**
+     * Remetente pra casar regra de senha e exibir na pendência. Se o
+     * e-mail veio reencaminhado pelo dono, é o remetente ORIGINAL lido do
+     * corpo — não quem encaminhou; senão, o `From` do envelope.
+     */
     private function senderEmail(Message $message): ?string
     {
         $from = $message->getFrom()->first();
+        $envelopeFrom = $from instanceof Address && $from->mail !== '' ? $from->mail : null;
 
-        return $from instanceof Address && $from->mail !== '' ? $from->mail : null;
+        $body = trim((string) $message->getTextBody()) ?: (string) $message->getHTMLBody();
+
+        return $this->forwardedSender->original(
+            $envelopeFrom,
+            (string) $message->getSubject(),
+            $body,
+            config('services.boleto_mailbox.forwarders', []),
+        ) ?? $envelopeFrom;
     }
 }

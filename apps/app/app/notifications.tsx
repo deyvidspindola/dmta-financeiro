@@ -1,9 +1,12 @@
-import { useMemo, useState } from 'react';
-import { Platform, Pressable, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AppState, Platform, Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { isPermissionGranted, requestPermission } from 'expo-notification-listener';
 import { Feather } from '@expo/vector-icons';
+import {
+  notificationAccessGranted,
+  openNotificationAccessSettings,
+} from '@/lib/notificationPermission';
 import { accountsApi, categoriesApi, notificationCapturesApi } from '@/api';
 import { ApiError } from '@/api/http';
 import type { NotificationCapture } from '@/api/notificationCaptures';
@@ -50,9 +53,31 @@ export default function NotificationsScreen() {
   const [toIgnore, setToIgnore] = useState<NotificationCapture | null>(null);
   const [dupWarning, setDupWarning] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
-  const [permMissing, setPermMissing] = useState(
-    Platform.OS === 'android' ? !isPermissionGranted() : false,
-  );
+  // Fonte da verdade: relê a permissão a cada volta ao foco (o usuário
+  // concede numa tela de Settings, fora do app) + algumas tentativas
+  // curtas logo depois (o serviço nativo demora um instante pra ligar).
+  const [accessGranted, setAccessGranted] = useState(() => notificationAccessGranted());
+  const retryTimers = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const recheckAccess = () => setAccessGranted(notificationAccessGranted());
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') return;
+    // valor inicial já vem do useState; aqui só reagimos ao foco
+    const sub = AppState.addEventListener('change', (state) => {
+      if (state === 'active') {
+        recheckAccess();
+        retryTimers.current.push(setTimeout(recheckAccess, 900), setTimeout(recheckAccess, 2500));
+      }
+    });
+    return () => {
+      sub.remove();
+      retryTimers.current.forEach(clearTimeout);
+      retryTimers.current = [];
+    };
+  }, []);
+
+  const permMissing = Platform.OS === 'android' && !accessGranted;
 
   const capturesQuery = useQuery({
     queryKey: ['notification-captures', 'pending'],
@@ -162,13 +187,12 @@ export default function NotificationsScreen() {
           <Text variant="muted" className="text-xs">
             {t.notifications.permissionHint}
           </Text>
-          <Button
-            label={t.notifications.grant}
-            onPress={() => {
-              requestPermission();
-              setPermMissing(false);
-            }}
-          />
+          <Button label={t.notifications.grant} onPress={openNotificationAccessSettings} />
+          <Pressable onPress={recheckAccess} hitSlop={8} className="items-center py-1">
+            <Text variant="muted" className="text-xs underline">
+              {t.notifications.alreadyGranted}
+            </Text>
+          </Pressable>
         </View>
       ) : null}
 

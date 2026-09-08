@@ -52,6 +52,14 @@ return [
         'encryption' => env('BOLETO_MAILBOX_ENCRYPTION', 'ssl'),
         'username' => env('BOLETO_MAILBOX_USERNAME'),
         'password' => env('BOLETO_MAILBOX_PASSWORD'),
+        // E-mails (separados por vírgula) que só reencaminham boletos pra
+        // caixa — quando o `From` bate com um destes, o remetente original
+        // é lido do corpo. Opcional: o assunto "Fwd:/Enc:" e o bloco de
+        // mensagem encaminhada já disparam a detecção sem esta lista.
+        'forwarders' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('BOLETO_MAILBOX_FORWARDERS', '')),
+        ), fn (string $v): bool => $v !== '')),
     ],
 
     /*
