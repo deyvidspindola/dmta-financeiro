@@ -99,6 +99,20 @@ export const strings = {
     save: 'Salvar orçamento',
     editBudget: 'Editar orçamento',
     spentEffective: (v: string) => `${v} já efetivado`,
+    detail: {
+      title: 'Consumo do orçamento',
+      editLimit: 'Editar teto',
+      emptyConsumption: 'Nenhum lançamento nesta categoria neste mês.',
+      sectionSpent: 'Efetivado',
+      sectionForecast: 'Previsto',
+      kinds: {
+        transaction: 'Lançamento',
+        bill: 'Boleto',
+        card_purchase: 'Compra no cartão',
+        recurring_transaction: 'Recorrente',
+        recurring_bill: 'Boleto recorrente',
+      },
+    },
   },
 
   auth: {
