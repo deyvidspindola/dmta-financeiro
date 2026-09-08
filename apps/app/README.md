@@ -68,6 +68,25 @@ Duas coisas, configuradas em `eas.json` + `.github/workflows/build-mobile.yml`:
   CI publica só o bundle JS no canal `preview`. Os APKs `preview` já
   instalados **puxam a atualização ao abrir, sem reinstalar**.
 
+### Versões — o que bumpar, e quando
+
+Duas chaves em `app.json`, com papéis diferentes:
+
+| chave              | o que é                                   | quando muda                                          |
+| ------------------ | ----------------------------------------- | --------------------------------------------------- |
+| `expo.runtimeVersion` (string fixa, hoje `"1.0.0"`) | contrato entre o APK e o bundle OTA | **só** em mudança nativa (novo `expo-*`, plugin, chave nativa do `app.json`, bump de SDK) — e aí **precisa de `eas build` novo** |
+| `expo.version` (hoje `1.0.1`) | "que release estou rodando", aparece em **Mais → Versão do app** | **todo** deploy que muda algo visível no app — bumpa o patch (`1.0.1` → `1.0.2` …). Flui via OTA, não quebra nada |
+
+Regra prática: mexeu só em JS/TS → bump `version`, faz o merge, pronto (OTA).
+Mexeu em nativo → bump `version` **e** `runtimeVersion`, merge, e roda o
+workflow *App (Expo) — build & update* → `preview`, instala o APK novo.
+
+A tela **Mais → Versão do app** (`app/updates.tsx`) mostra `version`,
+`runtimeVersion`, canal, data da última atualização e um botão "Buscar
+atualizações" (baixa na hora; reinicia pra aplicar). Se ela disser
+*"desenvolvimento"* no canal, é build de dev — OTA não funciona nele, só
+`npx expo start`.
+
 ### Setup (uma vez)
 
 1. **Secret `EXPO_TOKEN`** no repo GitHub: expo.dev → *Account settings →

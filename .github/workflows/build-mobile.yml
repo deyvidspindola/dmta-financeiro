@@ -7,7 +7,8 @@ name: App (Expo) — build & update
 #    mudança ao abrir — sem reinstalar. Rápido e ~grátis.
 #  • workflow_dispatch                  → `eas build` Android (APK): gera um
 #    binário novo. Necessário no 1º install e sempre que muda código nativo /
-#    o SDK do Expo / config nativa (o runtimeVersion `fingerprint` avisa).
+#    o SDK do Expo / config nativa — nesses casos bumpe também
+#    `expo.runtimeVersion` no app.json (ver apps/app/README.md).
 #
 # `--no-wait`: não segura o job esperando a fila da EAS (pode passar de 1h no
 # plano free). Acompanhe em https://expo.dev/accounts/drspindola/projects/dmta-financeiro-app.
