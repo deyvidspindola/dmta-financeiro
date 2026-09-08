@@ -33,6 +33,22 @@ final class TelegramReplyFormatter
         /** @phpstan-ignore-next-line nullsafe.neverNull (larastan otimista com as relações) */
         $where = trim(($entry->category?->name ?? 'sem categoria').' · '.($entry->account?->name ?? ''), ' ·');
 
-        return "✅ {$sign} R$ {$amount} · {$entry->description}\n{$where}\n\nErrado? responda \"desfazer\".";
+        return "✅ {$sign} R$ {$amount} · {$entry->description}\n{$where}"
+            ."\n\nCategoria errada? responda \"categoria\". Tudo errado? \"desfazer\".";
+    }
+
+    public function reclassified(StatementEntry $entry, string $categoryName): string
+    {
+        return "✅ Categoria de \"{$entry->description}\" agora é {$categoryName}.";
+    }
+
+    /**
+     * Lista numerada pras escolhas do bot ("1) Mercado").
+     *
+     * @param  list<array{n: int, label: string}>  $options
+     */
+    public function numbered(array $options): string
+    {
+        return implode("\n", array_map(fn (array $o): string => "{$o['n']}) {$o['label']}", $options));
     }
 }

@@ -114,14 +114,31 @@ final class TelegramCategorySuggester
             ->all();
     }
 
-    /** @param  list<string>  $tokens */
+    /**
+     * @param  list<string>  $tokens
+     *
+     * Casa palavra da descrição com palavra do nome da categoria. Só
+     * aceita substring quando uma das pontas tem 5+ letras — evita o
+     * falso positivo de nome curto ("Extra" dentro de "supermercadoextra").
+     */
     private function nameMatches(string $name, array $tokens): bool
     {
-        $normalized = Str::of($name)->lower()->ascii()->toString();
+        $nameWords = preg_split('/\s+/', Str::of($name)->lower()->ascii()->toString()) ?: [];
 
         foreach ($tokens as $token) {
-            if (str_contains($normalized, $token) || str_contains($token, $normalized)) {
-                return true;
+            foreach ($nameWords as $word) {
+                if (mb_strlen($word) < 3) {
+                    continue;
+                }
+                if ($word === $token) {
+                    return true;
+                }
+                if (mb_strlen($word) >= 5 && str_contains($token, $word)) {
+                    return true;
+                }
+                if (mb_strlen($token) >= 5 && str_contains($word, $token)) {
+                    return true;
+                }
             }
         }
 
