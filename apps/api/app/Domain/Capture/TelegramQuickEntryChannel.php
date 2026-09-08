@@ -176,17 +176,17 @@ final class TelegramQuickEntryChannel implements QuickEntryChannelInterface
                 return QuickEntryStep::notUnderstood('Esse contexto não tem categoria pra esse tipo — cadastra uma no app primeiro.');
             }
 
-            // Categoria sempre confirmada pelo dono (o palpite vem na opção
-            // 1) — adivinhar sozinho já lançou na categoria errada. Atalho
-            // só quando não há escolha.
-            if (count($ranked) > 1) {
+            // Palpite forte → registra direto; senão pergunta (palpite na
+            // opção 1). Depois dá pra corrigir com "categoria".
+            $strong = collect($ranked)->firstWhere('strong', true);
+            if ($strong === null && count($ranked) > 1) {
                 return $this->ask($conversation, 'category', 'Qual categoria?', array_map(
                     fn (array $c): array => ['id' => $c['id'], 'label' => $c['name']],
                     $ranked,
                 ));
             }
 
-            $draft['category_id'] = $ranked[0]['id'];
+            $draft['category_id'] = $strong !== null ? $strong['id'] : $ranked[0]['id'];
             $conversation->update(['draft' => $draft]);
         }
 

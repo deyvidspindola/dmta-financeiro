@@ -118,20 +118,55 @@ test('categoria não óbvia → lista numerada, e o número registra', function 
     expect(lastReply())->toContain('R$ 100,00')->toContain('Transporte')->toContain('desfazer');
 });
 
-test('categoria óbvia pelo nome → sugerida como opção 1, mas ainda confirmada', function () {
+test('categoria óbvia pelo nome → registra direto, sem perguntar', function () {
     telegramReady(['Mercado', 'Transporte']);
 
     sendTelegram('gastei 45 no mercado');
 
-    // Nunca lança sozinho na categoria: o palpite ("Mercado") só vem no topo.
-    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('awaiting_reply')
-        ->and(lastReply())->toContain('1) Mercado');
-
-    sendTelegram('1');
-
     expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('registered')
         ->and(StatementEntry::query()->where('description', 'gastei 45 no mercado')->value('category_id'))
         ->toBe(Category::query()->where('name', 'Mercado')->value('id'));
+
+    // O palpite é mostrado e dá pra corrigir.
+    expect(lastReply())->toContain('Mercado')->toContain('categoria');
+});
+
+test('"categoria" troca a categoria do último lançamento do bot', function () {
+    telegramReady(['Mercado', 'Transporte']);
+
+    sendTelegram('gastei 45 no mercado'); // óbvia → registra em Mercado
+    $entryId = StatementEntry::query()->where('description', 'gastei 45 no mercado')->value('id');
+
+    sendTelegram('categoria');
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('reclassify_asked')
+        ->and(lastReply())->toContain('2) Transporte');
+
+    sendTelegram('2');
+
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('reclassified')
+        ->and(StatementEntry::query()->find($entryId)->category_id)
+        ->toBe(Category::query()->where('name', 'Transporte')->value('id'))
+        ->and(lastReply())->toContain('Transporte');
+});
+
+test('"categoria" sem lançamento recente → avisa que não achou', function () {
+    telegramReady(['Mercado']);
+
+    sendTelegram('categoria');
+
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('reclassify_nothing')
+        ->and(lastReply())->toContain('Não achei');
+});
+
+test('reclassificação com número inválido repete a lista', function () {
+    telegramReady(['Mercado', 'Transporte']);
+    sendTelegram('gastei 45 no mercado');
+    sendTelegram('categoria');
+
+    sendTelegram('99');
+
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('reclassify_asked')
+        ->and(lastReply())->toContain('Responde o número');
 });
 
 test('contexto com só uma categoria do tipo → não pergunta', function () {

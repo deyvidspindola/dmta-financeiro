@@ -10,6 +10,7 @@ use App\DTOs\RegisterTransactionData;
 use App\DTOs\TransactionDraftData;
 use App\Enums\CaptureOrigin;
 use App\Services\TelegramBotClient;
+use App\Services\TelegramCategoryReclassifier;
 use App\Services\TelegramConfigGuard;
 use App\Services\TelegramReplyFormatter;
 use App\Services\TelegramWebhookRecorder;
@@ -37,12 +38,15 @@ final class HandleTelegramMessage
 
     private const UNDO_WORDS = ['desfazer', 'desfaz', 'apagar', 'errado'];
 
+    private const CATEGORY_WORDS = ['categoria', 'categoría', 'cat', 'trocar categoria', 'mudar categoria', 'corrigir categoria'];
+
     public function __construct(
         private readonly QuickEntryChannelInterface $channel,
         private readonly TelegramBotClient $bot,
         private readonly TelegramConfigGuard $guard,
         private readonly RegisterTransaction $registerTransaction,
         private readonly UndoLastTelegramEntry $undoLast,
+        private readonly TelegramCategoryReclassifier $reclassify,
         private readonly TelegramReplyFormatter $formatter,
         private readonly TelegramWebhookRecorder $recorder,
     ) {}
@@ -74,6 +78,14 @@ final class HandleTelegramMessage
             return $this->undoLast->execute($chatId)
                 ? ['undone', null, '↩️ Desfeito — o lançamento foi apagado.']
                 : ['undo_nothing', null, 'Nada recente pra desfazer aqui.'];
+        }
+
+        if ($this->reclassify->isAwaiting($chatId)) {
+            return $this->reclassify->apply($chatId, $message);
+        }
+
+        if (in_array($word, self::CATEGORY_WORDS, true)) {
+            return $this->reclassify->start($chatId);
         }
 
         $step = $this->channel->handle($chatId, $message);
