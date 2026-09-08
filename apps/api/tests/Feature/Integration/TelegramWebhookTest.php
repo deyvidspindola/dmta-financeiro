@@ -118,8 +118,24 @@ test('categoria não óbvia → lista numerada, e o número registra', function 
     expect(lastReply())->toContain('R$ 100,00')->toContain('Transporte')->toContain('desfazer');
 });
 
-test('categoria óbvia pelo nome → registra direto, sem perguntar', function () {
+test('categoria óbvia pelo nome → sugerida como opção 1, mas ainda confirmada', function () {
     telegramReady(['Mercado', 'Transporte']);
+
+    sendTelegram('gastei 45 no mercado');
+
+    // Nunca lança sozinho na categoria: o palpite ("Mercado") só vem no topo.
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('awaiting_reply')
+        ->and(lastReply())->toContain('1) Mercado');
+
+    sendTelegram('1');
+
+    expect(TelegramWebhookEvent::query()->latest('id')->value('outcome'))->toBe('registered')
+        ->and(StatementEntry::query()->where('description', 'gastei 45 no mercado')->value('category_id'))
+        ->toBe(Category::query()->where('name', 'Mercado')->value('id'));
+});
+
+test('contexto com só uma categoria do tipo → não pergunta', function () {
+    telegramReady(['Mercado']);
 
     sendTelegram('gastei 45 no mercado');
 
