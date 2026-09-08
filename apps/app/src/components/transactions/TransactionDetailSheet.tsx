@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { transactionsApi } from '@/api';
 import { Badge, Button, MoneyValue, Sheet, Text } from '@/components/ui';
@@ -28,6 +29,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /** Detalhe de um lançamento — abre em sheet a partir da lista. Efetivar previsto no B2. */
 export function TransactionDetailSheet({ entry, contextId, accountName, categoryName, onClose }: Props) {
   const queryClient = useQueryClient();
+  const router = useRouter();
 
   const settle = useMutation({
     mutationFn: () => transactionsApi.settleTransaction(contextId!, entry!.id),
@@ -92,18 +94,35 @@ export function TransactionDetailSheet({ entry, contextId, accountName, category
             </View>
           ) : null}
 
-          {isPending && contextId ? (
+          {contextId ? (
             <View className="mt-4 gap-2">
-              {settle.isError ? (
-                <Text variant="error">{t.transactions.detail.settleError}</Text>
-              ) : null}
               <Button
-                label={t.transactions.detail.markSettled}
-                loading={settle.isPending}
-                onPress={() => settle.mutate()}
+                label={t.transactions.detail.edit}
+                variant="secondary"
+                onPress={() => {
+                  onClose();
+                  router.push({
+                    pathname: '/edit-transaction',
+                    params: { contextId, transactionId: entry.id },
+                  });
+                }}
               />
+              {isPending ? (
+                <>
+                  {settle.isError ? (
+                    <Text variant="error">{t.transactions.detail.settleError}</Text>
+                  ) : null}
+                  <Button
+                    label={t.transactions.detail.markSettled}
+                    loading={settle.isPending}
+                    onPress={() => settle.mutate()}
+                  />
+                </>
+              ) : null}
             </View>
-          ) : entry.settled_at ? (
+          ) : null}
+
+          {entry.settled_at ? (
             <Text variant="muted" className="mt-4 text-xs text-fg-subtle">
               {t.transactions.detail.settledOn(formatDateShort(entry.settled_at.slice(0, 10)))}
             </Text>

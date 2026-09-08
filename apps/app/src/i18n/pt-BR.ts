@@ -406,6 +406,7 @@ export const strings = {
       settledOn: (date: string) => `Efetivado em ${date}`,
       settleError: 'Não deu para efetivar. Tente de novo.',
       settled: 'Efetivado.',
+      edit: 'Editar',
     },
     created: 'Lançamento registrado.',
     goal: 'Destinar a uma meta?',
@@ -746,6 +747,12 @@ export const strings = {
       date: 'Data inválida (use AAAA-MM-DD).',
       generic: 'Não deu para salvar. Tente de novo.',
     },
+  },
+
+  editTransaction: {
+    title: 'Editar lançamento',
+    submit: 'Salvar alterações',
+    updated: 'Lançamento atualizado.',
   },
 } as const;
 

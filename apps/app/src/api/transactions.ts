@@ -45,6 +45,8 @@ export type CreateTransactionInput = {
   settled: boolean;
 };
 
+export type UpdateTransactionInput = Omit<CreateTransactionInput, 'settled'>;
+
 export async function createTransaction(
   contextId: string,
   input: CreateTransactionInput,
@@ -52,6 +54,20 @@ export async function createTransaction(
   const payload = await http.post<
     Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
   >(`/contexts/${contextId}/transactions`, {
+    ...input,
+    category_id: input.category_id ?? undefined,
+  });
+  return mapTransaction(contextId, unwrapData(payload));
+}
+
+export async function updateTransaction(
+  contextId: string,
+  transactionId: string,
+  input: UpdateTransactionInput,
+): Promise<StatementEntry> {
+  const payload = await http.patch<
+    Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
+  >(`/contexts/${contextId}/transactions/${transactionId}`, {
     ...input,
     category_id: input.category_id ?? undefined,
   });
