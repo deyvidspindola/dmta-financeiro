@@ -34,6 +34,19 @@ final readonly class TransactionDraftData
         public ?int $accountId = null,
     ) {}
 
+    /** @param  array<string, mixed>  $draft  Estado acumulado da conversa (json de TelegramConversation). */
+    public static function fromDraft(array $draft): self
+    {
+        return new self(
+            description: $draft['description'] ?? '',
+            amount: $draft['amount'] ?? null,
+            type: isset($draft['type']) ? StatementEntryType::from($draft['type']) : null,
+            categoryId: $draft['category_id'] ?? null,
+            contextId: $draft['context_id'] ?? null,
+            accountId: $draft['account_id'] ?? null,
+        );
+    }
+
     public function isComplete(): bool
     {
         return $this->amount !== null

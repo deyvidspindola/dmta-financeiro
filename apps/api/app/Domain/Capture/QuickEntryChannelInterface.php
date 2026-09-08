@@ -4,21 +4,20 @@ declare(strict_types=1);
 
 namespace App\Domain\Capture;
 
-use App\DTOs\TransactionDraftData;
-
 /**
- * Interpreta uma mensagem de texto recebida do bot do Telegram e produz
- * um rascunho de lançamento (capítulo 6.4, `docs/03_INTERFACES_PLUGAVEIS.md`).
- * F1 usa conversa guiada (pergunta valor → contexto → categoria quando
- * faltar informação) — evita depender de NLP. Uma implementação futura
- * mais sofisticada pode substituir esta sem mudar o Controller do
- * webhook.
+ * Assistente de lançamento rápido do bot do Telegram (capítulo 6.4,
+ * `docs/03_INTERFACES_PLUGAVEIS.md`). Conversa guiada por listas
+ * numeradas — o usuário digita o valor uma vez e responde os passos
+ * seguintes só com números. Avança sozinho o que dá pra resolver sem
+ * perguntar (contexto/conta únicos, categoria óbvia pelo histórico).
+ * Sem NLP de verdade; uma implementação futura pode substituir esta sem
+ * mudar o Controller do webhook.
  *
  * @package App\Domain\Capture
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 2.0.0
  *
  * @since   25/08/2026
  *
@@ -27,23 +26,20 @@ use App\DTOs\TransactionDraftData;
 interface QuickEntryChannelInterface extends TransactionCaptureChannelInterface
 {
     /**
-     * Interpreta uma mensagem recebida e devolve o rascunho acumulado da
-     * conversa (pode vir incompleto — ver {@see TransactionDraftData::isComplete()}),
-     * ou `null` se a mensagem não foi entendida (não é um valor, ou a
-     * resposta não bateu com nenhuma opção da pergunta atual).
+     * Processa uma mensagem e devolve o próximo passo da conversa.
      *
      * @param  string  $chatId  Identificador da conversa no Telegram.
      * @param  string  $message  Texto recebido.
      */
-    public function parseMessage(string $chatId, string $message): ?TransactionDraftData;
+    public function handle(string $chatId, string $message): QuickEntryStep;
 
-    /** Descarta a conversa em aberto deste chat (comando "cancelar"). */
+    /** Descarta a conversa em aberto deste chat. */
     public function cancel(string $chatId): void;
 
     /**
-     * Descreve, em português, o que a conversa em aberto deste chat espera
-     * como próxima resposta — com as opções válidas listadas quando fizer
-     * sentido. `null` se não há conversa em aberto.
+     * Marca a conversa como registrada (`Confirmed`), guardando o id do
+     * lançamento pra um eventual "desfazer". Chamado pelo caso de uso
+     * logo depois de gravar.
      */
-    public function describeExpectedReply(string $chatId): ?string;
+    public function markRegistered(string $chatId, int $transactionId): void;
 }
