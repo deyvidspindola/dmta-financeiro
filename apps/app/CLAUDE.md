@@ -109,6 +109,11 @@ npm run format               # prettier --check
 npm run export:web           # expo export -p web  (build web sem erro)
 ```
 
+Toda mudança visível no app: bumpe o **patch** de `expo.version` no
+`app.json` (aparece em Mais → Versão do app; flui via OTA). `runtimeVersion`
+(string fixa) só muda em alteração nativa, e aí precisa de `eas build` novo —
+ver `README.md` § "Versões".
+
 Build nativo (iOS/Android) via **EAS** (`build-mobile.yml`, `workflow_dispatch`)
 — não verificável nesta máquina de dev. O workflow ainda aponta pra
 `apps/mobile`; ajuste do path fica pra um PR de CI dedicado (fora do escopo B0).

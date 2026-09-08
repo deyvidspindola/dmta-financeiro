@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react';
 import { Pressable, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
+import Constants from 'expo-constants';
 import { Feather } from '@expo/vector-icons';
 import { TabShell } from '@/components/TabShell';
 import { ConfirmSheet, ListRow, Text } from '@/components/ui';
@@ -92,6 +93,19 @@ export default function MoreTab() {
               </Pressable>
             ))}
           </View>
+        </Section>
+
+        <Section title={t.about.title}>
+          <ListRow onPress={() => router.push('/updates')}>
+            <View className="flex-row items-center gap-3">
+              <Feather name="info" size={18} color="#7c918b" />
+              <Text className="flex-1">{t.about.version}</Text>
+              <Text variant="muted" className="text-xs">
+                {Constants.expoConfig?.version ?? '—'}
+              </Text>
+              <Feather name="chevron-right" size={18} color="#7c918b" />
+            </View>
+          </ListRow>
         </Section>
 
         <Pressable

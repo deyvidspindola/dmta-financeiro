@@ -3,16 +3,15 @@
     "name": "DMTA Financeiro",
     "slug": "dmta-financeiro-app",
     "owner": "drspindola",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "scheme": "dmtafinanceiro",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "runtimeVersion": {
-      "policy": "fingerprint"
-    },
+    "runtimeVersion": "1.0.0",
     "updates": {
       "fallbackToCacheTimeout": 0,
+      "checkAutomatically": "ON_LOAD",
       "url": "https://u.expo.dev/0b1fc021-30e9-4c54-a22c-8d1a2ff11003"
     },
     "ios": {

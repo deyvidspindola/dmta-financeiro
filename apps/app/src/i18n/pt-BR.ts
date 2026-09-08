@@ -59,6 +59,35 @@ export const strings = {
     logoutConfirm: 'Sair da conta neste aparelho?',
   },
 
+  about: {
+    title: 'Sobre',
+    version: 'Versão do app',
+  },
+
+  appUpdates: {
+    title: 'Versão e atualizações',
+    appVersion: 'Versão do app',
+    runtime: 'Versão nativa',
+    channel: 'Canal',
+    channelDev: 'desenvolvimento',
+    source: 'Origem',
+    sourceEmbedded: 'embutida no APK',
+    sourceOta: 'atualização OTA',
+    lastUpdate: 'Última atualização',
+    updateId: 'ID da atualização',
+    check: 'Buscar atualizações',
+    checking: 'Procurando…',
+    downloading: 'Baixando…',
+    upToDate: 'Você já está na versão mais recente.',
+    readyTitle: 'Atualização baixada',
+    readyHint: 'Reinicie o app para aplicar as novidades.',
+    restart: 'Reiniciar agora',
+    error: 'Não deu para atualizar.',
+    devTitle: 'Build de desenvolvimento',
+    devHint:
+      'Atualizações automáticas só funcionam no APK de preview/produção. Neste build, rode "npx expo start" e recarregue pelo Metro.',
+  },
+
   shell: {
     collapseSidebar: 'Recolher menu',
     expandSidebar: 'Expandir menu',
