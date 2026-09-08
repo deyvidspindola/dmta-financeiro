@@ -99,6 +99,20 @@ export const strings = {
     save: 'Salvar orçamento',
     editBudget: 'Editar orçamento',
     spentEffective: (v: string) => `${v} já efetivado`,
+    detail: {
+      title: 'Consumo do orçamento',
+      editLimit: 'Editar teto',
+      emptyConsumption: 'Nenhum lançamento nesta categoria neste mês.',
+      sectionSpent: 'Efetivado',
+      sectionForecast: 'Previsto',
+      kinds: {
+        transaction: 'Lançamento',
+        bill: 'Boleto',
+        card_purchase: 'Compra no cartão',
+        recurring_transaction: 'Recorrente',
+        recurring_bill: 'Boleto recorrente',
+      },
+    },
   },
 
   auth: {
@@ -414,6 +428,7 @@ export const strings = {
       settledOn: (date: string) => `Efetivado em ${date}`,
       settleError: 'Não deu para efetivar. Tente de novo.',
       settled: 'Efetivado.',
+      edit: 'Editar',
     },
     created: 'Lançamento registrado.',
     goal: 'Destinar a uma meta?',
@@ -727,6 +742,8 @@ export const strings = {
     close: 'Fechar',
     delete: 'Excluir',
     comingSoon: 'Em breve',
+    search: 'Buscar…',
+    noResults: 'Nenhuma opção encontrada',
   },
 
   newTransaction: {
@@ -754,6 +771,12 @@ export const strings = {
       date: 'Data inválida (use AAAA-MM-DD).',
       generic: 'Não deu para salvar. Tente de novo.',
     },
+  },
+
+  editTransaction: {
+    title: 'Editar lançamento',
+    submit: 'Salvar alterações',
+    updated: 'Lançamento atualizado.',
   },
 } as const;
 

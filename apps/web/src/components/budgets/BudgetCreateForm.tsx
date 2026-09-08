@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import {
   Button,
+  CategorySelect,
   ErrorBanner,
   Field,
   MoneyInput,
-  TextSelect,
 } from '@/components/ui'
 import type { Category } from '@/types/models'
 import { strings } from '@/i18n/pt-BR'
@@ -37,19 +37,13 @@ export function BudgetCreateForm({
         onSubmit({ categoryId, limit })
       }}
     >
-      <Field label={t.category}>
-        <TextSelect
-          value={categoryId}
-          onChange={(event) => setCategoryId(event.target.value)}
-        >
-          <option value="">{strings.common.select}</option>
-          {categories.map((category) => (
-            <option key={category.id} value={category.id}>
-              {category.name}
-            </option>
-          ))}
-        </TextSelect>
-      </Field>
+      <CategorySelect
+        label={t.category}
+        categories={categories}
+        value={categoryId || null}
+        onChange={(value) => setCategoryId(value || '')}
+        placeholder={strings.common.select}
+      />
       <Field label={t.limit}>
         <MoneyInput value={limit} onChange={setLimit} />
       </Field>

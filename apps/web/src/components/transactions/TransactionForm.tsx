@@ -6,6 +6,7 @@ import { accountsApi, categoriesApi, goalsApi } from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import {
   Button,
+  CategorySelect,
   DatePickerField,
   ErrorBanner,
   Field,
@@ -212,35 +213,22 @@ export function TransactionForm({
         </Field>
 
         <div className={cn(!isQuick && 'sm:col-span-2')}>
-          <Field label={t.category}>
-            <div className="flex gap-2">
-              <TextSelect
-                className="min-w-0 flex-1"
-                {...form.register('category_id', {
-                  setValueAs: (v: string) => (v === '' ? null : v),
-                })}
-              >
-                <option value="">
-                  {isQuick ? strings.quickAdd.noCategory : strings.common.select}
-                </option>
-                {categories.map((cat) => (
-                  <option key={cat.id} value={cat.id}>
-                    {cat.parent_id ? `↳ ${cat.name}` : cat.name}
-                  </option>
-                ))}
-              </TextSelect>
-              {!isQuick ? (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setCategoryOpen(true)}
-                >
-                  {strings.categories.quickAdd}
-                </Button>
-              ) : null}
-            </div>
-          </Field>
+          <Controller
+            name="category_id"
+            control={form.control}
+            render={({ field }) => (
+              <CategorySelect
+                label={t.category}
+                categories={categories}
+                value={field.value}
+                onChange={field.onChange}
+                placeholder={isQuick ? strings.quickAdd.noCategory : strings.common.select}
+                error={form.formState.errors.category_id?.message}
+                onQuickAdd={!isQuick ? () => setCategoryOpen(true) : undefined}
+                quickAddLabel={!isQuick ? strings.categories.quickAdd : undefined}
+              />
+            )}
+          />
         </div>
 
         {showGoalField ? (

@@ -30,19 +30,26 @@ type SheetProps = {
  * encolhe dentro desse limite (`flexShrink`), então forms longos rolam em
  * vez de empurrar a alça/título pra fora.
  *
- * Teclado: `KeyboardAvoidingView` com `padding` no iOS e `height` no
- * Android — no Android o `<Modal>` não respeita `adjustResize`, então sem
- * o `height` os campos de baixo ficavam atrás do teclado.
+ * Teclado: Modal translúcido + KeyboardAvoidingView com padding (funciona
+ * melhor que height dentro de Modal translúcido). ScrollView com
+ * automaticallyAdjustKeyboardInsets (iOS) e keyboardDismissMode interativo.
  */
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {
   const { height } = useWindowDimensions();
 
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={onClose}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+    >
       <View className="flex-1 justify-end">
         <Pressable className="absolute inset-0 bg-black/40" onPress={onClose} />
         <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior="padding"
+          keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
           className="w-full"
         >
           <SafeAreaView edges={['bottom']} className="bg-canvas">
@@ -68,6 +75,8 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
               <ScrollView
                 style={{ flexShrink: 1 }}
                 keyboardShouldPersistTaps="handled"
+                keyboardDismissMode="interactive"
+                automaticallyAdjustKeyboardInsets
                 showsVerticalScrollIndicator={false}
                 contentContainerClassName="pb-6"
               >

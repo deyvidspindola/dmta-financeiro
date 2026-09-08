@@ -15,6 +15,7 @@ import {
   Skeleton,
   Text,
 } from '@/components/ui';
+import { BudgetDetailSheet } from '@/components/budgets/BudgetDetailSheet';
 import { t } from '@/i18n';
 import { formatMonthLabel } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
@@ -35,6 +36,7 @@ export default function BudgetsScreen() {
 
   const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<BudgetRow | null>(null);
+  const [viewingDetail, setViewingDetail] = useState<BudgetRow | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const budgetsQuery = useQuery({
@@ -114,9 +116,7 @@ export default function BudgetsScreen() {
               {(budgetsQuery.data ?? []).map((row) => (
                 <Pressable
                   key={row.budget_id}
-                  onPress={() =>
-                    setForm({ budgetId: row.budget_id, categoryId: row.category_id, limit: row.limit })
-                  }
+                  onPress={() => setViewingDetail(row)}
                   className="gap-2 rounded-2xl border border-line bg-surface p-4 active:bg-surface-2"
                 >
                   <View className="flex-row items-center justify-between gap-3">
@@ -168,6 +168,7 @@ export default function BudgetsScreen() {
                 value={form.categoryId}
                 options={categoryOptions}
                 onChange={(v) => setForm({ ...form, categoryId: v })}
+                searchable
               />
             ) : null}
             <MoneyField
@@ -205,6 +206,22 @@ export default function BudgetsScreen() {
           </View>
         ) : null}
       </Sheet>
+
+      <BudgetDetailSheet
+        budget={viewingDetail}
+        contextId={activeScope}
+        month={month}
+        onClose={() => setViewingDetail(null)}
+        onEdit={() => {
+          if (viewingDetail) {
+            setForm({
+              budgetId: viewingDetail.budget_id,
+              categoryId: viewingDetail.category_id,
+              limit: viewingDetail.limit,
+            });
+          }
+        }}
+      />
 
       <ConfirmSheet
         open={toDelete !== null}

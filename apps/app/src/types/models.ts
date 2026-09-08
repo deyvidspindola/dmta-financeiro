@@ -224,6 +224,34 @@ export interface BudgetRow {
   over: boolean;
 }
 
+export type BudgetItemKind =
+  | 'transaction'
+  | 'bill'
+  | 'card_purchase'
+  | 'recurring_transaction'
+  | 'recurring_bill';
+
+export interface BudgetItem {
+  kind: BudgetItemKind;
+  effective: boolean;
+  description: string;
+  category_id: string;
+  category_name: string | null;
+  amount: number;
+  date: string;
+}
+
+export interface BudgetDetail {
+  budget_id: string;
+  category_id: string;
+  category_name: string;
+  limit: number;
+  month: string;
+  spent: number;
+  spent_effective: number;
+  items: BudgetItem[];
+}
+
 export type GoalStatus = 'active' | 'completed';
 
 export interface Goal {
