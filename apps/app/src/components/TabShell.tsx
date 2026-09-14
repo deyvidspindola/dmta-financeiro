@@ -3,7 +3,6 @@ import { ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { AppHeader } from '@/components/AppHeader';
 import { Text } from '@/components/ui';
-import { t } from '@/i18n';
 
 type TabShellProps = {
   title?: string;
@@ -24,14 +23,5 @@ export function TabShell({ title, children }: TabShellProps) {
         {children}
       </ScrollView>
     </SafeAreaView>
-  );
-}
-
-/** Placeholder "Em breve" para abas ainda não implementadas (B2+). */
-export function ComingSoonTab({ title }: { title: string }) {
-  return (
-    <TabShell title={title}>
-      <Text variant="muted">{t.common.comingSoon}</Text>
-    </TabShell>
   );
 }

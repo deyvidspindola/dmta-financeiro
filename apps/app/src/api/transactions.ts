@@ -34,6 +34,17 @@ export async function listTransactions(
   return unwrapData(payload).map((row) => mapTransaction(contextId, row));
 }
 
+/** Busca 1 lançamento por id — não filtra a lista inteira no cliente. */
+export async function getTransaction(
+  contextId: string,
+  transactionId: string,
+): Promise<StatementEntry> {
+  const payload = await http.get<
+    Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
+  >(`/contexts/${contextId}/transactions/${transactionId}`);
+  return mapTransaction(contextId, unwrapData(payload));
+}
+
 export type CreateTransactionInput = {
   account_id: string;
   category_id: string | null;

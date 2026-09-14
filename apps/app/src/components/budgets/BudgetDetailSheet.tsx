@@ -33,8 +33,8 @@ function ItemRow({ item, categoryName }: { item: BudgetItem; categoryName: strin
             {item.description}
           </Text>
           {!item.effective ? (
-            <Badge tone="neutral" className="text-[10px]">
-              Previsto
+            <Badge tone="warning" className="text-[10px]">
+              {t.transactions.pendingBadge}
             </Badge>
           ) : null}
         </View>
@@ -54,7 +54,15 @@ function ItemRow({ item, categoryName }: { item: BudgetItem; categoryName: strin
   );
 }
 
-function ItemSection({ title, items, categoryName }: { title: string; items: BudgetItem[]; categoryName: string }) {
+function ItemSection({
+  title,
+  items,
+  categoryName,
+}: {
+  title: string;
+  items: BudgetItem[];
+  categoryName: string;
+}) {
   if (items.length === 0) return null;
 
   const total = items.reduce((sum, item) => sum + item.amount, 0);
@@ -69,7 +77,11 @@ function ItemSection({ title, items, categoryName }: { title: string; items: Bud
       </View>
       <View>
         {items.map((item, index) => (
-          <ItemRow key={`${item.kind}-${item.date}-${index}`} item={item} categoryName={categoryName} />
+          <ItemRow
+            key={`${item.kind}-${item.date}-${index}`}
+            item={item}
+            categoryName={categoryName}
+          />
         ))}
       </View>
     </View>
@@ -111,7 +123,8 @@ export function BudgetDetailSheet({ budget, contextId, month, onClose, onEdit }:
               </Text>
               {spentEffective !== spent ? (
                 <Text variant="muted" className="text-xs">
-                  {t.budgets.spentEffective(formatMoney(spentEffective))} de {formatMoney(spent)} total
+                  {t.budgets.spentEffective(formatMoney(spentEffective))} de {formatMoney(spent)}{' '}
+                  total
                 </Text>
               ) : null}
             </View>
@@ -125,8 +138,16 @@ export function BudgetDetailSheet({ budget, contextId, month, onClose, onEdit }:
             <Text variant="muted">{t.budgets.detail.emptyConsumption}</Text>
           ) : (
             <View className="gap-6">
-              <ItemSection title={t.budgets.detail.sectionSpent} items={spentItems} categoryName={categoryName} />
-              <ItemSection title={t.budgets.detail.sectionForecast} items={forecastItems} categoryName={categoryName} />
+              <ItemSection
+                title={t.budgets.detail.sectionSpent}
+                items={spentItems}
+                categoryName={categoryName}
+              />
+              <ItemSection
+                title={t.budgets.detail.sectionForecast}
+                items={forecastItems}
+                categoryName={categoryName}
+              />
             </View>
           )}
 
