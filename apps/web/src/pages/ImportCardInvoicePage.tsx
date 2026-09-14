@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { billCapturesApi, creditCardsApi } from '@/api'
 import { CsvFileField, ImportResult } from '@/components/imports/ImportFields'
+import { ImportTabs } from '@/components/imports/ImportTabs'
 import {
   ImportPreviewTable,
   previewMoney,
@@ -168,6 +169,8 @@ export function ImportCardInvoicePage() {
           </Button>
         }
       />
+
+      <ImportTabs active="card-invoice" />
 
       {!contextId ? <ErrorBanner message={i.needContext} /> : null}
 

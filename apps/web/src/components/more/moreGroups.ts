@@ -81,23 +81,13 @@ export const MORE_GROUPS: MoreGroup[] = [
   {
     title: m.groups.imports,
     items: [
+      // 1 item só, não 3 — extrato/boletos/fatura viraram abas dentro da
+      // mesma tela (ImportTabs), então 1 porta de entrada basta.
       {
         kind: 'link',
         to: '/import-statement',
-        label: n.importStatement,
+        label: n.import,
         icon: FileDown,
-      },
-      {
-        kind: 'link',
-        to: '/import-bills',
-        label: n.importBills,
-        icon: FileDown,
-      },
-      {
-        kind: 'link',
-        to: '/import-card-invoice',
-        label: n.importCardInvoice,
-        icon: CreditCard,
       },
     ],
   },
