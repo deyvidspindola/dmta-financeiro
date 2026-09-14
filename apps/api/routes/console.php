@@ -4,6 +4,7 @@ use App\Jobs\CloseCardInvoices;
 use App\Jobs\GenerateRecurringBillEntries;
 use App\Jobs\GenerateRecurringTransactionEntries;
 use App\Jobs\PollBoletoMailbox;
+use App\Jobs\SendBillReminders;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -61,3 +62,12 @@ Schedule::job(new CloseCardInvoices)
     ->daily()
     ->withoutOverlapping(30)
     ->sentryMonitor('fechamento-faturas-cartao');
+
+// Lembrete de boleto vencendo amanhã, via Telegram (o mesmo bot do
+// lançamento rápido) — 8h da manhã, não meia-noite: é aviso pra gente
+// ler acordado. Sem efeito se TELEGRAM_ALLOWED_CHAT_ID não estiver
+// configurado (ver SendBillReminders).
+Schedule::job(new SendBillReminders)
+    ->dailyAt('08:00')
+    ->withoutOverlapping(30)
+    ->sentryMonitor('lembrete-boletos');
