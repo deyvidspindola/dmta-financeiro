@@ -12,6 +12,7 @@ import {
   transactionsApi,
 } from '@/api';
 import { TabShell } from '@/components/TabShell';
+import { CategorySpendingList } from '@/components/dashboard/CategorySpendingList';
 import { EvolutionChart } from '@/components/dashboard/EvolutionChart';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
 import {
@@ -27,6 +28,7 @@ import {
   Text,
 } from '@/components/ui';
 import { t } from '@/i18n';
+import { categoryColor } from '@/lib/categoryColor';
 import { formatDateShort, formatMonthLabel, isInMonth, monthDateRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
 import { transactionDirection } from '@/lib/transactionDisplay';
@@ -118,6 +120,24 @@ export default function HomeTab() {
     }
     return map;
   }, [categoriesQuery.data]);
+
+  // Só despesa já efetivada do mês — previsto ainda não é "onde o
+  // dinheiro foi". transactionsQuery já vem filtrada pro mês (from/to).
+  const categorySpending = useMemo(() => {
+    const sums = new Map<string, number>();
+    for (const tx of transactionsQuery.data ?? []) {
+      if (tx.type !== 'expense' || tx.status !== 'settled') continue;
+      const key = tx.category_id ?? '';
+      sums.set(key, (sums.get(key) ?? 0) + Math.abs(tx.amount));
+    }
+    return [...sums.entries()]
+      .map(([categoryId, amount]) => ({
+        name: categoryId ? (categoryMap.get(categoryId) ?? '') : t.newTransaction.categoryNone,
+        amount,
+        color: categoryId ? categoryColor(categoryId) : '#94a3b8',
+      }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [transactionsQuery.data, categoryMap]);
 
   const recentTransactions = useMemo(() => {
     const rows = transactionsQuery.data ?? [];
@@ -293,6 +313,16 @@ export default function HomeTab() {
               {t.dashboard.evolution}
             </Text>
             <EvolutionChart series={evolutionQuery.data} />
+          </Card>
+        ) : null}
+
+        {/* Gastos por categoria — só despesa já efetivada do mês */}
+        {categorySpending.length > 0 ? (
+          <Card className="gap-3">
+            <Text variant="title" className="text-base">
+              {t.dashboard.categorySpending}
+            </Text>
+            <CategorySpendingList rows={categorySpending} />
           </Card>
         ) : null}
 
