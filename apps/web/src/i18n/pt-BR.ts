@@ -10,7 +10,6 @@ export const strings = {
     accounts: 'Contas',
     creditCards: 'Cartões',
     bills: 'Boletos',
-    billCaptures: 'Capturas',
     boletoPasswords: 'Senhas de boleto',
     transactions: 'Lançamentos',
     recurring: 'Recorrentes',
@@ -464,10 +463,13 @@ export const strings = {
     empty: 'Nenhuma recorrência neste contexto.',
     needContext: 'Selecione um contexto para gerenciar recorrências.',
     created: 'Recorrência cadastrada.',
-    cancel: 'Cancelar recorrência',
-    cancelled: 'Recorrência cancelada.',
+    // Não existe "cancelar" reversível — é DELETE de verdade (sem editar,
+    // sem reativar). Nomeado como exclusão pra não prometer algo que não
+    // faz; "recorrências já geradas permanecem" continua valendo.
+    cancel: 'Excluir recorrência',
+    cancelled: 'Recorrência excluída.',
     confirmCancel:
-      'Cancelar esta recorrência? Ocorrências já geradas permanecem.',
+      'Excluir esta recorrência? Ocorrências já geradas permanecem.',
     intervals: {
       weekly: 'Semanal',
       monthly: 'Mensal',

@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { accountsApi, categoriesApi, transactionsApi, transfersApi } from '@/api';
 import { ApiError } from '@/api/http';
+import { ContextSwitcher } from '@/components/ContextSwitcher';
 import {
   Button,
   DateField,
@@ -223,7 +224,10 @@ export default function NewTransactionScreen() {
       </View>
 
       {isConsolidated ? (
-        <Text variant="muted">{t.newTransaction.needContext}</Text>
+        <View className="items-start gap-3">
+          <Text variant="muted">{t.newTransaction.needContext}</Text>
+          <ContextSwitcher />
+        </View>
       ) : (
         <View className="gap-4">
           {/* Tipo */}

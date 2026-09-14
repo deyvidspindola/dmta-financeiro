@@ -52,22 +52,20 @@ export default function EditTransactionScreen() {
 
   const transactionQuery = useQuery({
     queryKey: ['transaction', contextId, transactionId],
-    queryFn: () => transactionsApi.listTransactions(contextId),
+    queryFn: () => transactionsApi.getTransaction(contextId, transactionId!),
     enabled: Boolean(contextId) && Boolean(transactionId),
   });
 
   // Carrega os dados da transação uma vez
   if (!loaded && transactionQuery.data) {
-    const tx = transactionQuery.data.find((t) => t.id === transactionId);
-    if (tx) {
-      setType(tx.type === 'income' ? 'income' : 'expense');
-      setAmount(Math.abs(tx.amount));
-      setDescription(tx.description);
-      setAccountId(tx.account_id);
-      setCategoryId(tx.category_id);
-      setOccurredAt(tx.date);
-      setLoaded(true);
-    }
+    const tx = transactionQuery.data;
+    setType(tx.type === 'income' ? 'income' : 'expense');
+    setAmount(Math.abs(tx.amount));
+    setDescription(tx.description);
+    setAccountId(tx.account_id);
+    setCategoryId(tx.category_id);
+    setOccurredAt(tx.date);
+    setLoaded(true);
   }
 
   const accountsQuery = useQuery({
@@ -170,7 +168,7 @@ export default function EditTransactionScreen() {
       </View>
 
       {transactionQuery.isLoading ? (
-        <Text variant="muted">Carregando...</Text>
+        <Text variant="muted">{t.common.loading}</Text>
       ) : (
         <View className="gap-4">
           {/* Tipo */}
