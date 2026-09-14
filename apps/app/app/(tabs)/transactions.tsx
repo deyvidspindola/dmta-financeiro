@@ -1,10 +1,20 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { Pressable, TextInput, View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import { accountsApi, categoriesApi, consolidatedApi, transactionsApi } from '@/api';
 import { TabShell } from '@/components/TabShell';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
-import { Badge, Card, ListRow, Money, MoneyValue, Skeleton, Text } from '@/components/ui';
+import {
+  Badge,
+  Card,
+  ListRow,
+  Money,
+  MoneyValue,
+  SelectField,
+  Skeleton,
+  Text,
+} from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { formatDateShort, isInMonth, monthDateRange } from '@/lib/dates';
@@ -40,6 +50,9 @@ export default function TransactionsTab() {
   const isConsolidated = activeScope === CONSOLIDATED;
   const contextId = isConsolidated ? null : activeScope;
   const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+  const [accountId, setAccountId] = useState<string | null>(null);
+  const [categoryId, setCategoryId] = useState<string | null>(null);
   const [selected, setSelected] = useState<StatementEntry | null>(null);
 
   const { from, to } = monthDateRange(month);
@@ -80,6 +93,21 @@ export default function TransactionsTab() {
     return map;
   }, [categoriesQuery.data]);
 
+  const accountOptions = useMemo(
+    () => [
+      { value: '', label: t.transactions.filters.allAccounts },
+      ...(accountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
+    ],
+    [accountsQuery.data],
+  );
+  const categoryOptions = useMemo(
+    () => [
+      { value: '', label: t.transactions.filters.allCategories },
+      ...(categoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    ],
+    [categoriesQuery.data],
+  );
+
   const monthEntries = useMemo(
     () =>
       (transactionsQuery.data ?? [])
@@ -98,10 +126,24 @@ export default function TransactionsTab() {
     return { income, expense, net: income - expense };
   }, [monthEntries]);
 
-  const groups = useMemo(
-    () => groupByDay(monthEntries.filter((tx) => matchesFilter(tx, filter))),
-    [monthEntries, filter],
-  );
+  const hasActiveFilters = search.trim().length > 0 || accountId !== null || categoryId !== null;
+
+  // Filtro é local — o mês inteiro já está em memória (mesma query de
+  // sempre), então busca/conta/categoria não precisam de ida-e-volta nova
+  // à API. Funciona igual no Consolidado, onde o endpoint não aceita
+  // filtro nenhum no servidor.
+  const groups = useMemo(() => {
+    const needle = search.trim().toLowerCase();
+    return groupByDay(
+      monthEntries.filter((tx) => {
+        if (!matchesFilter(tx, filter)) return false;
+        if (accountId && tx.account_id !== accountId) return false;
+        if (categoryId && tx.category_id !== categoryId) return false;
+        if (needle && !tx.description.toLowerCase().includes(needle)) return false;
+        return true;
+      }),
+    );
+  }, [monthEntries, filter, accountId, categoryId, search]);
 
   const filterLabel = (f: Filter) =>
     f === 'all' ? t.transactions.filters.all : t.transactions.types[f as EntryType];
@@ -114,18 +156,65 @@ export default function TransactionsTab() {
         {/* Resumo do mês */}
         <Card className="flex-row justify-between">
           <View className="gap-0.5">
-            <Text variant="muted" className="text-xs">{t.transactions.monthIn}</Text>
+            <Text variant="muted" className="text-xs">
+              {t.transactions.monthIn}
+            </Text>
             <MoneyValue amount={totals.income} direction="credit" size="md" />
           </View>
           <View className="gap-0.5">
-            <Text variant="muted" className="text-xs">{t.transactions.monthOut}</Text>
+            <Text variant="muted" className="text-xs">
+              {t.transactions.monthOut}
+            </Text>
             <MoneyValue amount={totals.expense} direction="debit" size="md" />
           </View>
           <View className="items-end gap-0.5">
-            <Text variant="muted" className="text-xs">{t.transactions.monthNet}</Text>
+            <Text variant="muted" className="text-xs">
+              {t.transactions.monthNet}
+            </Text>
             <Money amount={totals.net} size="md" />
           </View>
         </Card>
+
+        {/* Busca */}
+        <View className="h-12 flex-row items-center gap-2 rounded-xl border border-line bg-surface px-3">
+          <Feather name="search" size={16} color="#7c918b" />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder={t.transactions.filters.searchPlaceholder}
+            placeholderTextColor="#7c918b"
+            className="h-full flex-1 text-base text-fg"
+          />
+          {search.length > 0 ? (
+            <Pressable onPress={() => setSearch('')} hitSlop={8}>
+              <Feather name="x" size={16} color="#7c918b" />
+            </Pressable>
+          ) : null}
+        </View>
+
+        {/* Conta / categoria */}
+        <View className="flex-row gap-2">
+          <View className="flex-1">
+            <SelectField
+              label={t.transactions.account}
+              placeholder={t.transactions.filters.allAccounts}
+              value={accountId ?? ''}
+              options={accountOptions}
+              onChange={(v) => setAccountId(v || null)}
+            />
+          </View>
+          {!isConsolidated ? (
+            <View className="flex-1">
+              <SelectField
+                label={t.transactions.category}
+                placeholder={t.transactions.filters.allCategories}
+                value={categoryId ?? ''}
+                options={categoryOptions}
+                onChange={(v) => setCategoryId(v || null)}
+              />
+            </View>
+          ) : null}
+        </View>
 
         {/* Filtro entradas/saídas */}
         <View className="flex-row rounded-xl border border-line bg-surface p-1">
@@ -133,16 +222,10 @@ export default function TransactionsTab() {
             <Pressable
               key={f}
               onPress={() => setFilter(f)}
-              className={cn(
-                'flex-1 items-center rounded-lg py-2',
-                filter === f && 'bg-canvas',
-              )}
+              className={cn('flex-1 items-center rounded-lg py-2', filter === f && 'bg-canvas')}
             >
               <Text
-                className={cn(
-                  'text-sm',
-                  filter === f ? 'font-semibold text-fg' : 'text-fg-muted',
-                )}
+                className={cn('text-sm', filter === f ? 'font-semibold text-fg' : 'text-fg-muted')}
               >
                 {filterLabel(f)}
               </Text>
@@ -161,7 +244,9 @@ export default function TransactionsTab() {
           <Text variant="error">{t.common.error}</Text>
         ) : groups.length === 0 ? (
           <Text variant="muted">
-            {filter === 'all' ? t.transactions.emptyMonth : t.transactions.emptyFilter}
+            {filter === 'all' && !hasActiveFilters
+              ? t.transactions.emptyMonth
+              : t.transactions.emptyFilter}
           </Text>
         ) : (
           <View className="gap-4">
@@ -217,9 +302,7 @@ export default function TransactionsTab() {
         entry={selected}
         contextId={contextId}
         accountName={selected ? accountMap.get(selected.account_id) : undefined}
-        categoryName={
-          selected?.category_id ? categoryMap.get(selected.category_id) : undefined
-        }
+        categoryName={selected?.category_id ? categoryMap.get(selected.category_id) : undefined}
         onClose={() => setSelected(null)}
       />
     </TabShell>
