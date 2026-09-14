@@ -445,6 +445,9 @@ export const strings = {
       all: 'Tudo',
       income: 'Entradas',
       expense: 'Saídas',
+      searchPlaceholder: 'Buscar por descrição…',
+      allAccounts: 'Todas as contas',
+      allCategories: 'Todas as categorias',
     },
     detail: {
       title: 'Lançamento',
