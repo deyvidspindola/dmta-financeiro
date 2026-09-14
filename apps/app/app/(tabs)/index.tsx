@@ -1,15 +1,38 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { accountsApi, categoriesApi, consolidatedApi, dashboardApi, transactionsApi } from '@/api';
+import {
+  accountsApi,
+  budgetsApi,
+  categoriesApi,
+  consolidatedApi,
+  dashboardApi,
+  goalsApi,
+  transactionsApi,
+} from '@/api';
 import { TabShell } from '@/components/TabShell';
-import { Badge, Card, ListRow, Money, MoneyValue, Skeleton, Stat, Text } from '@/components/ui';
+import { EvolutionChart } from '@/components/dashboard/EvolutionChart';
+import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
+import {
+  Badge,
+  Card,
+  ListRow,
+  Money,
+  MoneyValue,
+  PressableCard,
+  ProgressBar,
+  Skeleton,
+  Stat,
+  Text,
+} from '@/components/ui';
 import { t } from '@/i18n';
 import { formatDateShort, formatMonthLabel, isInMonth, monthDateRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
 import { transactionDirection } from '@/lib/transactionDisplay';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import { useMonthStore } from '@/store/monthStore';
+import type { StatementEntry } from '@/types/models';
 
 const RECENT_LIMIT = 6;
 
@@ -23,10 +46,12 @@ function StatSkeleton() {
 }
 
 export default function HomeTab() {
+  const router = useRouter();
   const { activeScope, contexts } = useAuthStore();
   const month = useMonthStore((s) => s.month);
   const isConsolidated = activeScope === CONSOLIDATED;
   const contextId = isConsolidated ? null : activeScope;
+  const [selected, setSelected] = useState<StatementEntry | null>(null);
 
   const contextLabel = isConsolidated
     ? t.dashboard.consolidatedTitle
@@ -35,6 +60,11 @@ export default function HomeTab() {
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', activeScope, month],
     queryFn: () => dashboardApi.getDashboard(activeScope, month),
+  });
+
+  const evolutionQuery = useQuery({
+    queryKey: ['dashboard-evolution', activeScope],
+    queryFn: () => dashboardApi.getDashboardEvolution(activeScope, 6),
   });
 
   const accountsQuery = useQuery({
@@ -63,6 +93,24 @@ export default function HomeTab() {
     enabled: Boolean(contextId),
   });
 
+  const budgetsQuery = useQuery({
+    queryKey: ['budgets', contextId, month],
+    queryFn: () => budgetsApi.listBudgets(contextId!, month),
+    enabled: Boolean(contextId),
+  });
+
+  const goalsQuery = useQuery({
+    queryKey: ['goals', contextId],
+    queryFn: () => goalsApi.listGoals(contextId!),
+    enabled: Boolean(contextId),
+  });
+
+  const accountMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const account of accountsQuery.data ?? []) map.set(account.id, account.name);
+    return map;
+  }, [accountsQuery.data]);
+
   const categoryMap = useMemo(() => {
     const map = new Map<string, string>();
     for (const cat of categoriesQuery.data ?? []) {
@@ -79,7 +127,27 @@ export default function HomeTab() {
       .slice(0, RECENT_LIMIT);
   }, [transactionsQuery.data, month]);
 
+  const budgetSummary = useMemo(() => {
+    const rows = budgetsQuery.data ?? [];
+    if (rows.length === 0) return null;
+    const spent = rows.reduce((sum, row) => sum + row.spent, 0);
+    const limit = rows.reduce((sum, row) => sum + row.limit, 0);
+    const overCount = rows.filter((row) => row.over).length;
+    const pct = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
+    return { spent, limit, overCount, pct, hasOver: overCount > 0 };
+  }, [budgetsQuery.data]);
+
+  const activeGoals = useMemo(
+    () => (goalsQuery.data ?? []).filter((goal) => goal.status === 'active').slice(0, 3),
+    [goalsQuery.data],
+  );
+
   const { data, isLoading, isError } = dashboardQuery;
+  const hasDebts =
+    data &&
+    (data.pending_debts_count > 0 ||
+      data.pending_debts_i_owe_amount > 0 ||
+      data.pending_debts_owed_to_me_amount > 0);
 
   return (
     <TabShell>
@@ -170,6 +238,7 @@ export default function HomeTab() {
                 label={t.dashboard.billsPending}
                 value={formatMoney(data.pending_bills_amount)}
                 hint={`${data.pending_bills_count}`}
+                onPress={() => router.push('/bills')}
               />
             </View>
             <View className="w-[47%]">
@@ -178,16 +247,67 @@ export default function HomeTab() {
                 tone={data.overdue_bills_amount > 0 ? 'negative' : 'neutral'}
                 value={formatMoney(data.overdue_bills_amount)}
                 hint={`${data.overdue_bills_count}`}
+                onPress={() => router.push('/bills')}
               />
             </View>
           </View>
         ) : null}
 
+        {/* Dívidas (discreto) */}
+        {hasDebts && data ? (
+          <View className="flex-row flex-wrap gap-x-5 gap-y-1">
+            <Text variant="muted" className="text-sm">
+              {t.dashboard.debtsIOwe}:{' '}
+              <Text className="font-semibold text-negative">
+                {formatMoney(data.pending_debts_i_owe_amount)}
+              </Text>
+              {data.pending_debts_count > 0 ? (
+                <Text variant="muted" className="text-fg-subtle">
+                  {' '}
+                  ({data.pending_debts_count})
+                </Text>
+              ) : null}
+            </Text>
+            <Text variant="muted" className="text-sm">
+              {t.dashboard.debtsOwedToMe}:{' '}
+              <Text className="font-semibold text-positive">
+                {formatMoney(data.pending_debts_owed_to_me_amount)}
+              </Text>
+            </Text>
+          </View>
+        ) : null}
+
+        {/* Evolução */}
+        {evolutionQuery.isLoading ? (
+          <Card className="gap-3">
+            <Skeleton className="h-4 w-24" />
+            <Skeleton className="h-24 w-full" />
+          </Card>
+        ) : evolutionQuery.data && evolutionQuery.data.length > 0 ? (
+          <Card className="gap-3">
+            <Text variant="title" className="text-base">
+              {t.dashboard.evolution}
+            </Text>
+            <EvolutionChart series={evolutionQuery.data} />
+          </Card>
+        ) : null}
+
         {/* Contas */}
         <Card className="gap-3">
-          <Text variant="title" className="text-base">
-            {t.dashboard.accounts}
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text variant="title" className="text-base">
+              {t.dashboard.accounts}
+            </Text>
+            {(accountsQuery.data ?? []).length > 0 ? (
+              <Text
+                variant="muted"
+                className="text-xs font-medium text-brand-600 dark:text-brand-400"
+                onPress={() => router.push('/accounts')}
+              >
+                {t.dashboard.viewAllAccounts}
+              </Text>
+            ) : null}
+          </View>
           {accountsQuery.isLoading ? (
             <View className="gap-3">
               {Array.from({ length: 3 }).map((_, i) => (
@@ -201,7 +321,10 @@ export default function HomeTab() {
           ) : (
             <View>
               {(accountsQuery.data ?? []).map((account) => (
-                <ListRow key={`${account.context_id}-${account.id}`}>
+                <ListRow
+                  key={`${account.context_id}-${account.id}`}
+                  onPress={() => router.push('/accounts')}
+                >
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-1">
                       <Text className="font-medium" numberOfLines={1}>
@@ -225,9 +348,20 @@ export default function HomeTab() {
 
         {/* Últimos lançamentos */}
         <Card className="gap-3">
-          <Text variant="title" className="text-base">
-            {t.dashboard.recentTransactions}
-          </Text>
+          <View className="flex-row items-center justify-between">
+            <Text variant="title" className="text-base">
+              {t.dashboard.recentTransactions}
+            </Text>
+            {recentTransactions.length > 0 ? (
+              <Text
+                variant="muted"
+                className="text-xs font-medium text-brand-600 dark:text-brand-400"
+                onPress={() => router.push('/transactions')}
+              >
+                {t.dashboard.viewAll}
+              </Text>
+            ) : null}
+          </View>
           {transactionsQuery.isLoading ? (
             <View className="gap-3">
               {Array.from({ length: 4 }).map((_, i) => (
@@ -243,7 +377,7 @@ export default function HomeTab() {
               {recentTransactions.map((tx) => {
                 const categoryName = tx.category_id ? categoryMap.get(tx.category_id) : undefined;
                 return (
-                  <ListRow key={`${tx.context_id}-${tx.id}`}>
+                  <ListRow key={`${tx.context_id}-${tx.id}`} onPress={() => setSelected(tx)}>
                     <View className="flex-row items-center justify-between gap-3">
                       <View className="min-w-0 flex-1 gap-0.5">
                         <Text className="font-medium" numberOfLines={1}>
@@ -272,7 +406,91 @@ export default function HomeTab() {
             </View>
           )}
         </Card>
+
+        {/* Planejamento — oculto no consolidado */}
+        {!isConsolidated ? (
+          <View className="gap-3">
+            <PressableCard onPress={() => router.push('/budgets')} className="gap-3">
+              <Text variant="title" className="text-base">
+                {t.dashboard.budgetsSummary}
+              </Text>
+              {budgetsQuery.isLoading ? (
+                <View className="gap-2">
+                  <Skeleton className="h-2 w-full" />
+                  <Skeleton className="h-4 w-40" />
+                </View>
+              ) : !budgetSummary ? (
+                <Text variant="muted">{t.dashboard.noBudgets}</Text>
+              ) : (
+                <View className="gap-2">
+                  <ProgressBar
+                    value={budgetSummary.pct}
+                    tone={budgetSummary.hasOver ? 'negative' : 'brand'}
+                  />
+                  <View className="flex-row flex-wrap items-center justify-between gap-2">
+                    <Text className="text-sm">
+                      {formatMoney(budgetSummary.spent)}{' '}
+                      <Text variant="muted">
+                        {t.dashboard.ofLabel} {formatMoney(budgetSummary.limit)}
+                      </Text>
+                    </Text>
+                    {budgetSummary.overCount > 0 ? (
+                      <Text className="text-sm font-medium text-negative">
+                        {t.dashboard.overBudgets(budgetSummary.overCount)}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              )}
+            </PressableCard>
+
+            <PressableCard onPress={() => router.push('/goals')} className="gap-3">
+              <Text variant="title" className="text-base">
+                {t.dashboard.goalsSummary}
+              </Text>
+              {goalsQuery.isLoading ? (
+                <View className="gap-3">
+                  {Array.from({ length: 2 }).map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
+                </View>
+              ) : activeGoals.length === 0 ? (
+                <Text variant="muted">{t.dashboard.noGoals}</Text>
+              ) : (
+                <View className="gap-3">
+                  {activeGoals.map((goal) => (
+                    <View key={goal.id} className="gap-1">
+                      <View className="flex-row items-center justify-between">
+                        <Text className="flex-1 font-medium" numberOfLines={1}>
+                          {goal.name}
+                        </Text>
+                        <Text variant="muted" className="text-xs">
+                          {goal.percent_complete}%
+                        </Text>
+                      </View>
+                      <ProgressBar value={goal.percent_complete} tone="brand" />
+                      <Text variant="muted" className="text-xs">
+                        {t.dashboard.goalAmount(
+                          formatMoney(goal.current_amount),
+                          formatMoney(goal.target_amount),
+                        )}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </PressableCard>
+          </View>
+        ) : null}
       </View>
+
+      <TransactionDetailSheet
+        entry={selected}
+        contextId={contextId}
+        accountName={selected ? accountMap.get(selected.account_id) : undefined}
+        categoryName={selected?.category_id ? categoryMap.get(selected.category_id) : undefined}
+        onClose={() => setSelected(null)}
+      />
     </TabShell>
   );
 }
