@@ -1,11 +1,10 @@
-import { useMemo, useState, type ReactNode } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ReactNode } from 'react'
 import { FolderInput, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
-import { accountsApi, categoriesApi, goalsApi, transactionsApi } from '@/api'
 import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
+import { useTransactionDetail } from '@/components/transactions/useTransactionDetail'
 import {
   Badge,
   Button,
@@ -15,18 +14,11 @@ import {
   LoadingBlock,
   Modal,
   MoneyValue,
-  useConfirm,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { formatDate } from '@/lib/format'
 import { getErrorMessage } from '@/lib/errors'
-import {
-  canMutateEntry,
-  transactionDirection,
-} from '@/lib/transactionDisplay'
-import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
-import { toastError, toastSuccess } from '@/store/toastStore'
-import type { EntryFormValues } from '@/components/transactions/schemas'
+import { transactionDirection } from '@/lib/transactionDisplay'
 import type { StatementEntry } from '@/types/models'
 
 const t = strings.transactionDetail
@@ -44,7 +36,8 @@ type TransactionDetailModalProps = {
 
 /**
  * Detalhe do lançamento em modal — editar / mover / excluir / efetivar.
- * A rota `/transactions/:id` continua como deep-link.
+ * A rota `/transactions/:id` continua como deep-link (`TransactionDetailPage`,
+ * mesma lógica via `useTransactionDetail`, casca de página cheia em vez de modal).
  */
 export function TransactionDetailModal({
   transactionId,
@@ -53,158 +46,37 @@ export function TransactionDetailModal({
   onDeleted,
   onMoved,
 }: TransactionDetailModalProps) {
-  const confirm = useConfirm()
-  const queryClient = useQueryClient()
-  const activeScope = useAuthStore((s) => s.activeScope)
-  const contexts = useAuthStore((s) => s.contexts)
-
-  const [entryOpen, setEntryOpen] = useState(false)
-  const [moving, setMoving] = useState(false)
-
-  const txQuery = useQuery({
-    queryKey: ['transaction', contextId, transactionId],
-    queryFn: () => transactionsApi.getTransaction(contextId, transactionId),
-    enabled: Boolean(contextId && transactionId),
-  })
-
-  const transaction = txQuery.data
-
-  const accountsQuery = useQuery({
-    queryKey: ['accounts', contextId],
-    queryFn: () => accountsApi.listAccounts(contextId),
-    enabled: Boolean(contextId),
-  })
-
-  const categoriesQuery = useQuery({
-    queryKey: [
-      'categories',
-      contextId,
-      transaction?.type === 'income' ? 'income' : 'expense',
-    ],
-    queryFn: () =>
-      categoriesApi.listCategories(contextId, {
-        type: transaction?.type === 'income' ? 'income' : 'expense',
-      }),
-    enabled:
-      Boolean(contextId) &&
-      Boolean(transaction) &&
-      transaction?.type !== 'transfer',
-  })
-
-  const goalsQuery = useQuery({
-    queryKey: ['goals', contextId],
-    queryFn: () => goalsApi.listGoals(contextId),
-    enabled: Boolean(contextId) && Boolean(transaction?.goal_id),
-  })
-
-  const accountName = useMemo(() => {
-    if (!transaction) return '—'
-    return (
-      accountsQuery.data?.find((a) => a.id === transaction.account_id)?.name ??
-      '—'
-    )
-  }, [transaction, accountsQuery.data])
-
-  const category = useMemo(() => {
-    if (!transaction?.category_id) return null
-    const cat = categoriesQuery.data?.find(
-      (c) => c.id === transaction.category_id,
-    )
-    if (!cat) return null
-    return { name: cat.name, colorIndex: Number(cat.id) % 12 || 1 }
-  }, [transaction, categoriesQuery.data])
-
-  const goalName = useMemo(() => {
-    if (!transaction?.goal_id) return null
-    return (
-      goalsQuery.data?.find((g) => g.id === transaction.goal_id)?.name ??
-      transaction.goal_id
-    )
-  }, [transaction, goalsQuery.data])
-
-  async function invalidateMoney() {
-    await queryClient.invalidateQueries({ queryKey: ['transactions'] })
-    await queryClient.invalidateQueries({ queryKey: ['transaction'] })
-    await queryClient.invalidateQueries({ queryKey: ['accounts'] })
-    await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-    await queryClient.invalidateQueries({ queryKey: ['budgets'] })
-  }
-
-  const saveMutation = useMutation({
-    mutationFn: (values: EntryFormValues) =>
-      transactionsApi.updateTransaction(transaction!.context_id, transaction!.id, {
-        account_id: values.account_id,
-        category_id: values.category_id || null,
-        description: values.description,
-        amount: values.amount,
-        type: values.type,
-        date: values.date,
-      }),
-    onSuccess: async () => {
-      await invalidateMoney()
-      toastSuccess(tx.updated)
-      setEntryOpen(false)
-    },
-    onError: (err) => toastError(getErrorMessage(err)),
-  })
-
-  const moveMutation = useMutation({
-    mutationFn: (values: Parameters<typeof transactionsApi.moveTransaction>[2]) =>
-      transactionsApi.moveTransaction(
-        transaction!.context_id,
-        transaction!.id,
-        values,
-      ),
-    onSuccess: async (moved) => {
-      await invalidateMoney()
-      toastSuccess(tx.moved)
-      setMoving(false)
-      onMoved?.(moved)
-    },
-    onError: (err) => toastError(getErrorMessage(err)),
-  })
-
-  const settleMutation = useMutation({
-    mutationFn: () =>
-      transactionsApi.settleTransaction(
-        transaction!.context_id,
-        transaction!.id,
-      ),
-    onSuccess: async () => {
-      await invalidateMoney()
-      toastSuccess(t.settledToast)
-    },
-    onError: (err) => toastError(getErrorMessage(err)),
-  })
-
-  const deleteMutation = useMutation({
-    mutationFn: () =>
-      transactionsApi.deleteTransaction(transaction!.context_id, transaction!.id),
-    onSuccess: async () => {
-      await invalidateMoney()
-      toastSuccess(tx.deleted)
+  const {
+    transaction,
+    isLoading,
+    isError,
+    error,
+    accountName,
+    category,
+    goalName,
+    contexts,
+    isConsolidated,
+    editable,
+    entryOpen,
+    setEntryOpen,
+    moving,
+    setMoving,
+    saveMutation,
+    moveMutation,
+    settleMutation,
+    deleteMutation,
+    handleDelete,
+  } = useTransactionDetail({
+    contextId,
+    transactionId,
+    onDeleted: () => {
       onDeleted?.()
       onClose()
     },
-    onError: (err) => toastError(getErrorMessage(err)),
+    onMoved,
   })
 
-  async function handleDelete() {
-    if (
-      !(await confirm({
-        message: tx.confirmDelete,
-        tone: 'danger',
-      }))
-    ) {
-      return
-    }
-    deleteMutation.mutate()
-  }
-
   const title = transaction?.description ?? t.title
-  const isConsolidated = activeScope === CONSOLIDATED
-  const editable =
-    Boolean(transaction) && !isConsolidated && canMutateEntry(transaction!)
 
   return (
     <>
@@ -240,15 +112,9 @@ export function TransactionDetailModal({
           ) : undefined
         }
       >
-        {txQuery.isLoading ? (
-          <LoadingBlock label={strings.common.loading} />
-        ) : null}
-        {txQuery.isError || (!txQuery.isLoading && !transaction) ? (
-          <ErrorBanner
-            message={
-              txQuery.isError ? getErrorMessage(txQuery.error) : t.notFound
-            }
-          />
+        {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
+        {isError || (!isLoading && !transaction) ? (
+          <ErrorBanner message={isError ? getErrorMessage(error) : t.notFound} />
         ) : null}
         {transaction ? (
           <TransactionDetailBody
@@ -291,9 +157,7 @@ export function TransactionDetailModal({
             showRecurring={false}
             showGoal={false}
             isPending={saveMutation.isPending}
-            error={
-              saveMutation.isError ? getErrorMessage(saveMutation.error) : null
-            }
+            error={saveMutation.isError ? getErrorMessage(saveMutation.error) : null}
             onSubmit={(values) => saveMutation.mutate(values)}
             onCancel={() => setEntryOpen(false)}
           />
@@ -307,9 +171,7 @@ export function TransactionDetailModal({
             excludeContextId={transaction.context_id}
             contexts={contexts}
             isPending={moveMutation.isPending}
-            error={
-              moveMutation.isError ? getErrorMessage(moveMutation.error) : null
-            }
+            error={moveMutation.isError ? getErrorMessage(moveMutation.error) : null}
             onSubmit={(values) => moveMutation.mutate(values)}
             onCancel={() => setMoving(false)}
           />
@@ -336,30 +198,19 @@ export function TransactionDetailBody({
   onSettle,
   settlePending = false,
 }: DetailBodyProps) {
-  const typeLabel =
-    transaction.type === 'transfer'
-      ? tx.types.transfer
-      : tx.types[transaction.type]
+  const typeLabel = transaction.type === 'transfer' ? tx.types.transfer : tx.types[transaction.type]
 
   return (
     <div className="space-y-6">
       <div className="text-center">
-        <MoneyValue
-          amount={transaction.amount}
-          direction={transactionDirection(transaction)}
-          size="lg"
-        />
+        <MoneyValue amount={transaction.amount} direction={transactionDirection(transaction)} size="lg" />
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <Badge tone="neutral">{typeLabel}</Badge>
-          {transaction.status === 'pending' ? (
-            <Badge tone="warning">{tx.pendingBadge}</Badge>
-          ) : null}
+          {transaction.status === 'pending' ? <Badge tone="warning">{tx.pendingBadge}</Badge> : null}
           <TransactionOriginBadge origin={transaction.origin} />
         </div>
         {transaction.status === 'settled' && transaction.settled_at ? (
-          <p className="mt-2 text-sm text-fg-muted">
-            {t.settledAt(formatDate(transaction.settled_at))}
-          </p>
+          <p className="mt-2 text-sm text-fg-muted">{t.settledAt(formatDate(transaction.settled_at))}</p>
         ) : null}
       </div>
 
@@ -374,34 +225,19 @@ export function TransactionDetailBody({
           </Link>
         </DetailItem>
         <DetailItem label={tx.category}>
-          {category ? (
-            <CategoryChip
-              name={category.name}
-              colorIndex={category.colorIndex}
-            />
-          ) : (
-            '—'
-          )}
+          {category ? <CategoryChip name={category.name} colorIndex={category.colorIndex} /> : '—'}
         </DetailItem>
         {transaction.bill_id ? (
           <DetailItem label={t.linkedBill}>
-            <Link
-              to="/bills"
-              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
-            >
+            <Link to="/bills" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
               {t.viewBill}
             </Link>
-            <span className="ml-1 text-xs text-fg-subtle">
-              #{transaction.bill_id}
-            </span>
+            <span className="ml-1 text-xs text-fg-subtle">#{transaction.bill_id}</span>
           </DetailItem>
         ) : null}
         {goalName ? (
           <DetailItem label={t.linkedGoal}>
-            <Link
-              to="/goals"
-              className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400"
-            >
+            <Link to="/goals" className="font-medium text-brand-600 hover:text-brand-700 dark:text-brand-400">
               {goalName}
             </Link>
           </DetailItem>
@@ -414,40 +250,28 @@ export function TransactionDetailBody({
             >
               {t.viewInvoice}
             </Link>
-            <span className="ml-1 text-xs text-fg-subtle">
-              #{transaction.card_invoice_id}
-            </span>
+            <span className="ml-1 text-xs text-fg-subtle">#{transaction.card_invoice_id}</span>
           </DetailItem>
         ) : null}
       </dl>
 
       {onSettle ? (
-        <Button
-          type="button"
-          onClick={onSettle}
-          loading={settlePending}
-          disabled={settlePending}
-          block
-        >
+        <Button type="button" onClick={onSettle} loading={settlePending} disabled={settlePending} block>
           {t.settle}
         </Button>
       ) : null}
 
       {transaction.transfer ? (
         <div className="rounded-xl border border-line bg-surface-2 p-4">
-          <h3 className="mb-3 text-sm font-semibold text-fg">
-            {t.transferSection}
-          </h3>
+          <h3 className="mb-3 text-sm font-semibold text-fg">{t.transferSection}</h3>
           <div className="space-y-2 text-sm">
             <p>
               <span className="text-fg-muted">{t.transferFrom}: </span>
-              {transaction.transfer.from.context.name} →{' '}
-              {transaction.transfer.from.account.name}
+              {transaction.transfer.from.context.name} → {transaction.transfer.from.account.name}
             </p>
             <p>
               <span className="text-fg-muted">{t.transferTo}: </span>
-              {transaction.transfer.to.context.name} →{' '}
-              {transaction.transfer.to.account.name}
+              {transaction.transfer.to.context.name} → {transaction.transfer.to.account.name}
             </p>
           </div>
         </div>
@@ -456,18 +280,10 @@ export function TransactionDetailBody({
   )
 }
 
-function DetailItem({
-  label,
-  children,
-}: {
-  label: string
-  children: ReactNode
-}) {
+function DetailItem({ label, children }: { label: string; children: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">
-        {label}
-      </dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-fg-subtle">{label}</dt>
       <dd className="mt-1 text-sm text-fg">{children}</dd>
     </div>
   )
