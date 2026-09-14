@@ -4,6 +4,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { investmentsApi } from '@/api'
 import { InvestmentForm } from '@/components/investments/InvestmentForm'
 import {
+  computeGainLoss,
+  sumInvested,
   sumInvestments,
   type InvestmentFormValues,
 } from '@/components/investments/investmentUtils'
@@ -16,6 +18,7 @@ import {
   LoadingBlock,
   Modal,
   Money,
+  MoneyValue,
   PageHeader,
   Stat,
   Td,
@@ -49,6 +52,11 @@ export function InvestmentsPage() {
   })
 
   const totalPosition = useMemo(() => sumInvestments(data), [data])
+  const totalInvested = useMemo(() => sumInvested(data), [data])
+  const totalGainLoss = useMemo(
+    () => computeGainLoss({ invested_amount: totalInvested, current_position: totalPosition }),
+    [totalInvested, totalPosition],
+  )
 
   function openCreate() {
     setEditing(null)
@@ -133,10 +141,31 @@ export function InvestmentsPage() {
       ) : null}
 
       {listContextId && data.length > 0 ? (
-        <Stat
-          label={t.totalPosition}
-          value={<Money amount={totalPosition} size="lg" />}
-        />
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+          <Stat
+            label={t.totalPosition}
+            value={<Money amount={totalPosition} size="lg" />}
+          />
+          <Stat
+            label={t.totalInvested}
+            value={<Money amount={totalInvested} size="lg" />}
+          />
+          <Stat
+            label={t.totalGainLoss}
+            value={
+              <MoneyValue
+                amount={totalGainLoss.amount}
+                direction={totalGainLoss.amount >= 0 ? 'credit' : 'debit'}
+                size="lg"
+              />
+            }
+            hint={
+              totalGainLoss.percent !== null
+                ? `${totalGainLoss.amount >= 0 ? '+' : '-'}${Math.abs(totalGainLoss.percent).toFixed(1)}%`
+                : undefined
+            }
+          />
+        </div>
       ) : null}
 
       {isLoading ? <LoadingBlock label={strings.common.loading} /> : null}
@@ -154,39 +183,56 @@ export function InvestmentsPage() {
             t.institution,
             { label: t.investedAmount, right: true },
             { label: t.currentPosition, right: true },
+            { label: t.gainLoss, right: true },
             strings.common.actions,
           ]}
         >
-          {data.map((item) => (
-            <Tr key={item.id}>
-              <Td>{item.name}</Td>
-              <Td>{item.type}</Td>
-              <Td>{item.institution ?? '—'}</Td>
-              <Td right className="tabular-nums">
-                {formatMoney(item.invested_amount)}
-              </Td>
-              <Td right className="tabular-nums">
-                {formatMoney(item.current_position)}
-              </Td>
-              <Td>
-                <div className="flex flex-wrap gap-1">
-                  <IconButton
-                    label={strings.common.edit}
-                    icon={Pencil}
-                    onClick={() => openEdit(item)}
-                    disabled={!contextId}
+          {data.map((item) => {
+            const gainLoss = computeGainLoss(item)
+            return (
+              <Tr key={item.id}>
+                <Td>{item.name}</Td>
+                <Td>{item.type}</Td>
+                <Td>{item.institution ?? '—'}</Td>
+                <Td right className="tabular-nums">
+                  {formatMoney(item.invested_amount)}
+                </Td>
+                <Td right className="tabular-nums">
+                  {formatMoney(item.current_position)}
+                </Td>
+                <Td right className="tabular-nums">
+                  <MoneyValue
+                    amount={gainLoss.amount}
+                    direction={gainLoss.amount >= 0 ? 'credit' : 'debit'}
+                    size="sm"
                   />
-                  <IconButton
-                    label={strings.common.delete}
-                    icon={Trash2}
-                    variant="danger"
-                    onClick={() => handleDelete(item.id)}
-                    disabled={deleteMutation.isPending || !contextId}
-                  />
-                </div>
-              </Td>
-            </Tr>
-          ))}
+                  {gainLoss.percent !== null ? (
+                    <span className="ml-1 text-xs text-fg-subtle">
+                      ({gainLoss.amount >= 0 ? '+' : '-'}
+                      {Math.abs(gainLoss.percent).toFixed(1)}%)
+                    </span>
+                  ) : null}
+                </Td>
+                <Td>
+                  <div className="flex flex-wrap gap-1">
+                    <IconButton
+                      label={strings.common.edit}
+                      icon={Pencil}
+                      onClick={() => openEdit(item)}
+                      disabled={!contextId}
+                    />
+                    <IconButton
+                      label={strings.common.delete}
+                      icon={Trash2}
+                      variant="danger"
+                      onClick={() => handleDelete(item.id)}
+                      disabled={deleteMutation.isPending || !contextId}
+                    />
+                  </div>
+                </Td>
+              </Tr>
+            )
+          })}
         </DataTable>
       ) : null}
 
