@@ -19,6 +19,7 @@ export const strings = {
     goals: 'Metas',
     simulator: 'Simulador',
     debts: 'Dívidas',
+    import: 'Importar dados',
     importBills: 'Importar boletos',
     importStatement: 'Importar extrato',
     importCardInvoice: 'Importar fatura',
