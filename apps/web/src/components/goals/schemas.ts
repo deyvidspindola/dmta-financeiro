@@ -16,3 +16,11 @@ export const emptyGoalValues: GoalFormValues = {
   target_date: '',
   notes: '',
 }
+
+export const goalContributeSchema = z.object({
+  account_id: z.string().min(1, strings.common.required),
+  amount: z.coerce.number().positive(),
+  occurred_at: z.string().min(1, strings.common.required),
+})
+
+export type GoalContributeValues = z.infer<typeof goalContributeSchema>

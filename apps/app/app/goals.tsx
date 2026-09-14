@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { goalsApi } from '@/api';
+import { accountsApi, goalsApi, transactionsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   Badge,
@@ -12,6 +12,7 @@ import {
   MoneyField,
   ProgressBar,
   Screen,
+  SelectField,
   Sheet,
   Skeleton,
   Text,
@@ -21,7 +22,12 @@ import { t } from '@/i18n';
 import { formatMoney } from '@/lib/format';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
+import { toastSuccess } from '@/store/toastStore';
 import type { Goal } from '@/types/models';
+
+function todayIso(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
 type FormState = {
   id: string | null;
@@ -29,6 +35,13 @@ type FormState = {
   target: number;
   targetDate: string;
   notes: string;
+};
+
+type ContributeState = {
+  goal: Goal;
+  amount: number;
+  accountId: string | null;
+  occurredAt: string;
 };
 
 export default function GoalsScreen() {
@@ -41,12 +54,24 @@ export default function GoalsScreen() {
   const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<Goal | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
+  const [contribute, setContribute] = useState<ContributeState | null>(null);
+  const [contributeError, setContributeError] = useState<string | null>(null);
 
   const query = useQuery({
     queryKey: ['goals', activeScope],
     queryFn: () => goalsApi.listGoals(activeScope),
     enabled: !isConsolidated && Boolean(activeScope),
   });
+
+  const accountsQuery = useQuery({
+    queryKey: ['accounts', activeScope],
+    queryFn: () => accountsApi.listAccounts(activeScope),
+    enabled: contribute !== null && Boolean(activeScope),
+  });
+  const accountOptions = useMemo(
+    () => (accountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
+    [accountsQuery.data],
+  );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['goals'] });
@@ -80,6 +105,29 @@ export default function GoalsScreen() {
       setToDelete(null);
     },
     onError: () => setToDelete(null),
+  });
+
+  const contributeMutation = useMutation({
+    mutationFn: (c: ContributeState) =>
+      transactionsApi.createTransaction(activeScope, {
+        account_id: c.accountId!,
+        category_id: null,
+        description: t.goals.contributionDescription(c.goal.name),
+        amount: c.amount,
+        type: 'income',
+        occurred_at: c.occurredAt,
+        settled: true,
+        goal_id: c.goal.id,
+      }),
+    onSuccess: () => {
+      invalidate();
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      setContribute(null);
+      toastSuccess(t.goals.contributed);
+    },
+    onError: (err) =>
+      setContributeError(err instanceof ApiError && err.message ? err.message : t.common.error),
   });
 
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
@@ -128,10 +176,30 @@ export default function GoalsScreen() {
                     ) : null}
                   </View>
                   <ProgressBar value={goal.percent_complete} tone="positive" />
-                  <Text variant="muted" className="text-xs tabular-nums">
-                    {formatMoney(goal.current_amount)} / {formatMoney(goal.target_amount)}
-                    {goal.target_date ? ` · ${goal.target_date}` : ''}
-                  </Text>
+                  <View className="flex-row items-center justify-between gap-2">
+                    <Text variant="muted" className="text-xs tabular-nums">
+                      {formatMoney(goal.current_amount)} / {formatMoney(goal.target_amount)}
+                      {goal.target_date ? ` · ${goal.target_date}` : ''}
+                    </Text>
+                    {goal.status === 'active' ? (
+                      <Pressable
+                        onPress={() =>
+                          setContribute({
+                            goal,
+                            amount: 0,
+                            accountId: null,
+                            occurredAt: todayIso(),
+                          })
+                        }
+                        hitSlop={8}
+                        className="rounded-lg bg-brand-500/15 px-2 py-1 active:bg-brand-500/25"
+                      >
+                        <Text className="text-[10px] font-medium text-brand-700 dark:text-brand-300">
+                          {t.goals.contribute}
+                        </Text>
+                      </Pressable>
+                    ) : null}
+                  </View>
                 </Pressable>
               ))}
             </View>
@@ -217,6 +285,50 @@ export default function GoalsScreen() {
         onConfirm={() => toDelete && remove.mutate(toDelete.id)}
         onClose={() => setToDelete(null)}
       />
+
+      <Sheet
+        open={contribute !== null}
+        onClose={() => {
+          setContribute(null);
+          setContributeError(null);
+        }}
+        title={t.goals.contributeTitle}
+      >
+        {contribute ? (
+          <View className="gap-4">
+            <Text variant="muted">{contribute.goal.name}</Text>
+            <MoneyField
+              label={t.goals.contributeAmount}
+              value={contribute.amount}
+              onChange={(v) => setContribute({ ...contribute, amount: v })}
+            />
+            <SelectField
+              label={t.goals.contributeAccount}
+              placeholder={t.newTransaction.accountPlaceholder}
+              value={contribute.accountId}
+              options={accountOptions}
+              onChange={(v) => setContribute({ ...contribute, accountId: v })}
+            />
+            <DateField
+              label={t.goals.contributeDate}
+              value={contribute.occurredAt}
+              onChange={(v) => setContribute({ ...contribute, occurredAt: v })}
+            />
+
+            {contributeError ? <Text variant="error">{contributeError}</Text> : null}
+
+            <Button
+              label={t.goals.contribute}
+              loading={contributeMutation.isPending}
+              disabled={!contribute.accountId || contribute.amount <= 0}
+              onPress={() => {
+                setContributeError(null);
+                contributeMutation.mutate(contribute);
+              }}
+            />
+          </View>
+        ) : null}
+      </Sheet>
     </Screen>
   );
 }

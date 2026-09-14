@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { Pencil, PiggyBank, Trash2 } from 'lucide-react'
 import {
   Badge,
   Card,
@@ -17,6 +17,7 @@ type GoalCardProps = {
   goal: Goal
   onEdit: () => void
   onDelete: () => void
+  onContribute: () => void
   canMutate?: boolean
   deletePending?: boolean
 }
@@ -25,6 +26,7 @@ export function GoalCard({
   goal,
   onEdit,
   onDelete,
+  onContribute,
   canMutate,
   deletePending,
 }: GoalCardProps) {
@@ -57,6 +59,15 @@ export function GoalCard({
           </div>
           {canMutate ? (
             <div className="flex shrink-0 gap-0.5">
+              {goal.status === 'active' ? (
+                <IconButton
+                  label={t.contribute}
+                  icon={PiggyBank}
+                  variant="ghost"
+                  size="sm"
+                  onClick={onContribute}
+                />
+              ) : null}
               <IconButton
                 label={strings.common.edit}
                 icon={Pencil}

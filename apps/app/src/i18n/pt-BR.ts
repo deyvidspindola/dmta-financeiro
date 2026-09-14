@@ -566,6 +566,13 @@ export const strings = {
     deleted: 'Meta excluída.',
     confirmDelete: 'Excluir esta meta?',
     needContext: 'Selecione um contexto para gerenciar metas.',
+    contribute: 'Aportar',
+    contributeTitle: 'Aportar na meta',
+    contributeAccount: 'De qual conta',
+    contributeAmount: 'Valor do aporte',
+    contributeDate: 'Data',
+    contributed: 'Aporte registrado.',
+    contributionDescription: (name: string) => `Aporte — ${name}`,
     statuses: {
       active: 'Ativa',
       completed: 'Concluída',
