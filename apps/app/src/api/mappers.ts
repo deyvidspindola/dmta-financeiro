@@ -867,9 +867,7 @@ export function mapDashboard(
     scope,
     label,
     balance_total: Number(raw.accounts_balance),
-    provisioned_balance_total: Number(
-      raw.accounts_balance_provisioned ?? raw.accounts_balance,
-    ),
+    provisioned_balance_total: Number(raw.accounts_balance_provisioned ?? raw.accounts_balance),
     income_month: Number(raw.month_income),
     expense_month: Number(raw.month_expense),
     projected_income_month: Number(raw.month_projected_income ?? raw.month_income),
