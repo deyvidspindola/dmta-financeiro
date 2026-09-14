@@ -1,12 +1,14 @@
-import type { ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { transactionsApi } from '@/api';
-import { Badge, Button, MoneyValue, Sheet, Text } from '@/components/ui';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { accountsApi, categoriesApi, transactionsApi } from '@/api';
+import { ApiError } from '@/api/http';
+import { Badge, Button, ConfirmSheet, MoneyValue, SelectField, Sheet, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { formatDateShort } from '@/lib/dates';
 import { transactionDirection } from '@/lib/transactionDisplay';
+import { useAuthStore } from '@/store/authStore';
 import type { StatementEntry } from '@/types/models';
 
 type Props = {
@@ -26,20 +28,106 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Detalhe de um lançamento — abre em sheet a partir da lista. Efetivar previsto no B2. */
-export function TransactionDetailSheet({ entry, contextId, accountName, categoryName, onClose }: Props) {
+/** Detalhe de um lançamento — abre em sheet a partir da lista. */
+export function TransactionDetailSheet({
+  entry,
+  contextId,
+  accountName,
+  categoryName,
+  onClose,
+}: Props) {
   const queryClient = useQueryClient();
   const router = useRouter();
+  const contexts = useAuthStore((s) => s.contexts);
+
+  const [mode, setMode] = useState<'detail' | 'move'>('detail');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [targetContextId, setTargetContextId] = useState<string | null>(null);
+  const [targetAccountId, setTargetAccountId] = useState<string | null>(null);
+  const [targetCategoryId, setTargetCategoryId] = useState<string | null>(null);
+  const [moveError, setMoveError] = useState<string | null>(null);
+
+  // Fechar (ou terminar uma ação) volta pro estado inicial — a sheet nunca
+  // troca de lançamento com ela já aberta, só abre (null → entry) e fecha
+  // (entry → null), então resetar aqui cobre o próximo open também.
+  const reset = () => {
+    setMode('detail');
+    setConfirmDelete(false);
+    setTargetContextId(null);
+    setTargetAccountId(null);
+    setTargetCategoryId(null);
+    setMoveError(null);
+  };
+  const handleClose = () => {
+    reset();
+    onClose();
+  };
+
+  const invalidate = () => {
+    void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+    void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+  };
 
   const settle = useMutation({
     mutationFn: () => transactionsApi.settleTransaction(contextId!, entry!.id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['transactions'] });
-      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
-      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
-      onClose();
+      invalidate();
+      handleClose();
     },
   });
+
+  const remove = useMutation({
+    mutationFn: () => transactionsApi.deleteTransaction(contextId!, entry!.id),
+    onSuccess: () => {
+      invalidate();
+      handleClose();
+    },
+    onError: () => setConfirmDelete(false),
+  });
+
+  const targetAccountsQuery = useQuery({
+    queryKey: ['accounts', targetContextId],
+    queryFn: () => accountsApi.listAccounts(targetContextId!),
+    enabled: mode === 'move' && Boolean(targetContextId),
+  });
+
+  const targetCategoriesQuery = useQuery({
+    queryKey: ['categories', targetContextId, entry?.type],
+    queryFn: () =>
+      categoriesApi.listCategories(targetContextId!, {
+        type: entry!.type === 'income' ? 'income' : 'expense',
+      }),
+    enabled: mode === 'move' && Boolean(targetContextId) && entry?.type !== 'transfer',
+  });
+
+  const move = useMutation({
+    mutationFn: () =>
+      transactionsApi.moveTransaction(contextId!, entry!.id, {
+        target_context_id: targetContextId!,
+        target_account_id: targetAccountId!,
+        target_category_id: targetCategoryId,
+      }),
+    onSuccess: () => {
+      invalidate();
+      handleClose();
+    },
+    onError: (err) =>
+      setMoveError(err instanceof ApiError && err.message ? err.message : t.common.error),
+  });
+
+  const contextOptions = useMemo(
+    () => contexts.filter((c) => c.id !== contextId).map((c) => ({ value: c.id, label: c.name })),
+    [contexts, contextId],
+  );
+  const targetAccountOptions = useMemo(
+    () => (targetAccountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
+    [targetAccountsQuery.data],
+  );
+  const targetCategoryOptions = useMemo(
+    () => (targetCategoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    [targetCategoriesQuery.data],
+  );
 
   const tags: string[] = [];
   if (entry?.bill_id) tags.push(t.transactions.detail.fromBill);
@@ -49,10 +137,23 @@ export function TransactionDetailSheet({ entry, contextId, accountName, category
   if (entry?.transfer_pair_id) tags.push(t.transactions.detail.transfer);
 
   const isPending = entry?.status === 'pending';
+  // Perna de transferência, vinculado a boleto/meta/fatura — o outro lado
+  // teria que mudar de contexto junto, o que essa ação simples não faz
+  // (mesma regra de MoveTransactionToContext no backend).
+  const canMove =
+    Boolean(contextId) &&
+    !entry?.transfer_pair_id &&
+    !entry?.bill_id &&
+    !entry?.goal_id &&
+    !entry?.card_invoice_id;
 
   return (
-    <Sheet open={entry !== null} onClose={onClose} title={t.transactions.detail.title}>
-      {entry ? (
+    <Sheet
+      open={entry !== null}
+      onClose={handleClose}
+      title={mode === 'move' ? t.transactions.moveTitle : t.transactions.detail.title}
+    >
+      {entry && mode === 'detail' ? (
         <View>
           <View className="mb-2 gap-1">
             <View className="flex-row items-center gap-2">
@@ -61,11 +162,7 @@ export function TransactionDetailSheet({ entry, contextId, accountName, category
               </Text>
               {isPending ? <Badge tone="accent">{t.transactions.pendingBadge}</Badge> : null}
             </View>
-            <MoneyValue
-              amount={entry.amount}
-              direction={transactionDirection(entry)}
-              size="xl"
-            />
+            <MoneyValue amount={entry.amount} direction={transactionDirection(entry)} size="xl" />
           </View>
 
           <Row label={t.transactions.type}>
@@ -100,7 +197,7 @@ export function TransactionDetailSheet({ entry, contextId, accountName, category
                 label={t.transactions.detail.edit}
                 variant="secondary"
                 onPress={() => {
-                  onClose();
+                  handleClose();
                   router.push({
                     pathname: '/edit-transaction',
                     params: { contextId, transactionId: entry.id },
@@ -127,8 +224,89 @@ export function TransactionDetailSheet({ entry, contextId, accountName, category
               {t.transactions.detail.settledOn(formatDateShort(entry.settled_at.slice(0, 10)))}
             </Text>
           ) : null}
+
+          {canMove || contextId ? (
+            <View className="mt-4 flex-row justify-between gap-2">
+              {canMove ? (
+                <Button
+                  label={t.transactions.move}
+                  variant="ghost"
+                  onPress={() => setMode('move')}
+                />
+              ) : (
+                <View />
+              )}
+              {contextId ? (
+                <Button
+                  label={t.common.delete}
+                  variant="ghost"
+                  onPress={() => setConfirmDelete(true)}
+                />
+              ) : null}
+            </View>
+          ) : null}
+        </View>
+      ) : entry && mode === 'move' ? (
+        <View className="gap-4">
+          <Text variant="muted" numberOfLines={1}>
+            {entry.description} · {formatDateShort(entry.date)}
+          </Text>
+
+          <SelectField
+            label={t.transactions.targetContext}
+            placeholder={t.common.select}
+            value={targetContextId}
+            options={contextOptions}
+            onChange={(v) => {
+              setTargetContextId(v);
+              setTargetAccountId(null);
+              setTargetCategoryId(null);
+            }}
+          />
+          <SelectField
+            label={t.transactions.targetAccount}
+            placeholder={t.newTransaction.accountPlaceholder}
+            value={targetAccountId}
+            options={targetAccountOptions}
+            onChange={setTargetAccountId}
+          />
+          {entry.type !== 'transfer' ? (
+            <SelectField
+              label={t.transactions.category}
+              placeholder={t.bills.category}
+              value={targetCategoryId ?? ''}
+              options={targetCategoryOptions}
+              onChange={(v) => setTargetCategoryId(v || null)}
+            />
+          ) : null}
+
+          {moveError ? <Text variant="error">{moveError}</Text> : null}
+
+          <View className="flex-row justify-between gap-2">
+            <Button label={t.common.cancel} variant="ghost" onPress={() => setMode('detail')} />
+            <Button
+              label={t.transactions.move}
+              loading={move.isPending}
+              disabled={!targetContextId || !targetAccountId}
+              onPress={() => {
+                setMoveError(null);
+                move.mutate();
+              }}
+            />
+          </View>
         </View>
       ) : null}
+
+      <ConfirmSheet
+        open={confirmDelete}
+        title={t.transactions.detail.title}
+        message={t.transactions.confirmDelete}
+        confirmLabel={t.common.delete}
+        tone="danger"
+        loading={remove.isPending}
+        onConfirm={() => remove.mutate()}
+        onClose={() => setConfirmDelete(false)}
+      />
     </Sheet>
   );
 }

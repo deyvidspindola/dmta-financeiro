@@ -15,6 +15,7 @@ type Item = { label: string; icon: keyof typeof Feather.glyphMap; href?: Href };
 // `href` ausente = tela ainda não construída (próximos PRs do trilho B).
 const MANAGE: Item[] = [
   { label: t.nav.accounts, icon: 'credit-card', href: '/accounts' },
+  { label: t.nav.transfers, icon: 'repeat', href: '/transfer' },
   { label: t.nav.categories, icon: 'tag', href: '/categories' },
   { label: t.nav.budgets, icon: 'pie-chart', href: '/budgets' },
   { label: t.nav.goals, icon: 'target', href: '/goals' },

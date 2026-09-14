@@ -1,5 +1,5 @@
 import { http, unwrapData } from '@/api/http';
-import { mapTransaction } from '@/api/mappers';
+import { mapTransaction, toMoveTransactionBody } from '@/api/mappers';
 import type { StatementEntry } from '@/types/models';
 
 export type TransactionListFilters = {
@@ -83,4 +83,31 @@ export async function settleTransaction(
     Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
   >(`/contexts/${contextId}/transactions/${transactionId}/settle`);
   return mapTransaction(contextId, unwrapData(payload));
+}
+
+export type MoveTransactionInput = {
+  target_context_id: string;
+  target_account_id: string;
+  target_category_id: string | null;
+};
+
+/**
+ * Move o lançamento pro contexto de destino — bloqueado no backend pra
+ * perna de transferência, vinculado a boleto/meta/fatura de cartão
+ * (`TransactionNotMovableException`).
+ */
+export async function moveTransaction(
+  contextId: string,
+  transactionId: string,
+  input: MoveTransactionInput,
+): Promise<StatementEntry> {
+  const payload = await http.post<
+    Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
+  >(`/contexts/${contextId}/transactions/${transactionId}/move`, toMoveTransactionBody(input));
+  return mapTransaction(input.target_context_id, unwrapData(payload));
+}
+
+/** Apaga o lançamento e desfaz o efeito no saldo/boleto/meta/fatura. */
+export async function deleteTransaction(contextId: string, transactionId: string): Promise<void> {
+  await http.delete(`/contexts/${contextId}/transactions/${transactionId}`);
 }
