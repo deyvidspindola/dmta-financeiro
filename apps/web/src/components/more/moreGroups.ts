@@ -1,14 +1,11 @@
 import {
   Building2,
   Calculator,
-  CreditCard,
   FileDown,
   HandCoins,
-  Home,
   Inbox,
   KeyRound,
   Landmark,
-  ListPlus,
   LogOut,
   Plug,
   PiggyBank,
@@ -51,9 +48,9 @@ export const MORE_MOBILE_GROUPS: MoreGroup[] = [
   {
     title: n.groups.overview,
     items: [
-      { kind: 'link', to: '/', label: n.home, icon: Home },
-      { kind: 'link', to: '/transactions', label: n.transactions, icon: ListPlus },
-      { kind: 'link', to: '/credit-cards', label: n.creditCards, icon: CreditCard },
+      // Home/Lançamentos/Cartões já estão na bottom nav — repeti-los aqui
+      // só empurrava contas/orçamento/metas (o que de fato falta na bottom
+      // nav) pra baixo da rolagem sem ganhar nada.
       { kind: 'link', to: '/accounts', label: n.accounts, icon: Wallet },
       { kind: 'link', to: '/bills', label: n.bills, icon: Receipt },
     ],
@@ -76,13 +73,9 @@ export const MORE_GROUPS: MoreGroup[] = [
       { kind: 'link', to: '/categories', label: n.categories, icon: Tags },
       { kind: 'link', to: '/companies', label: n.companies, icon: Building2 },
       { kind: 'link', to: '/recurring', label: n.recurring, icon: Repeat },
-    ],
-  },
-  {
-    title: m.groups.imports,
-    items: [
-      // 1 item só, não 3 — extrato/boletos/fatura viraram abas dentro da
-      // mesma tela (ImportTabs), então 1 porta de entrada basta.
+      // Importar dados: extrato/boletos/fatura viraram abas dentro da mesma
+      // tela (ImportTabs), então 1 item aqui basta — e junto de "Cadastros"
+      // em vez de card próprio, que sobrava com um único link dentro.
       {
         kind: 'link',
         to: '/import-statement',
