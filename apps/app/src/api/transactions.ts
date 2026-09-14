@@ -43,6 +43,8 @@ export type CreateTransactionInput = {
   occurred_at: string;
   /** `false` = lançamento previsto (não entra no saldo até ser efetivado). */
   settled: boolean;
+  /** Aporte de meta — só aceito pelo backend quando `type` é `income`. */
+  goal_id?: string | null;
 };
 
 export type UpdateTransactionInput = Omit<CreateTransactionInput, 'settled'>;
@@ -56,6 +58,7 @@ export async function createTransaction(
   >(`/contexts/${contextId}/transactions`, {
     ...input,
     category_id: input.category_id ?? undefined,
+    goal_id: input.goal_id ?? undefined,
   });
   return mapTransaction(contextId, unwrapData(payload));
 }

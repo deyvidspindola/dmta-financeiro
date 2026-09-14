@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { goalsApi } from '@/api'
+import { goalsApi, transactionsApi } from '@/api'
 import { GoalCard } from '@/components/goals/GoalCard'
+import { GoalContributeForm } from '@/components/goals/GoalContributeForm'
 import { GoalForm } from '@/components/goals/GoalForm'
-import type { GoalFormValues } from '@/components/goals/schemas'
+import type { GoalContributeValues, GoalFormValues } from '@/components/goals/schemas'
 import {
   Button,
   EmptyState,
@@ -30,6 +31,7 @@ export function GoalsPage() {
   const listContextId = activeScope === CONSOLIDATED ? null : activeScope
   const [editing, setEditing] = useState<Goal | null>(null)
   const [open, setOpen] = useState(false)
+  const [contributeFor, setContributeFor] = useState<Goal | null>(null)
   const isEdit = editing !== null
 
   const { data = [], isLoading, isError } = useQuery({
@@ -97,6 +99,29 @@ export function GoalsPage() {
     deleteMutation.mutate(goalId)
   }
 
+  const contributeMutation = useMutation({
+    mutationFn: (values: GoalContributeValues) =>
+      transactionsApi.createTransaction(contextId!, {
+        account_id: values.account_id,
+        category_id: null,
+        description: t.contributionDescription(contributeFor!.name),
+        amount: values.amount,
+        type: 'income',
+        date: values.occurred_at,
+        settled: true,
+        goal_id: contributeFor!.id,
+      }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['goals'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      toastSuccess(t.contributed)
+      setContributeFor(null)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
   return (
     <div className="space-y-6 bg-canvas text-fg">
       <PageHeader
@@ -130,6 +155,7 @@ export function GoalsPage() {
             goal={item}
             onEdit={() => openEdit(item)}
             onDelete={() => handleDelete(item.id)}
+            onContribute={() => setContributeFor(item)}
             canMutate={Boolean(contextId)}
             deletePending={deleteMutation.isPending}
           />
@@ -147,6 +173,19 @@ export function GoalsPage() {
             error={mutation.isError ? getErrorMessage(mutation.error) : null}
             onSubmit={(values) => mutation.mutate(values)}
             onCancel={closeModal}
+          />
+        </Modal>
+      ) : null}
+
+      {contributeFor && contextId ? (
+        <Modal title={t.contributeTitle} onClose={() => setContributeFor(null)}>
+          <GoalContributeForm
+            goal={contributeFor}
+            contextId={contextId}
+            isPending={contributeMutation.isPending}
+            error={contributeMutation.isError ? getErrorMessage(contributeMutation.error) : null}
+            onSubmit={(values) => contributeMutation.mutate(values)}
+            onCancel={() => setContributeFor(null)}
           />
         </Modal>
       ) : null}
