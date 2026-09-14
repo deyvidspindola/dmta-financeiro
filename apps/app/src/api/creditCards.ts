@@ -1,8 +1,23 @@
 import { http, unwrapData } from '@/api/http';
-import { mapCardInvoice, mapCardPurchase, mapCreditCard } from '@/api/mappers';
+import {
+  mapCardInvoice,
+  mapCardPurchase,
+  mapCreditCard,
+  toCreateCreditCardBody,
+} from '@/api/mappers';
 import type { CardInvoice, CardPurchase, CreditCard } from '@/types/models';
 
-type RawCard = Parameters<typeof mapCreditCard>[1] & { context?: { id: string | number; name: string } | null };
+type RawCard = Parameters<typeof mapCreditCard>[1] & {
+  context?: { id: string | number; name: string } | null;
+};
+
+export type CreditCardInput = {
+  name: string;
+  brand: string | null;
+  limit: number;
+  closing_day: number;
+  due_day: number;
+};
 
 export async function listCreditCards(contextId: string): Promise<CreditCard[]> {
   const payload = await http.get<RawCard[] | { data: RawCard[] }>(
@@ -11,12 +26,33 @@ export async function listCreditCards(contextId: string): Promise<CreditCard[]> 
   return unwrapData(payload).map((row) => mapCreditCard(contextId, row));
 }
 
+export async function createCreditCard(
+  contextId: string,
+  input: CreditCardInput,
+): Promise<CreditCard> {
+  const payload = await http.post<RawCard | { data: RawCard }>(
+    `/contexts/${contextId}/credit-cards`,
+    toCreateCreditCardBody(input),
+  );
+  return mapCreditCard(contextId, unwrapData(payload));
+}
+
+export async function updateCreditCard(
+  contextId: string,
+  creditCardId: string,
+  input: CreditCardInput,
+): Promise<CreditCard> {
+  const payload = await http.patch<RawCard | { data: RawCard }>(
+    `/contexts/${contextId}/credit-cards/${creditCardId}`,
+    toCreateCreditCardBody(input),
+  );
+  return mapCreditCard(contextId, unwrapData(payload));
+}
+
 /** Cartões de todos os contextos do usuário (modo Consolidado). */
 export async function listConsolidatedCreditCards(): Promise<CreditCard[]> {
   const payload = await http.get<RawCard[] | { data: RawCard[] }>('/consolidated/credit-cards');
-  return unwrapData(payload).map((row) =>
-    mapCreditCard(String(row.context?.id ?? ''), row),
-  );
+  return unwrapData(payload).map((row) => mapCreditCard(String(row.context?.id ?? ''), row));
 }
 
 export async function listCardInvoices(
@@ -36,10 +72,9 @@ export async function payCardInvoice(
   invoiceId: string,
   accountId: string,
 ): Promise<void> {
-  await http.post(
-    `/contexts/${contextId}/credit-cards/${creditCardId}/invoices/${invoiceId}/pay`,
-    { account_id: accountId },
-  );
+  await http.post(`/contexts/${contextId}/credit-cards/${creditCardId}/invoices/${invoiceId}/pay`, {
+    account_id: accountId,
+  });
 }
 
 export async function deleteCreditCard(
