@@ -23,10 +23,17 @@ import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 
 type EntryType = 'income' | 'expense' | 'transfer';
 
-/** Cor por tipo no seletor — despesa vermelho, receita verde, transferência azul. */
+// Cor por tipo no seletor — despesa vermelho, receita verde, transferência
+// azul. O fundo usa a cor literal da paleta (`bg-red-500/10`), não o token
+// semântico (`bg-negative/10`): NativeWind resolve opacidade em tempo de
+// build e não sabe calcular alfa sobre uma cor vinda de var(--negative) —
+// o fundo simplesmente não aparecia, só o texto (cor sólida) funcionava.
+// red-600/emerald-600 (claro) e red-400/emerald-400 (escuro) são os hex
+// exatos de --negative/--positive (global.css), então o texto continua
+// usando o token semântico sem perder a cor de marca.
 const TYPE_TONE: Record<EntryType, { bg: string; text: string }> = {
-  expense: { bg: 'bg-negative/10', text: 'text-negative' },
-  income: { bg: 'bg-positive/10', text: 'text-positive' },
+  expense: { bg: 'bg-red-500/10', text: 'text-negative' },
+  income: { bg: 'bg-emerald-500/10', text: 'text-positive' },
   transfer: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
 };
 
