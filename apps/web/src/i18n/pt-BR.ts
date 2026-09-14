@@ -130,7 +130,6 @@ export const strings = {
   more: {
     groups: {
       registers: 'Cadastros',
-      imports: 'Importar',
       emailBills: 'Boletos por e-mail',
       account: 'Conta',
     },
