@@ -275,7 +275,7 @@ export default function TransactionsTab() {
                                 {tx.description}
                               </Text>
                               {pending ? (
-                                <Badge tone="accent">{t.transactions.pendingBadge}</Badge>
+                                <Badge tone="warning">{t.transactions.pendingBadge}</Badge>
                               ) : null}
                             </View>
                             <Text variant="muted" className="text-xs" numberOfLines={1}>

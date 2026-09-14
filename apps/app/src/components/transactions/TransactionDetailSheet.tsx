@@ -160,7 +160,7 @@ export function TransactionDetailSheet({
               <Text variant="title" className="text-lg" numberOfLines={2}>
                 {entry.description}
               </Text>
-              {isPending ? <Badge tone="accent">{t.transactions.pendingBadge}</Badge> : null}
+              {isPending ? <Badge tone="warning">{t.transactions.pendingBadge}</Badge> : null}
             </View>
             <MoneyValue amount={entry.amount} direction={transactionDirection(entry)} size="xl" />
           </View>

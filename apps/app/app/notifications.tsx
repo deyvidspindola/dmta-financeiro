@@ -219,12 +219,12 @@ export default function NotificationsScreen() {
               </Text>
               <View className="flex-row flex-wrap items-center gap-2">
                 {capture.guessed_amount != null ? (
-                  <Badge tone={capture.guessed_type === 'income' ? 'brand' : 'accent'}>
+                  <Badge tone={capture.guessed_type === 'income' ? 'brand' : 'negative'}>
                     {t.common.currency} {capture.guessed_amount.toFixed(2)}
                   </Badge>
                 ) : null}
                 {capture.guessed_type ? (
-                  <Badge tone="neutral">
+                  <Badge tone={capture.guessed_type === 'income' ? 'brand' : 'negative'}>
                     {capture.guessed_type === 'income'
                       ? t.newTransaction.typeIncome
                       : t.newTransaction.typeExpense}

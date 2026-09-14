@@ -3,7 +3,7 @@
     "name": "DMTA Financeiro",
     "slug": "dmta-financeiro-app",
     "owner": "drspindola",
-    "version": "1.0.7",
+    "version": "1.0.8",
     "scheme": "dmtafinanceiro",
     "orientation": "portrait",
     "icon": "./assets/icon.png",

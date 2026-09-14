@@ -38,7 +38,7 @@ const RECENT_LIMIT = 6;
 
 function StatSkeleton() {
   return (
-    <View className="gap-2 rounded-2xl border border-line bg-surface p-4">
+    <View className="min-h-[7rem] gap-2 rounded-2xl border border-line bg-surface p-4">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-7 w-28" />
     </View>
@@ -199,6 +199,7 @@ export default function HomeTab() {
           <View className="flex-row flex-wrap gap-3">
             <View className="w-[47%]">
               <Stat
+                className="min-h-[7rem]"
                 label={
                   data.projected_income_month !== data.income_month
                     ? `${t.dashboard.income} ${t.dashboard.projectedLabel}`
@@ -217,6 +218,7 @@ export default function HomeTab() {
             </View>
             <View className="w-[47%]">
               <Stat
+                className="min-h-[7rem]"
                 label={
                   data.projected_expense_month !== data.expense_month
                     ? `${t.dashboard.expense} ${t.dashboard.projectedLabel}`
@@ -235,6 +237,7 @@ export default function HomeTab() {
             </View>
             <View className="w-[47%]">
               <Stat
+                className="min-h-[7rem]"
                 label={t.dashboard.billsPending}
                 value={formatMoney(data.pending_bills_amount)}
                 hint={`${data.pending_bills_count}`}
@@ -243,6 +246,7 @@ export default function HomeTab() {
             </View>
             <View className="w-[47%]">
               <Stat
+                className="min-h-[7rem]"
                 label={t.dashboard.billsOverdue}
                 tone={data.overdue_bills_amount > 0 ? 'negative' : 'neutral'}
                 value={formatMoney(data.overdue_bills_amount)}
