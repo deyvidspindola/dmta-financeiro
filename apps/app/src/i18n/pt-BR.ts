@@ -8,7 +8,6 @@ export const strings = {
     dashboard: 'Painel',
     home: 'Início',
     accounts: 'Contas',
-    transfers: 'Transferência entre contas',
     creditCards: 'Cartões',
     bills: 'Boletos',
     billCaptures: 'Capturas',
