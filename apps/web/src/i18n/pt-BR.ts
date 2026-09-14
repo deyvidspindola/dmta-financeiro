@@ -185,6 +185,7 @@ export const strings = {
     activeGoals: 'Metas ativas',
     evolution: 'Evolução',
     evolutionMonths: 'Meses',
+    categorySpending: 'Gastos por categoria',
     creditUsed: 'Limite usado',
     investments: 'Investimentos',
     empty: 'Nenhum dado neste contexto ainda.',

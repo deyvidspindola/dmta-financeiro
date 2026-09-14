@@ -208,6 +208,8 @@ export const strings = {
     activeGoals: 'Metas ativas',
     evolution: 'Evolução',
     evolutionMonths: 'Meses',
+    categorySpending: 'Gastos por categoria',
+    otherCategories: (n: number) => (n === 1 ? '1 outra categoria' : `${n} outras categorias`),
     creditUsed: 'Limite usado',
     investments: 'Investimentos',
     empty: 'Nenhum dado neste contexto ainda.',

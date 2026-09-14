@@ -19,6 +19,7 @@ import {
   Card,
   CardHeader,
   CategoryChip,
+  DonutChart,
   EmptyState,
   Money,
   MoneyValue,
@@ -26,6 +27,7 @@ import {
   ProgressRing,
   Skeleton,
   Stat,
+  useChartPalette,
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { cn } from '@/lib/cn'
@@ -121,6 +123,22 @@ export function DashboardPage() {
       .slice(0, RECENT_LIMIT)
   }, [transactionsQuery.data, month])
 
+  // Só despesa já efetivada — previsto ainda não é "onde o dinheiro foi".
+  const categorySpending = useMemo(() => {
+    const sums = new Map<string, number>()
+    for (const tx of transactionsQuery.data ?? []) {
+      if (!isInMonth(tx.date, month) || tx.type !== 'expense' || tx.status !== 'settled') continue
+      const key = tx.category_id ?? ''
+      sums.set(key, (sums.get(key) ?? 0) + Math.abs(tx.amount))
+    }
+    return [...sums.entries()]
+      .map(([categoryId, amount]) => {
+        const cat = categoryId ? categoryMap.get(categoryId) : undefined
+        return { amount, name: cat?.name ?? strings.quickAdd.noCategory, colorIndex: cat?.colorIndex ?? null }
+      })
+      .sort((a, b) => b.amount - a.amount)
+  }, [transactionsQuery.data, month, categoryMap])
+
   const budgetSummary = useMemo(() => {
     const rows = budgetsQuery.data ?? []
     if (rows.length === 0) return null
@@ -137,6 +155,7 @@ export function DashboardPage() {
       .slice(0, 3)
   }, [goalsQuery.data])
 
+  const chartPalette = useChartPalette()
   const { data, isLoading, isError } = dashboardQuery
   const hasDebts =
     data &&
@@ -300,6 +319,21 @@ export function DashboardPage() {
         <Card>
           <CardHeader title={t.evolution} />
           <EvolutionChart series={evolutionQuery.data} />
+        </Card>
+      ) : null}
+
+      {/* Gastos por categoria — só despesa já efetivada do mês */}
+      {categorySpending.length > 0 ? (
+        <Card>
+          <CardHeader title={t.categorySpending} />
+          <DonutChart
+            labels={categorySpending.map((c) => c.name)}
+            values={categorySpending.map((c) => c.amount)}
+            colors={categorySpending.map((c) =>
+              c.colorIndex !== null ? chartPalette.cat[c.colorIndex - 1] : '#94a3b8',
+            )}
+            centerLabel={t.expense}
+          />
         </Card>
       ) : null}
 
