@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi } from '@/api';
 import { ApiError } from '@/api/http';
@@ -27,7 +28,13 @@ const TYPE_OPTIONS = (['checking', 'savings', 'wallet', 'other'] as AccountType[
   label: t.accounts.types[v],
 }));
 
-type FormState = { id: string | null; name: string; bank: string; type: AccountType; balance: number };
+type FormState = {
+  id: string | null;
+  name: string;
+  bank: string;
+  type: AccountType;
+  balance: number;
+};
 const EMPTY: FormState = { id: null, name: '', bank: '', type: 'checking', balance: 0 };
 
 export default function AccountsScreen() {
@@ -69,9 +76,7 @@ export default function AccountsScreen() {
       setForm(null);
     },
     onError: (err) =>
-      setFormError(
-        err instanceof ApiError && err.message ? err.message : t.common.error,
-      ),
+      setFormError(err instanceof ApiError && err.message ? err.message : t.common.error),
   });
 
   const remove = useMutation({
@@ -119,12 +124,9 @@ export default function AccountsScreen() {
                 <ListRow
                   key={account.id}
                   onPress={() =>
-                    setForm({
-                      id: account.id,
-                      name: account.name,
-                      bank: account.bank_name ?? '',
-                      type: account.type,
-                      balance: account.balance,
+                    router.push({
+                      pathname: '/account',
+                      params: { id: account.id, contextId: activeScope },
                     })
                   }
                 >
@@ -137,7 +139,24 @@ export default function AccountsScreen() {
                         {account.bank_name ?? t.accounts.types[account.type]}
                       </Text>
                     </View>
-                    <Money amount={account.balance} size="sm" />
+                    <View className="flex-row items-center gap-2">
+                      <Money amount={account.balance} size="sm" />
+                      <Pressable
+                        onPress={() =>
+                          setForm({
+                            id: account.id,
+                            name: account.name,
+                            bank: account.bank_name ?? '',
+                            type: account.type,
+                            balance: account.balance,
+                          })
+                        }
+                        hitSlop={8}
+                        className="p-1 active:opacity-60"
+                      >
+                        <Feather name="edit-2" size={15} color="#7c918b" />
+                      </Pressable>
+                    </View>
                   </View>
                 </ListRow>
               ))}

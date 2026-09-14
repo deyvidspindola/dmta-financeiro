@@ -323,7 +323,12 @@ export default function HomeTab() {
               {(accountsQuery.data ?? []).map((account) => (
                 <ListRow
                   key={`${account.context_id}-${account.id}`}
-                  onPress={() => router.push('/accounts')}
+                  onPress={() =>
+                    router.push({
+                      pathname: '/account',
+                      params: { id: account.id, contextId: account.context_id },
+                    })
+                  }
                 >
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-1">
