@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react'
+import { ArrowDownCircle, ArrowLeftRight, ArrowUpCircle } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { recurringTransactionsApi, transactionsApi } from '@/api'
+import { recurringTransactionsApi, transactionsApi, transfersApi } from '@/api'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
+import { TransferForm } from '@/components/transactions/TransferForm'
 import { emptyEntry } from '@/components/transactions/schemas'
 import type { EntryFormValues } from '@/components/transactions/schemas'
 import { PageHeader } from '@/components/ui'
@@ -12,6 +13,7 @@ import { strings } from '@/i18n/pt-BR'
 import { currentMonthKey } from '@/lib/dates'
 import { getErrorMessage } from '@/lib/errors'
 import { cn } from '@/lib/cn'
+import { useAuthStore } from '@/store/authStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import type { MoneyDirection } from '@/types/models'
 
@@ -21,11 +23,27 @@ function today(): string {
 
 const t = strings.quickAdd
 
+type EntryKind = MoneyDirection | 'transfer'
+
 export function QuickAddPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const contextId = useWritableContextId()
-  const [type, setType] = useState<MoneyDirection>('expense')
+  const contexts = useAuthStore((s) => s.contexts)
+  const [type, setType] = useState<EntryKind>('expense')
+
+  const transferMutation = useMutation({
+    mutationFn: (values: Parameters<typeof transfersApi.createTransfer>[1]) =>
+      transfersApi.createTransfer(contextId!, values),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
+      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+      toastSuccess(strings.transfers.created)
+      navigate('/transactions')
+    },
+    onError: (error) => toastError(getErrorMessage(error)),
+  })
 
   const create = useMutation({
     mutationFn: async (values: EntryFormValues) => {
@@ -78,12 +96,12 @@ export function QuickAddPage() {
     <div className="mx-auto max-w-md space-y-6 bg-canvas text-fg">
       <PageHeader title={t.title} />
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
         <button
           type="button"
           onClick={() => setType('expense')}
           className={cn(
-            'flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition',
+            'flex items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-sm font-medium transition',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
             type === 'expense'
               ? 'border-negative bg-negative/10 text-negative'
@@ -97,7 +115,7 @@ export function QuickAddPage() {
           type="button"
           onClick={() => setType('income')}
           className={cn(
-            'flex items-center justify-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition',
+            'flex items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-sm font-medium transition',
             'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
             type === 'income'
               ? 'border-positive bg-positive/10 text-positive'
@@ -107,20 +125,45 @@ export function QuickAddPage() {
           <ArrowUpCircle size={18} aria-hidden />
           {t.income}
         </button>
+        <button
+          type="button"
+          onClick={() => setType('transfer')}
+          className={cn(
+            'flex items-center justify-center gap-1.5 rounded-xl border px-2 py-3 text-sm font-medium transition',
+            'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
+            type === 'transfer'
+              ? 'border-blue-500 bg-blue-500/10 text-blue-600 dark:text-blue-400'
+              : 'border-line bg-surface text-fg-muted hover:bg-surface-2',
+          )}
+        >
+          <ArrowLeftRight size={18} aria-hidden />
+          {strings.transfers.create}
+        </button>
       </div>
 
-      <TransactionForm
-        key={type}
-        contextId={contextId}
-        initialValues={{ ...emptyEntry(today()), type }}
-        showRecurring={false}
-        showGoal={false}
-        variant="quick"
-        isPending={create.isPending}
-        error={create.isError ? getErrorMessage(create.error) : null}
-        onSubmit={(values) => create.mutate(values)}
-        onCancel={() => void navigate(-1)}
-      />
+      {type === 'transfer' ? (
+        <TransferForm
+          contextId={contextId}
+          contexts={contexts}
+          isPending={transferMutation.isPending}
+          error={transferMutation.isError ? getErrorMessage(transferMutation.error) : null}
+          onSubmit={(values) => transferMutation.mutate(values)}
+          onCancel={() => void navigate(-1)}
+        />
+      ) : (
+        <TransactionForm
+          key={type}
+          contextId={contextId}
+          initialValues={{ ...emptyEntry(today()), type }}
+          showRecurring={false}
+          showGoal={false}
+          variant="quick"
+          isPending={create.isPending}
+          error={create.isError ? getErrorMessage(create.error) : null}
+          onSubmit={(values) => create.mutate(values)}
+          onCancel={() => void navigate(-1)}
+        />
+      )}
     </div>
   )
 }

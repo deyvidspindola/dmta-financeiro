@@ -27,10 +27,13 @@ import { useMonthStore } from '@/store/monthStore';
 import { useScanStore } from '@/store/scanStore';
 import type { Bill, BillKind, BillStatus } from '@/types/models';
 
-const STATUS_TONE: Record<BillStatus, 'neutral' | 'accent' | 'brand'> = {
-  pending: 'brand',
-  overdue: 'accent',
-  paid: 'neutral',
+// Mesma paleta do apps/web (billStatusTone): pago=verde, vencido=vermelho,
+// pendente=âmbar — antes o mobile não tinha tom vermelho/âmbar no Badge e
+// usava roxo genérico pra "vencido", perdendo o sinal de urgência.
+const STATUS_TONE: Record<BillStatus, 'neutral' | 'brand' | 'negative' | 'warning'> = {
+  pending: 'warning',
+  overdue: 'negative',
+  paid: 'brand',
   cancelled: 'neutral',
 };
 

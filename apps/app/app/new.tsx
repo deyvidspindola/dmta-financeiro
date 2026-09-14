@@ -22,6 +22,13 @@ import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 
 type EntryType = 'income' | 'expense' | 'transfer';
 
+/** Cor por tipo no seletor — despesa vermelho, receita verde, transferência azul. */
+const TYPE_TONE: Record<EntryType, { bg: string; text: string }> = {
+  expense: { bg: 'bg-negative/10', text: 'text-negative' },
+  income: { bg: 'bg-positive/10', text: 'text-positive' },
+  transfer: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+};
+
 const schema = z.object({
   amount: z.number().positive(),
   description: z.string().trim().min(1),
@@ -232,13 +239,13 @@ export default function NewTransactionScreen() {
                 }}
                 className={cn(
                   'flex-1 items-center rounded-lg py-2',
-                  type === option && 'bg-canvas',
+                  type === option && TYPE_TONE[option].bg,
                 )}
               >
                 <Text
                   className={cn(
                     'text-sm',
-                    type === option ? 'font-semibold text-fg' : 'text-fg-muted',
+                    type === option ? cn('font-semibold', TYPE_TONE[option].text) : 'text-fg-muted',
                   )}
                 >
                   {option === 'income'

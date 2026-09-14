@@ -20,7 +20,7 @@ export function MonthNavigator() {
   const label = formatMonthLabel(month);
 
   return (
-    <View className="flex-row items-center rounded-xl bg-surface px-1 py-0.5">
+    <View className="h-10 flex-row items-center rounded-xl border border-line bg-surface px-1">
       <Pressable
         accessibilityLabel={t.monthNav.prevMonth}
         onPress={() => shift(-1)}

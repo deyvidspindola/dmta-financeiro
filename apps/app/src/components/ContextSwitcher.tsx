@@ -51,7 +51,10 @@ export function ContextSwitcher() {
         className="h-10 max-w-[10.5rem] flex-row items-center gap-2 rounded-xl border border-line bg-surface px-2.5 active:bg-surface-2"
       >
         {activeScope === CONSOLIDATED ? <Feather name="layers" size={14} color="#8b5cf6" /> : null}
-        <Text className="min-w-0 flex-1 text-xs font-medium" numberOfLines={1}>
+        {/* `shrink` (não `flex-1`) — dentro de um Pressable sem largura fixa,
+            `flex: 1` (flexBasis 0%) colapsa o texto a ~0px, some o nome do
+            contexto e deixa só a badge/seta com vão vazio no lugar. */}
+        <Text className="min-w-0 shrink text-xs font-medium" numberOfLines={1}>
           {currentLabel}
         </Text>
         {currentTag ? (
