@@ -31,7 +31,6 @@ import { useSessionRoute } from '@/hooks/useSessionRoute';
 const TONE_HEX = '#0891b2';
 const TONE_TEXT = 'text-cyan-600 dark:text-cyan-400';
 const TONE_SOLID_BG = 'bg-cyan-600';
-const CATEGORY_CHIP_COLOR = '#3b82f6';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -196,8 +195,6 @@ export default function CardPurchaseScreen() {
               options={categoryOptions}
               onChange={(v) => setCategoryId(v || null)}
               searchable
-              variant="chip"
-              chipToneColor={CATEGORY_CHIP_COLOR}
               renderIcon={(opt) => (
                 <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
               )}

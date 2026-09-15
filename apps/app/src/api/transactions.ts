@@ -49,6 +49,8 @@ export type CreateTransactionInput = {
   account_id: string;
   category_id: string | null;
   description: string;
+  /** Campo "Observação" — texto livre além da descrição. */
+  notes?: string | null;
   amount: number;
   type: 'income' | 'expense';
   occurred_at: string;
@@ -69,6 +71,7 @@ export async function createTransaction(
   >(`/contexts/${contextId}/transactions`, {
     ...input,
     category_id: input.category_id ?? undefined,
+    notes: input.notes || undefined,
     goal_id: input.goal_id ?? undefined,
   });
   return mapTransaction(contextId, unwrapData(payload));
@@ -84,6 +87,7 @@ export async function updateTransaction(
   >(`/contexts/${contextId}/transactions/${transactionId}`, {
     ...input,
     category_id: input.category_id ?? undefined,
+    notes: input.notes || undefined,
   });
   return mapTransaction(contextId, unwrapData(payload));
 }

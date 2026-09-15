@@ -58,6 +58,7 @@ final class RegisterTransaction
                 'recurring_transaction_id' => $data->recurringTransactionId,
                 'goal_id' => $data->goalId,
                 'description' => $data->description,
+                'notes' => $data->notes,
                 'amount' => $data->amount,
                 'type' => $data->type->value,
                 'status' => ($settled ? StatementEntryStatus::Settled : StatementEntryStatus::Pending)->value,

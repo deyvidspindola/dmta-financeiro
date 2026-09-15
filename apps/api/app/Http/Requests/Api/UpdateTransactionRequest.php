@@ -40,6 +40,7 @@ final class UpdateTransactionRequest extends FormRequest
         return [
             'account_id' => ['required', 'integer', $this->existsInRouteContext('accounts')],
             'description' => ['required', 'string', 'max:150'],
+            'notes' => ['nullable', 'string', 'max:1000'],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'type' => ['required', Rule::in(['income', 'expense'])],
             'occurred_at' => ['required', 'date'],

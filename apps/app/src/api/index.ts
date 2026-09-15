@@ -7,6 +7,7 @@ export * as contextsApi from './contexts';
 export * as dashboardApi from './dashboard';
 export * as accountsApi from './accounts';
 export * as transactionsApi from './transactions';
+export * as recurringTransactionsApi from './recurringTransactions';
 export * as transfersApi from './transfers';
 export * as consolidatedApi from './consolidated';
 export * as categoriesApi from './categories';
