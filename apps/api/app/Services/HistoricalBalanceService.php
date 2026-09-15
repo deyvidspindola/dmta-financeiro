@@ -7,7 +7,9 @@ namespace App\Services;
 use App\Enums\StatementEntryType;
 use App\Enums\TransferRole;
 use App\Models\Context;
+use App\Models\StatementEntry;
 use App\UseCases\Transaction\TransferBetweenAccounts;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -21,15 +23,17 @@ use Illuminate\Support\Carbon;
  * entra (mesmo padrão de {@see TransferBetweenAccounts}).
  *
  * NÃO cobre saldo futuro/provisionado (isso é `accounts_balance_provisioned`
- * no {@see DashboardSummaryService}) nem saldo por conta individual.
+ * no {@see DashboardSummaryService}).
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   02/09/2026
+ *
+ * @updated 15/09/2026
  */
 final class HistoricalBalanceService
 {
@@ -37,8 +41,45 @@ final class HistoricalBalanceService
     public function asOf(Context $context, Carbon $date): float
     {
         $initial = (float) $context->accounts()->sum('initial_balance');
+        $delta = $this->deltaQuery($context, $date)->value('delta');
 
-        $delta = $context->statementEntries()
+        return round($initial + (float) $delta, 2);
+    }
+
+    /**
+     * Mesmo replay de {@see self::asOf()}, mas por conta — usado pela
+     * listagem de Contas quando o passador de mês está num mês fechado.
+     * Contas sem nenhum lançamento até `$date` não aparecem no `GROUP BY`
+     * do delta; entram no resultado com o próprio `initial_balance`.
+     *
+     * @return array<int, float> `account_id` => saldo.
+     */
+    public function perAccountAsOf(Context $context, Carbon $date): array
+    {
+        $balances = $context->accounts()->pluck('initial_balance', 'id')
+            ->map(fn ($value) => (float) $value)
+            ->all();
+
+        $deltas = $this->deltaQuery($context, $date)
+            ->selectRaw('account_id')
+            ->groupBy('account_id')
+            ->pluck('delta', 'account_id');
+
+        foreach ($deltas as $accountId => $delta) {
+            $balances[$accountId] = round(($balances[$accountId] ?? 0.0) + (float) $delta, 2);
+        }
+
+        return $balances;
+    }
+
+    /**
+     * Query base do delta (CASE de sinal por tipo) usada por `asOf`/`perAccountAsOf`.
+     *
+     * @return HasMany<StatementEntry, Context>
+     */
+    private function deltaQuery(Context $context, Carbon $date): HasMany
+    {
+        return $context->statementEntries()
             ->settled()
             ->whereDate('occurred_at', '<=', $date->toDateString())
             ->selectRaw(
@@ -51,9 +92,6 @@ final class HistoricalBalanceService
                     StatementEntryType::Transfer->value,
                     TransferRole::Origin->value,
                 ],
-            )
-            ->value('delta');
-
-        return round($initial + (float) $delta, 2);
+            );
     }
 }

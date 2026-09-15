@@ -69,6 +69,7 @@ export interface Account {
   bank_name: string | null;
   type: AccountType;
   balance: number;
+  initial_balance: number;
   currency: 'BRL';
   context?: ContextRef | null;
 }
@@ -226,11 +227,7 @@ export interface BudgetRow {
 }
 
 export type BudgetItemKind =
-  | 'transaction'
-  | 'bill'
-  | 'card_purchase'
-  | 'recurring_transaction'
-  | 'recurring_bill';
+  'transaction' | 'bill' | 'card_purchase' | 'recurring_transaction' | 'recurring_bill';
 
 export interface BudgetItem {
   kind: BudgetItemKind;

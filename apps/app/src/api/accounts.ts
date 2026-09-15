@@ -2,10 +2,16 @@ import { http, unwrapData } from '@/api/http';
 import { mapAccount, toCreateAccountBody, toUpdateAccountBody } from '@/api/mappers';
 import type { Account, AccountType } from '@/types/models';
 
-export async function listAccounts(contextId: string): Promise<Account[]> {
+/**
+ * `month` (YYYY-MM) opcional — mês fechado devolve o saldo de cada conta
+ * como estava no fim daquele mês (replay no backend); mês atual/futuro (ou
+ * omitido) devolve o saldo de agora, igual antes.
+ */
+export async function listAccounts(contextId: string, month?: string): Promise<Account[]> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
   const payload = await http.get<
     Parameters<typeof mapAccount>[1][] | { data: Parameters<typeof mapAccount>[1][] }
-  >(`/contexts/${contextId}/accounts`);
+  >(`/contexts/${contextId}/accounts${query}`);
   return unwrapData(payload).map((row) => mapAccount(contextId, row));
 }
 

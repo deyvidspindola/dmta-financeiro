@@ -193,6 +193,13 @@ export const strings = {
     codeHint: 'Digite o código de 6 dígitos gerado pelo app.',
     enrollSuccess: 'MFA ativado. No próximo login será pedido o código.',
     disableSuccess: 'MFA desligado.',
+    resetTitle: 'Apagar todos os dados',
+    resetWarning:
+      'Apaga todos os lançamentos, contas, cartões, boletos, metas e dívidas de todos os seus contextos, e recria um contexto "Pessoal" vazio para você começar do zero. Sua conta de acesso (login e senha) não é afetada. Essa ação não pode ser desfeita.',
+    resetPasswordLabel: 'Confirme sua senha para continuar',
+    resetConfirm: 'Apagar tudo e começar do zero',
+    resetSuccess: 'Pronto — todos os dados foram apagados.',
+    resetWrongPassword: 'Senha incorreta.',
   },
 
   dashboard: {
@@ -258,6 +265,19 @@ export const strings = {
     statement: 'Extrato',
     runningBalance: 'Saldo',
     emptyStatement: 'Nenhum lançamento nesta conta.',
+    institution: 'Instituição bancária',
+    initialBalance: 'Saldo inicial',
+    incomeCount: 'Receitas no mês',
+    expenseCount: 'Despesas no mês',
+    transferCount: 'Transferências no mês',
+    adjustBalance: 'Reajustar saldo',
+    adjustBalanceHint:
+      'Informe o saldo real da conta hoje — um lançamento de ajuste é criado para cobrir a diferença.',
+    adjustBalanceNewBalance: 'Novo saldo',
+    adjustBalanceDescription: 'Ajuste de saldo',
+    adjustBalanceSame: 'Esse já é o saldo atual da conta.',
+    adjustBalanceSubmit: 'Reajustar',
+    adjustBalanceSuccess: 'Saldo reajustado.',
   },
 
   accounts: {
@@ -283,6 +303,7 @@ export const strings = {
     total: 'Total em contas',
     save: 'Salvar conta',
     balanceEditHint: 'O saldo só muda por lançamento.',
+    emptyMonth: 'Nenhuma conta nesse mês.',
   },
 
   creditCards: {

@@ -1,17 +1,30 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
-import { useQuery } from '@tanstack/react-query';
-import { accountsApi, categoriesApi, transactionsApi } from '@/api';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { accountsApi, ApiError, categoriesApi, transactionsApi } from '@/api';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
-import { Badge, Card, ListRow, Money, MoneyValue, Screen, Skeleton, Text } from '@/components/ui';
+import {
+  Badge,
+  Button,
+  Card,
+  ListRow,
+  Money,
+  MoneyField,
+  MoneyValue,
+  Screen,
+  Sheet,
+  Skeleton,
+  Text,
+} from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
-import { formatDateShort, formatMonthLabel, monthDateRange } from '@/lib/dates';
+import { currentMonthKey, formatDateShort, formatMonthLabel, monthDateRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
 import { transactionBalanceEffect, transactionDirection } from '@/lib/transactionDisplay';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { useMonthStore } from '@/store/monthStore';
+import { toastSuccess } from '@/store/toastStore';
 import type { StatementEntry } from '@/types/models';
 
 type StatementLine = { tx: StatementEntry; runningBalance: number };
@@ -42,17 +55,49 @@ function groupByDay(rows: StatementLine[]): { date: string; rows: StatementLine[
 
 export default function AccountDetailScreen() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const sessionRoute = useSessionRoute();
   const { id, contextId } = useLocalSearchParams<{ id: string; contextId: string }>();
   const month = useMonthStore((s) => s.month);
   const [selected, setSelected] = useState<StatementEntry | null>(null);
+  const [adjustOpen, setAdjustOpen] = useState(false);
+  const [adjustBalance, setAdjustBalance] = useState(0);
+  const [adjustError, setAdjustError] = useState<string | null>(null);
+
+  const isHistorical = month < currentMonthKey();
 
   const accountsQuery = useQuery({
-    queryKey: ['accounts', contextId],
-    queryFn: () => accountsApi.listAccounts(contextId),
+    queryKey: ['accounts', contextId, month],
+    queryFn: () => accountsApi.listAccounts(contextId, month),
     enabled: Boolean(contextId),
   });
   const account = accountsQuery.data?.find((a) => a.id === id) ?? null;
+
+  const adjust = useMutation({
+    mutationFn: async (target: number) => {
+      if (!account || !contextId) return;
+      const diff = Math.round((target - account.balance) * 100) / 100;
+      if (diff === 0) throw new Error(t.accountDetail.adjustBalanceSame);
+      return transactionsApi.createTransaction(contextId, {
+        account_id: account.id,
+        category_id: null,
+        description: t.accountDetail.adjustBalanceDescription,
+        amount: Math.abs(diff),
+        type: diff > 0 ? 'income' : 'expense',
+        occurred_at: new Date().toISOString().slice(0, 10),
+        settled: true,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      void queryClient.invalidateQueries({ queryKey: ['transactions'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setAdjustOpen(false);
+      toastSuccess(t.accountDetail.adjustBalanceSuccess);
+    },
+    onError: (err) =>
+      setAdjustError(err instanceof ApiError && err.message ? err.message : (err as Error).message),
+  });
 
   const { from, to } = monthDateRange(month);
   const transactionsQuery = useQuery({
@@ -79,6 +124,17 @@ export default function AccountDetailScreen() {
     if (!account) return [];
     return groupByDay(buildStatement(account.balance, transactionsQuery.data ?? []));
   }, [account, transactionsQuery.data]);
+
+  // Contagens do mês exibido — não é histórico "desde sempre", é o mesmo
+  // recorte de mês que já move o extrato abaixo.
+  const counts = useMemo(() => {
+    const rows = transactionsQuery.data ?? [];
+    return {
+      income: rows.filter((r) => r.type === 'income').length,
+      expense: rows.filter((r) => r.type === 'expense').length,
+      transfer: rows.filter((r) => r.type === 'transfer').length,
+    };
+  }, [transactionsQuery.data]);
 
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
@@ -107,6 +163,55 @@ export default function AccountDetailScreen() {
             <Text variant="muted" className="text-xs" numberOfLines={1}>
               {account.bank_name ?? t.accounts.types[account.type]}
             </Text>
+            {isHistorical ? null : (
+              <Pressable
+                onPress={() => {
+                  setAdjustBalance(account.balance);
+                  setAdjustError(null);
+                  setAdjustOpen(true);
+                }}
+                className="mt-3 self-start rounded-full bg-negative px-4 py-2 active:opacity-80"
+              >
+                <Text className="text-xs font-semibold uppercase tracking-wide text-white">
+                  {t.accountDetail.adjustBalance}
+                </Text>
+              </Pressable>
+            )}
+          </Card>
+
+          <Card className="gap-3">
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted" className="text-xs">
+                {t.accountDetail.institution}
+              </Text>
+              <Text className="text-sm font-medium" numberOfLines={1}>
+                {account.bank_name ?? '—'}
+              </Text>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted" className="text-xs">
+                {t.accountDetail.initialBalance}
+              </Text>
+              <Money amount={account.initial_balance} size="sm" />
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted" className="text-xs">
+                {t.accountDetail.incomeCount}
+              </Text>
+              <Text className="text-sm font-medium">{counts.income}</Text>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted" className="text-xs">
+                {t.accountDetail.expenseCount}
+              </Text>
+              <Text className="text-sm font-medium">{counts.expense}</Text>
+            </View>
+            <View className="flex-row items-center justify-between">
+              <Text variant="muted" className="text-xs">
+                {t.accountDetail.transferCount}
+              </Text>
+              <Text className="text-sm font-medium">{counts.transfer}</Text>
+            </View>
           </Card>
 
           <View className="flex-row items-center justify-between">
@@ -183,6 +288,30 @@ export default function AccountDetailScreen() {
         categoryName={selected?.category_id ? categoryMap.get(selected.category_id) : undefined}
         onClose={() => setSelected(null)}
       />
+
+      <Sheet
+        open={adjustOpen}
+        onClose={() => setAdjustOpen(false)}
+        title={t.accountDetail.adjustBalance}
+      >
+        <View className="gap-4">
+          <Text variant="muted">{t.accountDetail.adjustBalanceHint}</Text>
+          <MoneyField
+            label={t.accountDetail.adjustBalanceNewBalance}
+            value={adjustBalance}
+            onChange={setAdjustBalance}
+          />
+          {adjustError ? <Text variant="error">{adjustError}</Text> : null}
+          <Button
+            label={t.accountDetail.adjustBalanceSubmit}
+            loading={adjust.isPending}
+            onPress={() => {
+              setAdjustError(null);
+              adjust.mutate(adjustBalance);
+            }}
+          />
+        </View>
+      </Sheet>
     </Screen>
   );
 }

@@ -154,6 +154,7 @@ export function mapAccount(
     bank_name: raw.institution ?? raw.bank_name ?? null,
     type: raw.type,
     balance: Number(raw.balance),
+    initial_balance: Number(raw.initial_balance ?? 0),
     currency: 'BRL',
     context,
   };

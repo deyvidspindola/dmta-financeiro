@@ -4,6 +4,7 @@ import { Redirect, Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SecuritySheet } from '@/components/SecuritySheet';
 import { Text } from '@/components/ui';
 import { useNotificationCaptureSync } from '@/hooks/useNotificationCaptureSync';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
@@ -28,15 +29,20 @@ function FabCircle({ action, onPress }: { action: FabAction; onPress: () => void
   );
 }
 
-// Raio do semicírculo (px) e os 4 ângulos onde cada atalho fica — 0° é a
+// Raio do semicírculo (px) e os 5 ângulos onde cada atalho fica — 0° é a
 // direita e o ângulo cresce sentido anti-horário (matemática padrão), então
-// 30°/150° ficam mais pro lado (mais baixos) e 70°/110° ficam mais em cima,
-// perto do topo do arco — igual ao leque do Mobills sobre o botão "+".
-const ARC_RADIUS = 108;
-const ARC_WIDTH = 300;
-const ARC_HEIGHT = 190;
-const ARC_ITEM_WIDTH = 100;
-const ARC_ANGLES_DEG = [150, 110, 70, 30] as const;
+// os ângulos das pontas ficam mais pro lado (mais baixos) e o do meio fica
+// mais em cima, perto do topo do arco — igual ao leque do Mobills sobre o
+// botão "+". Raio maior que o do leque de 4 itens (era 108) porque com 5
+// itens a corda entre ângulos vizinhos (2·R·sen(Δθ/2)) precisa ser ≥
+// `ARC_ITEM_WIDTH`, senão as caixas de toque vizinhas se sobrepõem e o
+// toque num atalho aciona o vizinho por baixo (bug real, visto em teste
+// manual: tocar "Segurança" abria "Transferência").
+const ARC_RADIUS = 132;
+const ARC_WIDTH = 320;
+const ARC_HEIGHT = 210;
+const ARC_ITEM_WIDTH = 64;
+const ARC_ANGLES_DEG = [155, 122.5, 90, 57.5, 25] as const;
 
 function arcPosition(angleDeg: number) {
   const rad = (angleDeg * Math.PI) / 180;
@@ -47,16 +53,32 @@ function arcPosition(angleDeg: number) {
 
 // Leque de opções do "+", igual ao padrão do Mobills: em vez de ir direto
 // pra um formulário genérico, o toque abre um semicírculo de atalhos
-// (transferência, receita, despesa no cartão, despesa) — cada um já leva o
-// tipo certo pra `/new` via param, ou pra aba Cartões (compra no cartão
-// exige escolher o cartão primeiro, feito lá). Ordem esquerda→direita
-// acompanha o arco: transferência/receita do lado esquerdo (a receita mais
-// alta, perto do topo), despesa no cartão/despesa do lado direito.
-function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+// (segurança, transferência, receita, despesa no cartão, despesa) — cada
+// lançamento já leva o tipo certo pra `/new` via param, ou pra aba Cartões
+// (compra no cartão exige escolher o cartão primeiro, feito lá).
+// "Segurança" fica na ponta esquerda de propósito — é a única ação
+// destrutiva do leque (abre a tela de apagar todos os dados), então longe
+// do centro onde o polegar naturalmente aperta pra lançar algo.
+function FabButton({
+  open,
+  onToggle,
+  onOpenSecurity,
+}: {
+  open: boolean;
+  onToggle: () => void;
+  onOpenSecurity: () => void;
+}) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const actions: FabAction[] = [
+    {
+      key: 'security',
+      label: t.nav.security,
+      icon: 'shield',
+      color: '#94a3b8',
+      onPress: onOpenSecurity,
+    },
     {
       key: 'transfer',
       label: t.nav.fabTransfer,
@@ -137,6 +159,7 @@ export default function TabsLayout() {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
   const [fabOpen, setFabOpen] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
 
   useNotificationCaptureSync();
 
@@ -197,7 +220,12 @@ export default function TabsLayout() {
           onPress={() => setFabOpen(false)}
         />
       ) : null}
-      <FabButton open={fabOpen} onToggle={() => setFabOpen((o) => !o)} />
+      <FabButton
+        open={fabOpen}
+        onToggle={() => setFabOpen((o) => !o)}
+        onOpenSecurity={() => setSecurityOpen(true)}
+      />
+      <SecuritySheet open={securityOpen} onClose={() => setSecurityOpen(false)} />
     </View>
   );
 }

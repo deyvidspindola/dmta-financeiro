@@ -1,7 +1,13 @@
 import { DEVICE_NAME } from '@/api/config';
 import { http, unwrapData } from '@/api/http';
 import { mapContext, mapUser } from '@/api/mappers';
-import type { AuthSession, LoginCredentials, LoginResult, MfaChallenge } from '@/types/models';
+import type {
+  AuthSession,
+  Context,
+  LoginCredentials,
+  LoginResult,
+  MfaChallenge,
+} from '@/types/models';
 
 type ApiUser = {
   id: string | number;
@@ -62,4 +68,16 @@ export async function verifyMfa(mfaToken: string, code: string): Promise<AuthSes
 
 export async function logout(): Promise<void> {
   await http.post('/auth/logout');
+}
+
+/**
+ * "Apagar todos os dados" da tela de segurança — apaga todo o dado
+ * financeiro do usuário e recria um contexto PF "Pessoal" vazio. Exige a
+ * senha atual (checada no backend). A conta de acesso não é afetada.
+ */
+export async function resetAccountData(password: string): Promise<Context> {
+  const payload = await http.post<
+    Parameters<typeof mapContext>[0] | { data: Parameters<typeof mapContext>[0] }
+  >('/account/reset', { password });
+  return mapContext(unwrapData(payload));
 }
