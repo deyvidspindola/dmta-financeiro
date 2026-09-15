@@ -17,43 +17,54 @@ type FabAction = {
   onPress: () => void;
 };
 
+function FabCircle({ action, onPress }: { action: FabAction; onPress: () => void }) {
+  return (
+    <Pressable accessibilityLabel={action.label} onPress={onPress} className="items-center gap-2">
+      <View className="size-16 items-center justify-center rounded-full bg-surface-2 shadow-sm">
+        <Feather name={action.icon} size={26} color={action.color} />
+      </View>
+      <Text className="text-xs font-medium text-fg">{action.label}</Text>
+    </Pressable>
+  );
+}
+
 // Leque de opções do "+", igual ao padrão do Mobills: em vez de ir direto
-// pra um formulário genérico, o toque abre 4 atalhos coloridos (receita,
-// despesa, despesa no cartão, transferência) — cada um já leva o tipo certo
-// pra `/new` via param, ou pra aba Cartões (compra no cartão exige escolher
-// o cartão primeiro, feito lá).
+// pra um formulário genérico, o toque abre uma grade 2x2 de atalhos
+// (receita, despesa no cartão, transferência, despesa) — cada um já leva o
+// tipo certo pra `/new` via param, ou pra aba Cartões (compra no cartão
+// exige escolher o cartão primeiro, feito lá).
 function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const actions: FabAction[] = [
     {
-      key: 'transfer',
-      label: t.nav.fabTransfer,
-      icon: 'repeat',
-      color: '#2563eb',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
+      key: 'income',
+      label: t.newTransaction.typeIncome,
+      icon: 'trending-up',
+      color: '#34d399',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'income' } }),
     },
     {
       key: 'card',
       label: t.nav.fabCardExpense,
       icon: 'credit-card',
-      color: '#7c3aed',
+      color: '#22d3ee',
       onPress: () => router.push('/(tabs)/cards'),
+    },
+    {
+      key: 'transfer',
+      label: t.nav.fabTransfer,
+      icon: 'repeat',
+      color: '#a78bfa',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
     },
     {
       key: 'expense',
       label: t.newTransaction.typeExpense,
-      icon: 'arrow-down-circle',
-      color: '#dc2626',
+      icon: 'trending-down',
+      color: '#f87171',
       onPress: () => router.push({ pathname: '/new', params: { type: 'expense' } }),
-    },
-    {
-      key: 'income',
-      label: t.newTransaction.typeIncome,
-      icon: 'arrow-up-circle',
-      color: '#059669',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'income' } }),
     },
   ];
 
@@ -64,31 +75,39 @@ function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       pointerEvents="box-none"
     >
       {open ? (
-        <View className="mb-3 items-end gap-3 pr-1">
-          {actions.map((action) => (
-            <Pressable
-              key={action.key}
-              accessibilityLabel={action.label}
+        <View className="mb-4 gap-5">
+          <View className="flex-row gap-8">
+            <FabCircle
+              action={actions[0]!}
               onPress={() => {
                 onToggle();
-                action.onPress();
+                actions[0]!.onPress();
               }}
-              className="flex-row items-center gap-3"
-            >
-              <View
-                className="rounded-lg bg-surface px-2.5 py-1.5 shadow-sm"
-                style={{ elevation: 3 }}
-              >
-                <Text className="text-sm font-medium text-fg">{action.label}</Text>
-              </View>
-              <View
-                className="size-11 items-center justify-center rounded-full shadow-lg"
-                style={{ backgroundColor: action.color, elevation: 6 }}
-              >
-                <Feather name={action.icon} size={20} color="#fff" />
-              </View>
-            </Pressable>
-          ))}
+            />
+            <FabCircle
+              action={actions[1]!}
+              onPress={() => {
+                onToggle();
+                actions[1]!.onPress();
+              }}
+            />
+          </View>
+          <View className="flex-row gap-8">
+            <FabCircle
+              action={actions[2]!}
+              onPress={() => {
+                onToggle();
+                actions[2]!.onPress();
+              }}
+            />
+            <FabCircle
+              action={actions[3]!}
+              onPress={() => {
+                onToggle();
+                actions[3]!.onPress();
+              }}
+            />
+          </View>
         </View>
       ) : null}
       <Pressable
