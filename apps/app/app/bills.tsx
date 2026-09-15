@@ -7,6 +7,7 @@ import { ApiError } from '@/api/http';
 import {
   Badge,
   Button,
+  CategoryIcon,
   ConfirmSheet,
   DateField,
   ListRow,
@@ -83,6 +84,27 @@ export default function BillsScreen() {
       }),
     enabled: form !== null && Boolean(activeScope),
   });
+
+  // Nomes de categoria pras linhas da lista (payable + receivable
+  // misturados) — independente do `categoriesQuery` acima, que é filtrado
+  // pelo tipo do formulário aberto.
+  const allCategoriesQuery = useQuery({
+    queryKey: ['categories', activeScope, 'all'],
+    queryFn: async () => {
+      const [expense, income] = await Promise.all([
+        categoriesApi.listCategories(activeScope, { type: 'expense' }),
+        categoriesApi.listCategories(activeScope, { type: 'income' }),
+      ]);
+      return [...expense, ...income];
+    },
+    enabled: !isConsolidated && Boolean(activeScope),
+  });
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of allCategoriesQuery.data ?? []) map.set(c.id, c.name);
+    return map;
+  }, [allCategoriesQuery.data]);
 
   const accountOptions = useMemo(
     () => (accountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
@@ -200,6 +222,17 @@ export default function BillsScreen() {
                       barcode: bill.barcode ?? '',
                     })
                   }
+                  leading={
+                    <CategoryIcon
+                      categoryId={bill.category_id}
+                      name={
+                        bill.category_id
+                          ? (categoryMap.get(bill.category_id) ?? '')
+                          : t.newTransaction.categoryNone
+                      }
+                      size="sm"
+                    />
+                  }
                 >
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-0.5">
@@ -311,6 +344,9 @@ export default function BillsScreen() {
               value={form.categoryId ?? ''}
               options={categoryOptions}
               onChange={(v) => setForm({ ...form, categoryId: v || null })}
+              renderIcon={(opt) => (
+                <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+              )}
             />
             <TextField
               label={t.bills.barcode}

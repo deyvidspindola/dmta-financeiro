@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
@@ -8,6 +8,7 @@ import { ApiError } from '@/api/http';
 import { ContextSwitcher } from '@/components/ContextSwitcher';
 import {
   AccountIcon,
+  AmountHero,
   Button,
   CategoryIcon,
   DateField,
@@ -19,7 +20,6 @@ import {
 } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
-import { formatMoney } from '@/lib/format';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import type { AccountType } from '@/types/models';
@@ -57,43 +57,6 @@ const transferSchema = z.object({
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
-}
-
-/**
- * Valor em destaque no topo do formulário, estilo "calculadora" do Mobills
- * — o mesmo parsing de dígitos do `MoneyField`, só que como protagonista
- * visual em vez de um campo pequeno.
- */
-function AmountHero({
-  value,
-  onChange,
-  toneClassName,
-  error,
-}: {
-  value: number;
-  onChange: (value: number) => void;
-  toneClassName: string;
-  error?: string | null;
-}) {
-  return (
-    <View className="items-center gap-1 py-2">
-      <TextInput
-        keyboardType="number-pad"
-        placeholderTextColor="#7c918b"
-        value={formatMoney(value)}
-        onChangeText={(raw) => {
-          const digits = raw.replace(/\D/g, '');
-          onChange(digits ? Number(digits) / 100 : 0);
-        }}
-        className={cn('w-full text-center text-4xl font-bold tabular-nums', toneClassName)}
-      />
-      {error ? (
-        <Text variant="error" className="text-center">
-          {error}
-        </Text>
-      ) : null}
-    </View>
-  );
 }
 
 export default function NewTransactionScreen() {

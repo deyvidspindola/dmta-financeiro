@@ -3,12 +3,13 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
-import { accountsApi, creditCardsApi } from '@/api';
+import { accountsApi, categoriesApi, creditCardsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import { toastError, toastSuccess } from '@/store/toastStore';
 import {
   Badge,
   Button,
+  CategoryIcon,
   ConfirmSheet,
   Money,
   MoneyValue,
@@ -67,6 +68,18 @@ export function CardDetailSheet({
     queryFn: () => creditCardsApi.listCardPurchases(card!.context_id, card!.id, openInvoiceId!),
     enabled: openInvoiceId !== null && Boolean(card?.context_id),
   });
+
+  const categoriesQuery = useQuery({
+    queryKey: ['categories', card?.context_id, 'expense'],
+    queryFn: () => categoriesApi.listCategories(card!.context_id, { type: 'expense' }),
+    enabled: card !== null && Boolean(card?.context_id),
+  });
+
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of categoriesQuery.data ?? []) map.set(c.id, c.name);
+    return map;
+  }, [categoriesQuery.data]);
 
   const accountOptions = useMemo(
     () => (accountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
@@ -212,6 +225,15 @@ export function CardDetailSheet({
                             key={p.id}
                             className="flex-row items-center gap-2 border-b border-line py-2.5"
                           >
+                            <CategoryIcon
+                              categoryId={p.category_id}
+                              name={
+                                p.category_id
+                                  ? (categoryMap.get(p.category_id) ?? '')
+                                  : t.newTransaction.categoryNone
+                              }
+                              size="sm"
+                            />
                             <Pressable
                               onPress={() =>
                                 isPurchaseEditable(p, invoice.status)
