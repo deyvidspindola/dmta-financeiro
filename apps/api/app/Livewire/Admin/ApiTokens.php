@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\PersonalAccessToken;
 use Livewire\Component;
+use TallStackUi\Traits\Interactions;
 
 /**
  * Gestão de tokens de API pessoais do Sanctum (área /admin/tokens).
@@ -34,10 +35,12 @@ use Livewire\Component;
  *
  * @since   18/08/2026
  *
- * @updated 18/08/2026
+ * @updated 07/09/2026
  */
 final class ApiTokens extends Component
 {
+    use Interactions;
+
     public string $name = '';
 
     public string $abilities = '';
@@ -65,11 +68,27 @@ final class ApiTokens extends Component
     }
 
     /**
+     * Abre o diálogo de confirmação antes de revogar.
+     * Não apaga o token ainda.
+     */
+    public function confirmRevoke(int $tokenId): void
+    {
+        $this->dialog()
+            ->question(__('admin.tokens.revoke_title'), __('admin.tokens.revoke_message'))
+            ->confirm(__('admin.tokens.revoke_confirm'), 'revoke', $tokenId)
+            ->cancel(__('admin.tokens.revoke_cancel'))
+            ->send();
+    }
+
+    /**
      * Revoga (apaga) um token do usuário autenticado.
      */
     public function revoke(int $tokenId): void
     {
         Auth::user()->tokens()->whereKey($tokenId)->delete();
+        $this->dialog()
+            ->success(__('ui.dialog.success'), __('admin.tokens.revoked'))
+            ->send();
     }
 
     public function render(): View

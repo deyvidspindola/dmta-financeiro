@@ -51,6 +51,11 @@ return [
         'col_last_used' => 'Último uso',
         'never_used' => 'Nunca usado',
         'revoke' => 'Revogar',
+        'revoke_title' => 'Revogar token?',
+        'revoke_message' => 'Aplicações que usam este token deixam de autenticar imediatamente.',
+        'revoke_confirm' => 'Revogar',
+        'revoke_cancel' => 'Cancelar',
+        'revoked' => 'Token revogado.',
         'empty' => 'Nenhum token gerado ainda.',
     ],
 

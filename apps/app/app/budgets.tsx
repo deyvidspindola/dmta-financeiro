@@ -225,8 +225,8 @@ export default function BudgetsScreen() {
 
       <ConfirmSheet
         open={toDelete !== null}
-        title={t.budgets.editBudget}
-        message={t.categories.confirmDelete}
+        title={t.common.delete}
+        message={t.budgets.confirmDelete}
         confirmLabel={t.common.delete}
         tone="danger"
         loading={remove.isPending}

@@ -94,6 +94,7 @@ export const strings = {
     ofLimit: 'de',
     totalSpent: 'Total gasto',
     totalLimit: 'Total do teto',
+    confirmDelete: 'Excluir este orçamento?',
     overCount: (count: number) =>
       count === 1 ? '1 categoria estourou' : `${count} categorias estouraram`,
     pickContext: 'Selecione um contexto para ver os orçamentos.',
@@ -146,6 +147,7 @@ export const strings = {
     enroll: 'Configurar MFA',
     confirm: 'Confirmar código',
     disable: 'Desligar MFA',
+    confirmDisable: 'Desligar a autenticação em duas etapas? O próximo login não pedirá código.',
     secretLabel: 'Chave secreta (digite manualmente se não puder escanear)',
     qrHint: 'Escaneie o QR no aplicativo autenticador (Google Authenticator, Authy, etc.).',
     codeHint: 'Digite o código de 6 dígitos gerado pelo app.',

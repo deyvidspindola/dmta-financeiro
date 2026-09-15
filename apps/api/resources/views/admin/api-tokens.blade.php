@@ -33,7 +33,7 @@
                 <span class="text-muted-foreground">{{ $token->created_at->format('d/m/Y') }}</span>
                 <span class="text-muted-foreground">{{ $token->last_used_at?->format('d/m/Y') ?? __('admin.tokens.never_used') }}</span>
                 <div class="flex justify-end">
-                    <x-ui.button variant="ghost" size="xs" wire:click="revoke({{ $token->id }})" :aria-label="__('admin.tokens.revoke')">
+                    <x-ui.button variant="ghost" size="xs" wire:click="confirmRevoke({{ $token->id }})" :aria-label="__('admin.tokens.revoke')">
                         <x-ui.icon icon="delete" class="size-4 text-destructive" />
                     </x-ui.button>
                 </div>
