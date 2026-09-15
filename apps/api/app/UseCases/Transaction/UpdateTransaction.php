@@ -71,6 +71,7 @@ final class UpdateTransaction
                 'category_id' => $data->categoryId,
                 'goal_id' => $data->goalId,
                 'description' => $data->description,
+                'notes' => $data->notes,
                 'amount' => $data->amount,
                 'type' => $data->type->value,
                 'occurred_at' => $data->occurredAt,

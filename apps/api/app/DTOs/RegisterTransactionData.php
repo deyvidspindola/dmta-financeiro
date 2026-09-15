@@ -39,6 +39,8 @@ final readonly class RegisterTransactionData
         public ?int $recurringTransactionId = null,
         public ?int $goalId = null,
         public ?int $cardInvoiceId = null,
+        /** Campo "Observação" — texto livre além de `description`. */
+        public ?string $notes = null,
         /**
          * `false` = lançamento nasce previsto (`pending`), não move o
          * saldo até {@see SettleTransaction}.

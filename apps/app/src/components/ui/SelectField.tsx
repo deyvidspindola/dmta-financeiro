@@ -18,14 +18,6 @@ type Props = {
   searchable?: boolean;
   /** Ícone/avatar por opção (ex.: `CategoryIcon`) — telas tipo Mobills mostram cor/ícone na lista. */
   renderIcon?: (option: SelectOption) => ReactNode;
-  /** `chip` — pill compacta (categoria/conta no lançamento), sem label acima nem largura cheia. */
-  variant?: 'field' | 'chip';
-  /**
-   * Cor da borda/texto do chip — hex literal (via `style`, não classe
-   * Tailwind: precisa funcionar com cor calculada em runtime, ex. por tipo
-   * de conta). Só usado em `variant="chip"`.
-   */
-  chipToneColor?: string;
 };
 
 function normalizeText(text: string): string {
@@ -45,13 +37,10 @@ export function SelectField({
   error,
   searchable = false,
   renderIcon,
-  variant = 'field',
-  chipToneColor,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const selected = options.find((o) => o.value === value);
-  const isChip = variant === 'chip';
 
   const filteredOptions = useMemo(() => {
     if (!searchable || !search.trim()) return options;
@@ -65,35 +54,22 @@ export function SelectField({
   };
 
   return (
-    <View className={isChip ? 'items-start gap-1.5' : 'gap-1.5'}>
-      {isChip ? null : <Text variant="label">{label}</Text>}
+    <View className="gap-1.5">
+      <Text variant="label">{label}</Text>
       <Pressable
         onPress={() => setOpen(true)}
-        style={isChip ? { borderColor: chipToneColor ?? '#7c918b' } : undefined}
         className={cn(
-          isChip
-            ? 'h-10 max-w-full flex-row items-center gap-2 self-start rounded-full border px-3'
-            : cn(
-                'h-12 flex-row items-center justify-between rounded-xl border border-line bg-surface px-3',
-                error && 'border-negative',
-              ),
+          'h-12 flex-row items-center justify-between rounded-xl border border-line bg-surface px-3',
+          error && 'border-negative',
         )}
       >
         <View className="min-w-0 flex-1 flex-row items-center gap-2">
           {selected && renderIcon ? renderIcon(selected) : null}
-          <Text
-            style={isChip ? { color: chipToneColor ?? '#7c918b' } : undefined}
-            className={cn(!isChip && (selected ? 'text-fg' : 'text-fg-subtle'))}
-            numberOfLines={1}
-          >
+          <Text className={cn(selected ? 'text-fg' : 'text-fg-subtle')} numberOfLines={1}>
             {selected?.label ?? placeholder}
           </Text>
         </View>
-        <Feather
-          name="chevron-down"
-          size={16}
-          color={isChip ? (chipToneColor ?? '#7c918b') : '#7c918b'}
-        />
+        <Feather name="chevron-down" size={18} color="#7c918b" />
       </Pressable>
       {error ? <Text variant="error">{error}</Text> : null}
 

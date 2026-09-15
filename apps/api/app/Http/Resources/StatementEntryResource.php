@@ -38,6 +38,7 @@ final class StatementEntryResource extends JsonResource
             'transfer_pair_id' => $this->transfer_pair_id,
             'recurring_transaction_id' => $this->recurring_transaction_id,
             'description' => $this->description,
+            'notes' => $this->notes,
             'amount' => (float) $this->amount,
             // @phpstan-ignore-next-line property.nonObject (cast StatementEntryType da migration)
             'type' => $this->type->value,

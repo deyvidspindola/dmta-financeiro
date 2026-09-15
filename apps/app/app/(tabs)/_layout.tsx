@@ -23,7 +23,7 @@ function FabCircle({ action, onPress }: { action: FabAction; onPress: () => void
       <View className="size-16 items-center justify-center rounded-full bg-surface-2 shadow-sm">
         <Feather name={action.icon} size={26} color={action.color} />
       </View>
-      <Text className="text-xs font-medium text-fg">{action.label}</Text>
+      <Text className="text-xs font-medium text-white">{action.label}</Text>
     </Pressable>
   );
 }
@@ -184,7 +184,7 @@ export default function TabsLayout() {
       {fabOpen ? (
         <Pressable
           accessibilityLabel={t.nav.fabClose}
-          className="absolute inset-0 bg-black/30"
+          className="absolute inset-0 bg-black/70"
           onPress={() => setFabOpen(false)}
         />
       ) : null}

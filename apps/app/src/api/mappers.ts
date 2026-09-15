@@ -315,6 +315,7 @@ export function mapTransaction(
     account_id: string | number;
     category_id?: string | number | null;
     description: string;
+    notes?: string | null;
     amount: number;
     type: EntryType;
     status?: 'pending' | 'settled';
@@ -348,6 +349,7 @@ export function mapTransaction(
     category_id:
       raw.category_id === null || raw.category_id === undefined ? null : asId(raw.category_id),
     description: raw.description,
+    notes: raw.notes ?? null,
     amount: Number(raw.amount),
     type: raw.type,
     status: raw.status ?? 'settled',

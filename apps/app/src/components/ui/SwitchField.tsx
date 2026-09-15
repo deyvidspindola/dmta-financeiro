@@ -25,7 +25,9 @@ export function SwitchField({ label, hint, value, onChange, toneColor }: Props) 
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: toneColor ?? '#0f9d58' }}
+        trackColor={{ false: '#767577', true: toneColor ?? '#0f9d58' }}
+        thumbColor="#fff"
+        ios_backgroundColor="#767577"
       />
     </View>
   );

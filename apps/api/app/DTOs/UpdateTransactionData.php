@@ -33,5 +33,7 @@ final readonly class UpdateTransactionData
         public string $occurredAt,
         public ?int $categoryId = null,
         public ?int $goalId = null,
+        /** Campo "Observação" — texto livre além de `description`. */
+        public ?string $notes = null,
     ) {}
 }

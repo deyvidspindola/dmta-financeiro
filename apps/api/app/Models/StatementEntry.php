@@ -20,7 +20,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'context_id', 'account_id', 'category_id', 'bill_id', 'card_invoice_id',
     'transfer_pair_id', 'transfer_role', 'recurring_transaction_id', 'goal_id',
-    'description', 'amount', 'type', 'status', 'settled_at', 'occurred_at', 'origin',
+    'description', 'notes', 'amount', 'type', 'status', 'settled_at', 'occurred_at', 'origin',
 ])]
 /**
  * Lançamento numa conta — o registro que move `accounts.balance` (ver

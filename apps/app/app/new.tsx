@@ -12,7 +12,13 @@ import { Feather } from '@expo/vector-icons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
-import { accountsApi, categoriesApi, transactionsApi, transfersApi } from '@/api';
+import {
+  accountsApi,
+  categoriesApi,
+  recurringTransactionsApi,
+  transactionsApi,
+  transfersApi,
+} from '@/api';
 import { ApiError } from '@/api/http';
 import { ContextSwitcher } from '@/components/ContextSwitcher';
 import {
@@ -27,9 +33,9 @@ import {
 } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
-import { accountIconColor } from '@/lib/accountIcon';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
+import { toastSuccess } from '@/store/toastStore';
 import type { AccountType } from '@/types/models';
 
 type EntryType = 'income' | 'expense' | 'transfer';
@@ -57,11 +63,6 @@ const TYPE_TONE: Record<EntryType, { bg: string; solidBg: string; text: string; 
   },
 };
 
-// Chip de categoria é sempre azul (identidade do campo "categoria", não da
-// categoria escolhida — o círculo colorido por categoria já mora dentro do
-// chip via `CategoryIcon`).
-const CATEGORY_CHIP_COLOR = '#3b82f6';
-
 const schema = z.object({
   amount: z.number().positive(),
   description: z.string().trim().min(1),
@@ -79,6 +80,12 @@ const transferSchema = z.object({
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function addMonthsIso(iso: string, months: number): string {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
 }
 
 const TITLE: Record<EntryType, string> = {
@@ -116,6 +123,11 @@ export default function NewTransactionScreen() {
   const [toAccountId, setToAccountId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
+  const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const [notes, setNotes] = useState('');
+  const [fixedExpense, setFixedExpense] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [repeatMonths, setRepeatMonths] = useState('2');
 
   const isTransfer = type === 'transfer';
   const tone = TYPE_TONE[type];
@@ -165,18 +177,11 @@ export default function NewTransactionScreen() {
     [categoriesQuery.data],
   );
 
-  const accountChipColor = accountId
-    ? accountIconColor(accountTypeMap.get(accountId) ?? 'other')
-    : '#7c918b';
-  const toAccountChipColor = toAccountId
-    ? accountIconColor(accountTypeMap.get(toAccountId) ?? 'other')
-    : '#7c918b';
-
   const sameAccount =
     isTransfer && accountId !== null && accountId === toAccountId && toContextId === activeScope;
 
   const mutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (variables: { keepOpen: boolean }) => {
       if (isTransfer) {
         await transfersApi.createTransfer(activeScope, {
           from_account_id: accountId!,
@@ -186,22 +191,52 @@ export default function NewTransactionScreen() {
           description: description.trim(),
           occurred_at: occurredAt,
         });
-        return;
+        return variables;
       }
+
+      // Despesa fixa (sem fim) ou repetir (com fim calculado) viram uma
+      // regra de recorrência — o próprio cadastro já materializa a
+      // ocorrência de hoje, não precisa criar o lançamento avulso também.
+      if (fixedExpense || repeat) {
+        await recurringTransactionsApi.createRecurringTransaction(activeScope, {
+          account_id: accountId!,
+          category_id: categoryId || null,
+          description: description.trim(),
+          amount,
+          type: type as 'income' | 'expense',
+          interval: 'monthly',
+          start_date: occurredAt,
+          end_date: fixedExpense ? null : addMonthsIso(occurredAt, Number(repeatMonths) || 1),
+        });
+        return variables;
+      }
+
       await transactionsApi.createTransaction(activeScope, {
         account_id: accountId!,
         category_id: categoryId || null,
         description: description.trim(),
+        notes: notes.trim() || null,
         amount,
         type,
         occurred_at: occurredAt,
         settled,
       });
+      return variables;
     },
-    onSuccess: () => {
+    onSuccess: (variables) => {
       void queryClient.invalidateQueries({ queryKey: ['transactions'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      if (variables.keepOpen) {
+        toastSuccess(t.newTransaction.created);
+        setAmount(0);
+        setDescription('');
+        setNotes('');
+        setFixedExpense(false);
+        setRepeat(false);
+        setRepeatMonths('2');
+        return;
+      }
       router.back();
     },
     onError: (err) => {
@@ -217,7 +252,7 @@ export default function NewTransactionScreen() {
     return <Redirect href={sessionRoute} />;
   }
 
-  function submit() {
+  function submit(keepOpen: boolean) {
     setFormError(null);
 
     if (isTransfer) {
@@ -246,7 +281,7 @@ export default function NewTransactionScreen() {
         return;
       }
       setErrors({});
-      mutation.mutate();
+      mutation.mutate({ keepOpen });
       return;
     }
 
@@ -273,7 +308,7 @@ export default function NewTransactionScreen() {
       return;
     }
     setErrors({});
-    mutation.mutate();
+    mutation.mutate({ keepOpen });
   }
 
   const canSubmit = !mutation.isPending && !(isTransfer && sameAccount);
@@ -384,8 +419,6 @@ export default function NewTransactionScreen() {
                     options={accountOptions}
                     onChange={setAccountId}
                     error={errors.account_id}
-                    variant="chip"
-                    chipToneColor={accountChipColor}
                     renderIcon={(opt) => {
                       const accType = accountTypeMap.get(opt.value);
                       return accType ? <AccountIcon type={accType} size="sm" /> : null;
@@ -407,8 +440,6 @@ export default function NewTransactionScreen() {
                     value={toAccountId}
                     options={toAccountOptions}
                     onChange={setToAccountId}
-                    variant="chip"
-                    chipToneColor={toAccountChipColor}
                     renderIcon={(opt) => {
                       const accType = accountTypeMap.get(opt.value);
                       return accType ? <AccountIcon type={accType} size="sm" /> : null;
@@ -417,7 +448,7 @@ export default function NewTransactionScreen() {
                   {sameAccount ? <Text variant="error">{t.transfers.sameAccount}</Text> : null}
                 </>
               ) : (
-                <View className="flex-row flex-wrap gap-2">
+                <>
                   <SelectField
                     label={t.newTransaction.category}
                     placeholder={t.newTransaction.categoryPlaceholder}
@@ -425,8 +456,6 @@ export default function NewTransactionScreen() {
                     options={categoryOptions}
                     onChange={(v) => setCategoryId(v || null)}
                     searchable
-                    variant="chip"
-                    chipToneColor={CATEGORY_CHIP_COLOR}
                     renderIcon={(opt) => (
                       <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
                     )}
@@ -438,14 +467,72 @@ export default function NewTransactionScreen() {
                     options={accountOptions}
                     onChange={setAccountId}
                     error={errors.account_id}
-                    variant="chip"
-                    chipToneColor={accountChipColor}
                     renderIcon={(opt) => {
                       const accType = accountTypeMap.get(opt.value);
                       return accType ? <AccountIcon type={accType} size="sm" /> : null;
                     }}
                   />
-                </View>
+                </>
+              )}
+
+              {isTransfer ? null : (
+                <>
+                  <Pressable
+                    onPress={() => setShowMoreDetails((v) => !v)}
+                    className="items-center py-1"
+                  >
+                    <Text
+                      className="text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: tone.hex }}
+                    >
+                      {showMoreDetails
+                        ? t.newTransaction.lessDetails
+                        : t.newTransaction.moreDetails}
+                    </Text>
+                  </Pressable>
+
+                  {showMoreDetails ? (
+                    <View className="gap-4">
+                      <SwitchField
+                        label={
+                          type === 'income'
+                            ? t.newTransaction.fixedIncome
+                            : t.newTransaction.fixedExpense
+                        }
+                        value={fixedExpense}
+                        onChange={(v) => {
+                          setFixedExpense(v);
+                          if (v) setRepeat(false);
+                        }}
+                        toneColor={tone.hex}
+                      />
+                      <SwitchField
+                        label={t.newTransaction.repeat}
+                        value={repeat}
+                        onChange={(v) => {
+                          setRepeat(v);
+                          if (v) setFixedExpense(false);
+                        }}
+                        toneColor={tone.hex}
+                      />
+                      {repeat ? (
+                        <TextField
+                          label={t.newTransaction.repeatMonths}
+                          value={repeatMonths}
+                          onChangeText={(v) => setRepeatMonths(v.replace(/\D/g, ''))}
+                          keyboardType="number-pad"
+                        />
+                      ) : null}
+                      <TextField
+                        label={t.newTransaction.notes}
+                        placeholder={t.newTransaction.notesPlaceholder}
+                        value={notes}
+                        onChangeText={setNotes}
+                        multiline
+                      />
+                    </View>
+                  ) : null}
+                </>
               )}
 
               {formError ? <Text variant="error">{formError}</Text> : null}
@@ -459,9 +546,24 @@ export default function NewTransactionScreen() {
             style={{ bottom: 20 + insets.bottom }}
             pointerEvents="box-none"
           >
+            {isTransfer ? null : (
+              <Pressable
+                onPress={() => submit(true)}
+                disabled={!canSubmit}
+                hitSlop={8}
+                className="mb-3 items-center"
+              >
+                <Text
+                  className="text-sm font-semibold uppercase tracking-wide"
+                  style={{ color: tone.hex, opacity: canSubmit ? 1 : 0.5 }}
+                >
+                  {t.newTransaction.saveAndContinue}
+                </Text>
+              </Pressable>
+            )}
             <Pressable
               accessibilityLabel={t.newTransaction.submit}
-              onPress={submit}
+              onPress={() => submit(false)}
               disabled={!canSubmit}
               className={cn(
                 'size-16 items-center justify-center rounded-full shadow-lg',

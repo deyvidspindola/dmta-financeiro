@@ -26,21 +26,19 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  * para e-mail/Telegram trocando só `origin`. Cobre o CRUD do recurso:
  * listar, ver, criar, editar e apagar.
  *
- * NÃO mora aqui: transferência entre contas ({@see TransferController},
- * recurso distinto com duas pernas), mover lançamento de contexto
- * ({@see MoveTransactionController}, ação customizada com resolução de
- * contexto do usuário) e toda regra de saldo/meta/boleto, que fica nos
- * casos de uso em `app/UseCases/Transaction/`.
+ * NÃO mora aqui: transferência entre contas ({@see TransferController}, recurso distinto com duas pernas),
+ * mover lançamento de contexto ({@see MoveTransactionController}, ação customizada) e toda regra de
+ * saldo/meta/boleto, que fica nos casos de uso em `app/UseCases/Transaction/`.
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 2.1.0
  *
  * @since   21/08/2026
  *
- * @updated 31/08/2026
+ * @updated 15/09/2026
  */
 final class TransactionController extends Controller
 {
@@ -80,6 +78,7 @@ final class TransactionController extends Controller
             billId: $request->integer('bill_id') ?: null,
             goalId: $request->integer('goal_id') ?: null,
             settled: $request->boolean('settled', true),
+            notes: $request->filled('notes') ? $request->string('notes')->toString() : null,
         ));
 
         return new StatementEntryResource($entry);
@@ -105,6 +104,7 @@ final class TransactionController extends Controller
             occurredAt: $request->string('occurred_at')->toString(),
             categoryId: $request->integer('category_id') ?: null,
             goalId: $request->integer('goal_id') ?: null,
+            notes: $request->filled('notes') ? $request->string('notes')->toString() : null,
         ));
 
         return new StatementEntryResource($entry);

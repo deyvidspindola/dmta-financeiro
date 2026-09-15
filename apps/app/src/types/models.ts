@@ -113,6 +113,7 @@ export interface StatementEntry {
   account_id: string;
   category_id: string | null;
   description: string;
+  notes: string | null;
   amount: number;
   type: EntryType;
   /** `pending` = previsto (não entrou no saldo); `settled` = efetivado. */
