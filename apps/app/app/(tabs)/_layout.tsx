@@ -23,21 +23,47 @@ function FabCircle({ action, onPress }: { action: FabAction; onPress: () => void
       <View className="size-16 items-center justify-center rounded-full bg-surface-2 shadow-sm">
         <Feather name={action.icon} size={26} color={action.color} />
       </View>
-      <Text className="text-xs font-medium text-white">{action.label}</Text>
+      <Text className="text-center text-xs font-medium text-white">{action.label}</Text>
     </Pressable>
   );
 }
 
+// Raio do semicírculo (px) e os 4 ângulos onde cada atalho fica — 0° é a
+// direita e o ângulo cresce sentido anti-horário (matemática padrão), então
+// 30°/150° ficam mais pro lado (mais baixos) e 70°/110° ficam mais em cima,
+// perto do topo do arco — igual ao leque do Mobills sobre o botão "+".
+const ARC_RADIUS = 108;
+const ARC_WIDTH = 300;
+const ARC_HEIGHT = 190;
+const ARC_ITEM_WIDTH = 100;
+const ARC_ANGLES_DEG = [150, 110, 70, 30] as const;
+
+function arcPosition(angleDeg: number) {
+  const rad = (angleDeg * Math.PI) / 180;
+  const centerX = ARC_WIDTH / 2 + ARC_RADIUS * Math.cos(rad);
+  const centerY = ARC_HEIGHT - ARC_RADIUS * Math.sin(rad);
+  return { left: centerX - ARC_ITEM_WIDTH / 2, top: centerY - 32 };
+}
+
 // Leque de opções do "+", igual ao padrão do Mobills: em vez de ir direto
-// pra um formulário genérico, o toque abre uma grade 2x2 de atalhos
-// (receita, despesa no cartão, transferência, despesa) — cada um já leva o
+// pra um formulário genérico, o toque abre um semicírculo de atalhos
+// (transferência, receita, despesa no cartão, despesa) — cada um já leva o
 // tipo certo pra `/new` via param, ou pra aba Cartões (compra no cartão
-// exige escolher o cartão primeiro, feito lá).
+// exige escolher o cartão primeiro, feito lá). Ordem esquerda→direita
+// acompanha o arco: transferência/receita do lado esquerdo (a receita mais
+// alta, perto do topo), despesa no cartão/despesa do lado direito.
 function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
   const actions: FabAction[] = [
+    {
+      key: 'transfer',
+      label: t.nav.fabTransfer,
+      icon: 'repeat',
+      color: '#a78bfa',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
+    },
     {
       key: 'income',
       label: t.newTransaction.typeIncome,
@@ -51,13 +77,6 @@ function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       icon: 'credit-card',
       color: '#22d3ee',
       onPress: () => router.push('/(tabs)/cards'),
-    },
-    {
-      key: 'transfer',
-      label: t.nav.fabTransfer,
-      icon: 'repeat',
-      color: '#a78bfa',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
     },
     {
       key: 'expense',
@@ -75,39 +94,29 @@ function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       pointerEvents="box-none"
     >
       {open ? (
-        <View className="mb-4 gap-5">
-          <View className="flex-row gap-8">
-            <FabCircle
-              action={actions[0]!}
-              onPress={() => {
-                onToggle();
-                actions[0]!.onPress();
+        <View
+          className="mb-2"
+          style={{ width: ARC_WIDTH, height: ARC_HEIGHT }}
+          pointerEvents="box-none"
+        >
+          {actions.map((action, i) => (
+            <View
+              key={action.key}
+              style={{
+                position: 'absolute',
+                width: ARC_ITEM_WIDTH,
+                ...arcPosition(ARC_ANGLES_DEG[i]!),
               }}
-            />
-            <FabCircle
-              action={actions[1]!}
-              onPress={() => {
-                onToggle();
-                actions[1]!.onPress();
-              }}
-            />
-          </View>
-          <View className="flex-row gap-8">
-            <FabCircle
-              action={actions[2]!}
-              onPress={() => {
-                onToggle();
-                actions[2]!.onPress();
-              }}
-            />
-            <FabCircle
-              action={actions[3]!}
-              onPress={() => {
-                onToggle();
-                actions[3]!.onPress();
-              }}
-            />
-          </View>
+            >
+              <FabCircle
+                action={action}
+                onPress={() => {
+                  onToggle();
+                  action.onPress();
+                }}
+              />
+            </View>
+          ))}
         </View>
       ) : null}
       <Pressable
