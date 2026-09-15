@@ -5,7 +5,6 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, goalsApi, transactionsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
-  Badge,
   Button,
   ConfirmSheet,
   DateField,
@@ -19,11 +18,12 @@ import {
   TextField,
 } from '@/components/ui';
 import { t } from '@/i18n';
+import { cn } from '@/lib/cn';
 import { formatMoney } from '@/lib/format';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import { toastSuccess } from '@/store/toastStore';
-import type { Goal } from '@/types/models';
+import type { Goal, GoalStatus } from '@/types/models';
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -51,6 +51,7 @@ export default function GoalsScreen() {
   const activeScope = useAuthStore((s) => s.activeScope);
   const isConsolidated = activeScope === CONSOLIDATED;
 
+  const [tab, setTab] = useState<GoalStatus>('active');
   const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<Goal | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -149,59 +150,75 @@ export default function GoalsScreen() {
         <Text variant="error">{t.common.error}</Text>
       ) : (
         <View className="gap-4">
-          {(query.data ?? []).length === 0 ? (
+          <View className="flex-row rounded-xl border border-line bg-surface p-1">
+            {(['active', 'completed'] as GoalStatus[]).map((option) => (
+              <Pressable
+                key={option}
+                onPress={() => setTab(option)}
+                className={cn('flex-1 items-center rounded-lg py-2', tab === option && 'bg-canvas')}
+              >
+                <Text
+                  className={cn(
+                    'text-sm',
+                    tab === option ? 'font-semibold text-fg' : 'text-fg-muted',
+                  )}
+                >
+                  {t.goals.statuses[option]}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
+          {(query.data ?? []).filter((g) => g.status === tab).length === 0 ? (
             <Text variant="muted">{t.goals.empty}</Text>
           ) : (
             <View className="gap-3">
-              {(query.data ?? []).map((goal) => (
-                <Pressable
-                  key={goal.id}
-                  onPress={() =>
-                    setForm({
-                      id: goal.id,
-                      name: goal.name,
-                      target: goal.target_amount,
-                      targetDate: goal.target_date ?? '',
-                      notes: goal.notes ?? '',
-                    })
-                  }
-                  className="gap-2 rounded-2xl border border-line bg-surface p-4 active:bg-surface-2"
-                >
-                  <View className="flex-row items-center justify-between gap-2">
+              {(query.data ?? [])
+                .filter((g) => g.status === tab)
+                .map((goal) => (
+                  <Pressable
+                    key={goal.id}
+                    onPress={() =>
+                      setForm({
+                        id: goal.id,
+                        name: goal.name,
+                        target: goal.target_amount,
+                        targetDate: goal.target_date ?? '',
+                        notes: goal.notes ?? '',
+                      })
+                    }
+                    className="gap-2 rounded-2xl border border-line bg-surface p-4 active:bg-surface-2"
+                  >
                     <Text className="font-medium" numberOfLines={1}>
                       {goal.name}
                     </Text>
-                    {goal.status === 'completed' ? (
-                      <Badge tone="brand">{t.goals.statuses.completed}</Badge>
-                    ) : null}
-                  </View>
-                  <ProgressBar value={goal.percent_complete} tone="positive" />
-                  <View className="flex-row items-center justify-between gap-2">
-                    <Text variant="muted" className="text-xs tabular-nums">
-                      {formatMoney(goal.current_amount)} / {formatMoney(goal.target_amount)}
-                      {goal.target_date ? ` · ${goal.target_date}` : ''}
-                    </Text>
-                    {goal.status === 'active' ? (
-                      <Pressable
-                        onPress={() =>
-                          setContribute({
-                            goal,
-                            amount: 0,
-                            accountId: null,
-                            occurredAt: todayIso(),
-                          })
-                        }
-                        hitSlop={8}
-                        className="rounded-lg bg-brand-500/15 px-2 py-1 active:bg-brand-500/25"
-                      >
-                        <Text className="text-[10px] font-medium text-brand-700 dark:text-brand-300">
-                          {t.goals.contribute}
-                        </Text>
-                      </Pressable>
-                    ) : null}
-                  </View>
-                </Pressable>
-              ))}
+                    <ProgressBar value={goal.percent_complete} tone="positive" />
+                    <View className="flex-row items-center justify-between gap-2">
+                      <Text variant="muted" className="text-xs tabular-nums">
+                        {formatMoney(goal.current_amount)} / {formatMoney(goal.target_amount)}
+                        {goal.target_date ? ` · ${goal.target_date}` : ''}
+                      </Text>
+                      {goal.status === 'active' ? (
+                        <Pressable
+                          onPress={() =>
+                            setContribute({
+                              goal,
+                              amount: 0,
+                              accountId: null,
+                              occurredAt: todayIso(),
+                            })
+                          }
+                          hitSlop={8}
+                          className="rounded-lg bg-brand-500/15 px-2 py-1 active:bg-brand-500/25"
+                        >
+                          <Text className="text-[10px] font-medium text-brand-700 dark:text-brand-300">
+                            {t.goals.contribute}
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                  </Pressable>
+                ))}
             </View>
           )}
 

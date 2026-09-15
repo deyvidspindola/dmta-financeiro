@@ -6,6 +6,7 @@ import { budgetsApi, categoriesApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   Button,
+  CategoryIcon,
   ConfirmSheet,
   MoneyField,
   ProgressBar,
@@ -119,13 +120,16 @@ export default function BudgetsScreen() {
                   onPress={() => setViewingDetail(row)}
                   className="gap-2 rounded-2xl border border-line bg-surface p-4 active:bg-surface-2"
                 >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <Text className="font-medium" numberOfLines={1}>
-                      {row.category_name}
-                    </Text>
-                    <Text variant="muted" className="text-xs tabular-nums">
-                      {formatMoney(row.spent)} {t.budgets.of} {formatMoney(row.limit)}
-                    </Text>
+                  <View className="flex-row items-center gap-3">
+                    <CategoryIcon categoryId={row.category_id} name={row.category_name} size="sm" />
+                    <View className="min-w-0 flex-1 flex-row items-center justify-between gap-3">
+                      <Text className="font-medium" numberOfLines={1}>
+                        {row.category_name}
+                      </Text>
+                      <Text variant="muted" className="text-xs tabular-nums">
+                        {formatMoney(row.spent)} {t.budgets.of} {formatMoney(row.limit)}
+                      </Text>
+                    </View>
                   </View>
                   <ProgressBar
                     value={row.percent}
@@ -169,6 +173,9 @@ export default function BudgetsScreen() {
                 options={categoryOptions}
                 onChange={(v) => setForm({ ...form, categoryId: v })}
                 searchable
+                renderIcon={(opt) => (
+                  <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+                )}
               />
             ) : null}
             <MoneyField
@@ -185,7 +192,8 @@ export default function BudgetsScreen() {
                   label={t.common.delete}
                   variant="ghost"
                   onPress={() => {
-                    const row = budgetsQuery.data?.find((b) => b.budget_id === form.budgetId) ?? null;
+                    const row =
+                      budgetsQuery.data?.find((b) => b.budget_id === form.budgetId) ?? null;
                     setForm(null);
                     setToDelete(row);
                   }}

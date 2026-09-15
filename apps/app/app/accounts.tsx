@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
+  AccountIcon,
   Button,
   ConfirmSheet,
   ListRow,
@@ -129,6 +130,7 @@ export default function AccountsScreen() {
                       params: { id: account.id, contextId: activeScope },
                     })
                   }
+                  leading={<AccountIcon type={account.type} size="sm" />}
                 >
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-0.5">

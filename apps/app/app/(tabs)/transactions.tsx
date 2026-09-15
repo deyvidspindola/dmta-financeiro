@@ -8,6 +8,7 @@ import { TransactionDetailSheet } from '@/components/transactions/TransactionDet
 import {
   Badge,
   Card,
+  CategoryIcon,
   ListRow,
   Money,
   MoneyValue,
@@ -262,7 +263,17 @@ export default function TransactionsTab() {
                       : undefined;
                     const pending = tx.status === 'pending';
                     return (
-                      <ListRow key={`${tx.context_id}-${tx.id}`} onPress={() => setSelected(tx)}>
+                      <ListRow
+                        key={`${tx.context_id}-${tx.id}`}
+                        onPress={() => setSelected(tx)}
+                        leading={
+                          <CategoryIcon
+                            categoryId={tx.category_id}
+                            name={categoryName ?? t.newTransaction.categoryNone}
+                            size="sm"
+                          />
+                        }
+                      >
                         <View
                           className={cn(
                             'flex-row items-center justify-between gap-3',

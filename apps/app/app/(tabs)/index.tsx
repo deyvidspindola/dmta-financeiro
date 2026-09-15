@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import {
   accountsApi,
@@ -16,8 +17,10 @@ import { CategorySpendingList } from '@/components/dashboard/CategorySpendingLis
 import { EvolutionChart } from '@/components/dashboard/EvolutionChart';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
 import {
+  AccountIcon,
   Badge,
   Card,
+  CategoryIcon,
   ListRow,
   Money,
   MoneyValue,
@@ -47,6 +50,39 @@ function StatSkeleton() {
   );
 }
 
+/** Círculo + valor, estilo Mobills: resumo de receita/despesa do mês na hero do painel. */
+function DirectionSummary({
+  label,
+  amount,
+  tone,
+}: {
+  label: string;
+  amount: number;
+  tone: 'positive' | 'negative';
+}) {
+  const color = tone === 'positive' ? '#059669' : '#dc2626';
+  return (
+    <View className="min-w-0 flex-1 flex-row items-center gap-2">
+      <View
+        className="size-9 items-center justify-center rounded-full"
+        style={{ backgroundColor: color }}
+      >
+        <Feather name={tone === 'positive' ? 'arrow-up' : 'arrow-down'} size={16} color="#fff" />
+      </View>
+      <View className="min-w-0 flex-1">
+        <Text variant="muted" className="text-xs" numberOfLines={1}>
+          {label}
+        </Text>
+        <MoneyValue
+          amount={amount}
+          direction={tone === 'positive' ? 'credit' : 'debit'}
+          size="md"
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function HomeTab() {
   const router = useRouter();
   const { activeScope, contexts } = useAuthStore();
@@ -54,6 +90,7 @@ export default function HomeTab() {
   const isConsolidated = activeScope === CONSOLIDATED;
   const contextId = isConsolidated ? null : activeScope;
   const [selected, setSelected] = useState<StatementEntry | null>(null);
+  const [hideBalance, setHideBalance] = useState(false);
 
   const contextLabel = isConsolidated
     ? t.dashboard.consolidatedTitle
@@ -173,89 +210,96 @@ export default function HomeTab() {
     <TabShell>
       <View className="gap-6">
         {/* Saldo em destaque */}
-        <View className="gap-1">
-          <Text variant="muted">{contextLabel}</Text>
-          <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
-            {t.dashboard.balance}
-          </Text>
+        <Card variant="hero" className="gap-3">
+          <View className="flex-row items-start justify-between gap-2">
+            <View className="gap-1">
+              <Text variant="muted">{contextLabel}</Text>
+              <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
+                {t.dashboard.balance}
+              </Text>
+            </View>
+            <Pressable
+              accessibilityLabel={hideBalance ? t.dashboard.showBalance : t.dashboard.hideBalance}
+              onPress={() => setHideBalance((v) => !v)}
+              hitSlop={8}
+              className="p-1"
+            >
+              <Feather name={hideBalance ? 'eye-off' : 'eye'} size={18} color="#7c918b" />
+            </Pressable>
+          </View>
+
           {isLoading ? (
             <Skeleton className="h-9 w-48" />
           ) : isError ? (
             <Text variant="error">{t.common.error}</Text>
           ) : data ? (
-            <>
-              <Money amount={data.balance_total} size="xl" />
-              {data.provisioned_balance_total !== data.balance_total ? (
-                <View className="flex-row items-baseline gap-1.5">
-                  <Text variant="muted" className="text-xs">
-                    {t.dashboard.balanceProvisioned}
+            <View className="gap-3">
+              <View className="gap-1">
+                {hideBalance ? (
+                  <Text className="text-3xl font-bold tabular-nums text-fg">
+                    {t.dashboard.hiddenBalance}
                   </Text>
-                  <Money amount={data.provisioned_balance_total} size="sm" />
-                  <Text variant="muted" className="text-xs text-fg-subtle">
-                    {t.dashboard.balanceProvisionedHint}
-                  </Text>
-                </View>
-              ) : null}
-              {isConsolidated ? <Text variant="muted">{t.dashboard.hint}</Text> : null}
-              <Text variant="muted" className="text-fg-subtle">
-                {formatMonthLabel(month)}
-              </Text>
-            </>
+                ) : (
+                  <>
+                    <Money amount={data.balance_total} size="xl" />
+                    {data.provisioned_balance_total !== data.balance_total ? (
+                      <View className="flex-row items-baseline gap-1.5">
+                        <Text variant="muted" className="text-xs">
+                          {t.dashboard.balanceProvisioned}
+                        </Text>
+                        <Money amount={data.provisioned_balance_total} size="sm" />
+                        <Text variant="muted" className="text-xs text-fg-subtle">
+                          {t.dashboard.balanceProvisionedHint}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </>
+                )}
+                {isConsolidated ? <Text variant="muted">{t.dashboard.hint}</Text> : null}
+                <Text variant="muted" className="text-fg-subtle">
+                  {formatMonthLabel(month)}
+                </Text>
+              </View>
+
+              <View className="flex-row gap-4 border-t border-line pt-3">
+                <DirectionSummary
+                  label={
+                    data.projected_income_month !== data.income_month
+                      ? `${t.dashboard.income} ${t.dashboard.projectedLabel}`
+                      : t.dashboard.income
+                  }
+                  amount={data.projected_income_month}
+                  tone="positive"
+                />
+                <DirectionSummary
+                  label={
+                    data.projected_expense_month !== data.expense_month
+                      ? `${t.dashboard.expense} ${t.dashboard.projectedLabel}`
+                      : t.dashboard.expense
+                  }
+                  amount={data.projected_expense_month}
+                  tone="negative"
+                />
+              </View>
+            </View>
           ) : (
             <Text variant="muted">{t.dashboard.empty}</Text>
           )}
-        </View>
+        </Card>
 
-        {/* KPIs */}
+        {/* Boletos */}
         {isLoading ? (
-          <View className="flex-row flex-wrap gap-3">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <View key={i} className="w-[47%]">
-                <StatSkeleton />
-              </View>
-            ))}
+          <View className="flex-row gap-3">
+            <View className="flex-1">
+              <StatSkeleton />
+            </View>
+            <View className="flex-1">
+              <StatSkeleton />
+            </View>
           </View>
         ) : data ? (
-          <View className="flex-row flex-wrap gap-3">
-            <View className="w-[47%]">
-              <Stat
-                className="min-h-[7rem]"
-                label={
-                  data.projected_income_month !== data.income_month
-                    ? `${t.dashboard.income} ${t.dashboard.projectedLabel}`
-                    : t.dashboard.income
-                }
-                tone="positive"
-                value={
-                  <MoneyValue amount={data.projected_income_month} direction="credit" size="lg" />
-                }
-                hint={
-                  data.projected_income_month !== data.income_month
-                    ? t.dashboard.effectiveHint(formatMoney(data.income_month))
-                    : undefined
-                }
-              />
-            </View>
-            <View className="w-[47%]">
-              <Stat
-                className="min-h-[7rem]"
-                label={
-                  data.projected_expense_month !== data.expense_month
-                    ? `${t.dashboard.expense} ${t.dashboard.projectedLabel}`
-                    : t.dashboard.expense
-                }
-                tone="negative"
-                value={
-                  <MoneyValue amount={data.projected_expense_month} direction="debit" size="lg" />
-                }
-                hint={
-                  data.projected_expense_month !== data.expense_month
-                    ? t.dashboard.effectiveHint(formatMoney(data.expense_month))
-                    : undefined
-                }
-              />
-            </View>
-            <View className="w-[47%]">
+          <View className="flex-row gap-3">
+            <View className="flex-1">
               <Stat
                 className="min-h-[7rem]"
                 label={t.dashboard.billsPending}
@@ -264,7 +308,7 @@ export default function HomeTab() {
                 onPress={() => router.push('/bills')}
               />
             </View>
-            <View className="w-[47%]">
+            <View className="flex-1">
               <Stat
                 className="min-h-[7rem]"
                 label={t.dashboard.billsOverdue}
@@ -363,6 +407,7 @@ export default function HomeTab() {
                       params: { id: account.id, contextId: account.context_id },
                     })
                   }
+                  leading={<AccountIcon type={account.type} size="sm" />}
                 >
                   <View className="flex-row items-center justify-between gap-3">
                     <View className="min-w-0 flex-1 gap-1">
@@ -416,7 +461,17 @@ export default function HomeTab() {
               {recentTransactions.map((tx) => {
                 const categoryName = tx.category_id ? categoryMap.get(tx.category_id) : undefined;
                 return (
-                  <ListRow key={`${tx.context_id}-${tx.id}`} onPress={() => setSelected(tx)}>
+                  <ListRow
+                    key={`${tx.context_id}-${tx.id}`}
+                    onPress={() => setSelected(tx)}
+                    leading={
+                      <CategoryIcon
+                        categoryId={tx.category_id}
+                        name={categoryName ?? t.newTransaction.categoryNone}
+                        size="sm"
+                      />
+                    }
+                  >
                     <View className="flex-row items-center justify-between gap-3">
                       <View className="min-w-0 flex-1 gap-0.5">
                         <Text className="font-medium" numberOfLines={1}>

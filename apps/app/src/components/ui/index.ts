@@ -11,6 +11,8 @@ export type { ButtonProps } from './Button';
 export { TextField } from './TextField';
 export type { TextFieldProps } from './TextField';
 export { Card, PressableCard } from './Card';
+export { CategoryIcon } from './CategoryIcon';
+export { AccountIcon } from './AccountIcon';
 export { Logo } from './Logo';
 export type { LogoProps } from './Logo';
 export { Screen } from './Screen';
