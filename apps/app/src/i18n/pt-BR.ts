@@ -496,6 +496,7 @@ export const strings = {
 
   transfers: {
     create: 'Transferir',
+    titleTransfer: 'Nova transferência',
     from: 'Conta de origem',
     to: 'Conta de destino',
     toContext: 'Contexto de destino',
@@ -791,13 +792,24 @@ export const strings = {
     delete: 'Excluir',
     search: 'Buscar…',
     noResults: 'Nenhuma opção encontrada',
+    done: 'Concluído',
+    today: 'Hoje',
+    yesterday: 'Ontem',
+    other: 'Outros…',
   },
 
   newTransaction: {
     title: 'Novo lançamento',
+    titleIncome: 'Nova receita',
+    titleExpense: 'Nova despesa',
     typeIncome: 'Receita',
     typeExpense: 'Despesa',
     amount: 'Valor',
+    amountIncome: 'Valor da receita',
+    amountExpense: 'Valor da despesa',
+    amountTransfer: 'Valor da transferência',
+    received: 'Recebido',
+    paid: 'Pago',
     description: 'Descrição',
     descriptionPlaceholder: 'Ex.: Salário, Mercado…',
     account: 'Conta',

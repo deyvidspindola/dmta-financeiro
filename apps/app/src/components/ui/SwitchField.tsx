@@ -6,10 +6,12 @@ type Props = {
   hint?: string;
   value: boolean;
   onChange: (value: boolean) => void;
+  /** Cor da trilha quando ligado — hex literal (Switch não lê classe Tailwind). */
+  toneColor?: string;
 };
 
 /** Toggle rotulado. */
-export function SwitchField({ label, hint, value, onChange }: Props) {
+export function SwitchField({ label, hint, value, onChange, toneColor }: Props) {
   return (
     <View className="flex-row items-center justify-between gap-3">
       <View className="min-w-0 flex-1">
@@ -23,7 +25,7 @@ export function SwitchField({ label, hint, value, onChange }: Props) {
       <Switch
         value={value}
         onValueChange={onChange}
-        trackColor={{ true: '#0f9d58' }}
+        trackColor={{ true: toneColor ?? '#0f9d58' }}
       />
     </View>
   );

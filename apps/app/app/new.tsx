@@ -1,6 +1,15 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  View,
+} from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { accountsApi, categoriesApi, transactionsApi, transfersApi } from '@/api';
@@ -9,10 +18,8 @@ import { ContextSwitcher } from '@/components/ContextSwitcher';
 import {
   AccountIcon,
   AmountHero,
-  Button,
   CategoryIcon,
-  DateField,
-  Screen,
+  QuickDateField,
   SelectField,
   SwitchField,
   Text,
@@ -20,25 +27,40 @@ import {
 } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
+import { accountIconColor } from '@/lib/accountIcon';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import type { AccountType } from '@/types/models';
 
 type EntryType = 'income' | 'expense' | 'transfer';
 
-// Cor por tipo no seletor — despesa vermelho, receita verde, transferência
-// azul. O fundo usa a cor literal da paleta (`bg-red-500/10`), não o token
-// semântico (`bg-negative/10`): NativeWind resolve opacidade em tempo de
-// build e não sabe calcular alfa sobre uma cor vinda de var(--negative) —
-// o fundo simplesmente não aparecia, só o texto (cor sólida) funcionava.
-// red-600/emerald-600 (claro) e red-400/emerald-400 (escuro) são os hex
-// exatos de --negative/--positive (global.css), então o texto continua
-// usando o token semântico sem perder a cor de marca.
-const TYPE_TONE: Record<EntryType, { bg: string; text: string }> = {
-  expense: { bg: 'bg-red-500/10', text: 'text-negative' },
-  income: { bg: 'bg-emerald-500/10', text: 'text-positive' },
-  transfer: { bg: 'bg-blue-500/10', text: 'text-blue-600 dark:text-blue-400' },
+// Cor por tipo — despesa vermelho, receita verde, transferência roxo
+// (mesma paleta do leque do FAB). `bg` usa a cor literal da paleta
+// (`bg-red-500/10`), não o token semântico (`bg-negative/10`): NativeWind
+// resolve opacidade em tempo de build e não sabe calcular alfa sobre uma
+// cor vinda de var(--negative) — o fundo simplesmente não aparecia, só o
+// texto (cor sólida) funcionava. `hex` é usado em `style` (teclado
+// calculadora, botão flutuante), onde classe Tailwind não chega.
+const TYPE_TONE: Record<EntryType, { bg: string; solidBg: string; text: string; hex: string }> = {
+  expense: { bg: 'bg-red-500/10', solidBg: 'bg-red-500', text: 'text-negative', hex: '#dc2626' },
+  income: {
+    bg: 'bg-emerald-500/10',
+    solidBg: 'bg-emerald-500',
+    text: 'text-positive',
+    hex: '#059669',
+  },
+  transfer: {
+    bg: 'bg-accent-500/10',
+    solidBg: 'bg-accent-500',
+    text: 'text-accent-600 dark:text-accent-400',
+    hex: '#7c3aed',
+  },
 };
+
+// Chip de categoria é sempre azul (identidade do campo "categoria", não da
+// categoria escolhida — o círculo colorido por categoria já mora dentro do
+// chip via `CategoryIcon`).
+const CATEGORY_CHIP_COLOR = '#3b82f6';
 
 const schema = z.object({
   amount: z.number().positive(),
@@ -59,8 +81,21 @@ function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
+const TITLE: Record<EntryType, string> = {
+  income: t.newTransaction.titleIncome,
+  expense: t.newTransaction.titleExpense,
+  transfer: t.transfers.titleTransfer,
+};
+
+const AMOUNT_LABEL: Record<EntryType, string> = {
+  income: t.newTransaction.amountIncome,
+  expense: t.newTransaction.amountExpense,
+  transfer: t.newTransaction.amountTransfer,
+};
+
 export default function NewTransactionScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
   const sessionRoute = useSessionRoute();
   const activeScope = useAuthStore((s) => s.activeScope);
@@ -83,6 +118,7 @@ export default function NewTransactionScreen() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const isTransfer = type === 'transfer';
+  const tone = TYPE_TONE[type];
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', activeScope],
@@ -128,6 +164,13 @@ export default function NewTransactionScreen() {
     ],
     [categoriesQuery.data],
   );
+
+  const accountChipColor = accountId
+    ? accountIconColor(accountTypeMap.get(accountId) ?? 'other')
+    : '#7c918b';
+  const toAccountChipColor = toAccountId
+    ? accountIconColor(accountTypeMap.get(toAccountId) ?? 'other')
+    : '#7c918b';
 
   const sameAccount =
     isTransfer && accountId !== null && accountId === toAccountId && toContextId === activeScope;
@@ -233,151 +276,208 @@ export default function NewTransactionScreen() {
     mutation.mutate();
   }
 
-  return (
-    <Screen scroll edges={['top', 'bottom']}>
-      <View className="mb-4 flex-row items-center justify-between">
-        <Text variant="title">{t.newTransaction.title}</Text>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text variant="muted">{t.common.close}</Text>
-        </Pressable>
-      </View>
+  const canSubmit = !mutation.isPending && !(isTransfer && sameAccount);
 
-      {isConsolidated ? (
-        <View className="items-start gap-3">
-          <Text variant="muted">{t.newTransaction.needContext}</Text>
-          <ContextSwitcher />
-        </View>
-      ) : (
-        <View className="gap-4">
-          {/* Tipo */}
-          <View className="flex-row rounded-xl border border-line bg-surface p-1">
-            {(['expense', 'income', 'transfer'] as EntryType[]).map((option) => (
-              <Pressable
-                key={option}
-                onPress={() => {
-                  setType(option);
-                  setCategoryId(null);
-                  setToAccountId(null);
-                  setToContextId(activeScope);
-                }}
-                className={cn(
-                  'flex-1 items-center rounded-lg py-2',
-                  type === option && TYPE_TONE[option].bg,
-                )}
-              >
-                <Text
-                  className={cn(
-                    'text-sm',
-                    type === option ? cn('font-semibold', TYPE_TONE[option].text) : 'text-fg-muted',
-                  )}
-                >
-                  {option === 'income'
-                    ? t.newTransaction.typeIncome
-                    : option === 'expense'
-                      ? t.newTransaction.typeExpense
-                      : t.transfers.create}
-                </Text>
+  return (
+    <SafeAreaView className="flex-1 bg-canvas" edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          className="flex-1"
+          contentContainerClassName="grow"
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header — fundo canvas (quase preto no dark), valor em destaque */}
+          <View className="gap-4 px-5 pb-6 pt-2">
+            <View className="flex-row items-center gap-3">
+              <Pressable onPress={() => router.back()} hitSlop={8}>
+                <Feather name="arrow-left" size={22} color="#e7efec" />
               </Pressable>
-            ))}
+              <Text variant="title">{TITLE[type]}</Text>
+            </View>
+
+            {isConsolidated ? null : (
+              <AmountHero
+                label={AMOUNT_LABEL[type]}
+                value={amount}
+                onChange={setAmount}
+                toneClassName={tone.text}
+                toneColor={tone.hex}
+                error={errors.amount}
+              />
+            )}
           </View>
 
-          <AmountHero
-            value={amount}
-            onChange={setAmount}
-            toneClassName={TYPE_TONE[type].text}
-            error={errors.amount}
-          />
-          <TextField
-            label={t.newTransaction.description}
-            placeholder={t.newTransaction.descriptionPlaceholder}
-            value={description}
-            onChangeText={setDescription}
-            error={errors.description}
-          />
-          <SelectField
-            label={isTransfer ? t.transfers.from : t.newTransaction.account}
-            placeholder={t.newTransaction.accountPlaceholder}
-            value={accountId}
-            options={accountOptions}
-            onChange={setAccountId}
-            error={errors.account_id}
-            renderIcon={(opt) => {
-              const accType = accountTypeMap.get(opt.value);
-              return accType ? <AccountIcon type={accType} size="sm" /> : null;
-            }}
-          />
-
-          {isTransfer ? (
-            <>
-              <SelectField
-                label={t.transfers.toContext}
-                placeholder={t.common.select}
-                value={toContextId}
-                options={contextOptions}
-                onChange={(v) => {
-                  setToContextId(v);
-                  setToAccountId(null);
-                }}
-              />
-              <SelectField
-                label={t.transfers.to}
-                placeholder={t.newTransaction.accountPlaceholder}
-                value={toAccountId}
-                options={toAccountOptions}
-                onChange={setToAccountId}
-                renderIcon={(opt) => {
-                  const accType = accountTypeMap.get(opt.value);
-                  return accType ? <AccountIcon type={accType} size="sm" /> : null;
-                }}
-              />
-              {sameAccount ? <Text variant="error">{t.transfers.sameAccount}</Text> : null}
-            </>
+          {isConsolidated ? (
+            <View className="items-start gap-3 rounded-t-3xl bg-surface-2 px-5 pb-10 pt-6">
+              <Text variant="muted">{t.newTransaction.needContext}</Text>
+              <ContextSwitcher />
+            </View>
           ) : (
-            <SelectField
-              label={t.newTransaction.category}
-              placeholder={t.newTransaction.categoryPlaceholder}
-              value={categoryId ?? ''}
-              options={categoryOptions}
-              onChange={(v) => setCategoryId(v || null)}
-              searchable
-              renderIcon={(opt) => (
-                <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+            <View className="grow gap-4 rounded-t-3xl bg-surface-2 px-5 pb-28 pt-6">
+              {/* Tipo */}
+              <View className="flex-row rounded-xl border border-line bg-surface p-1">
+                {(['expense', 'income', 'transfer'] as EntryType[]).map((option) => (
+                  <Pressable
+                    key={option}
+                    onPress={() => {
+                      setType(option);
+                      setCategoryId(null);
+                      setToAccountId(null);
+                      setToContextId(activeScope);
+                    }}
+                    className={cn(
+                      'flex-1 items-center rounded-lg py-2',
+                      type === option && TYPE_TONE[option].bg,
+                    )}
+                  >
+                    <Text
+                      className={cn(
+                        'text-sm',
+                        type === option
+                          ? cn('font-semibold', TYPE_TONE[option].text)
+                          : 'text-fg-muted',
+                      )}
+                    >
+                      {option === 'income'
+                        ? t.newTransaction.typeIncome
+                        : option === 'expense'
+                          ? t.newTransaction.typeExpense
+                          : t.transfers.create}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {isTransfer ? null : (
+                <SwitchField
+                  label={type === 'income' ? t.newTransaction.received : t.newTransaction.paid}
+                  value={settled}
+                  onChange={setSettled}
+                  toneColor={tone.hex}
+                />
               )}
-            />
+
+              <QuickDateField
+                value={occurredAt}
+                onChange={setOccurredAt}
+                toneClassName={tone.solidBg}
+              />
+              {errors.occurred_at ? <Text variant="error">{errors.occurred_at}</Text> : null}
+
+              <TextField
+                label={t.newTransaction.description}
+                placeholder={t.newTransaction.descriptionPlaceholder}
+                value={description}
+                onChangeText={setDescription}
+                error={errors.description}
+              />
+
+              {isTransfer ? (
+                <>
+                  <SelectField
+                    label={t.transfers.from}
+                    placeholder={t.newTransaction.accountPlaceholder}
+                    value={accountId}
+                    options={accountOptions}
+                    onChange={setAccountId}
+                    error={errors.account_id}
+                    variant="chip"
+                    chipToneColor={accountChipColor}
+                    renderIcon={(opt) => {
+                      const accType = accountTypeMap.get(opt.value);
+                      return accType ? <AccountIcon type={accType} size="sm" /> : null;
+                    }}
+                  />
+                  <SelectField
+                    label={t.transfers.toContext}
+                    placeholder={t.common.select}
+                    value={toContextId}
+                    options={contextOptions}
+                    onChange={(v) => {
+                      setToContextId(v);
+                      setToAccountId(null);
+                    }}
+                  />
+                  <SelectField
+                    label={t.transfers.to}
+                    placeholder={t.newTransaction.accountPlaceholder}
+                    value={toAccountId}
+                    options={toAccountOptions}
+                    onChange={setToAccountId}
+                    variant="chip"
+                    chipToneColor={toAccountChipColor}
+                    renderIcon={(opt) => {
+                      const accType = accountTypeMap.get(opt.value);
+                      return accType ? <AccountIcon type={accType} size="sm" /> : null;
+                    }}
+                  />
+                  {sameAccount ? <Text variant="error">{t.transfers.sameAccount}</Text> : null}
+                </>
+              ) : (
+                <View className="flex-row flex-wrap gap-2">
+                  <SelectField
+                    label={t.newTransaction.category}
+                    placeholder={t.newTransaction.categoryPlaceholder}
+                    value={categoryId ?? ''}
+                    options={categoryOptions}
+                    onChange={(v) => setCategoryId(v || null)}
+                    searchable
+                    variant="chip"
+                    chipToneColor={CATEGORY_CHIP_COLOR}
+                    renderIcon={(opt) => (
+                      <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+                    )}
+                  />
+                  <SelectField
+                    label={t.newTransaction.account}
+                    placeholder={t.newTransaction.accountPlaceholder}
+                    value={accountId}
+                    options={accountOptions}
+                    onChange={setAccountId}
+                    error={errors.account_id}
+                    variant="chip"
+                    chipToneColor={accountChipColor}
+                    renderIcon={(opt) => {
+                      const accType = accountTypeMap.get(opt.value);
+                      return accType ? <AccountIcon type={accType} size="sm" /> : null;
+                    }}
+                  />
+                </View>
+              )}
+
+              {formError ? <Text variant="error">{formError}</Text> : null}
+            </View>
           )}
+        </ScrollView>
 
-          <DateField
-            label={t.newTransaction.date}
-            value={occurredAt}
-            onChange={setOccurredAt}
-            error={errors.occurred_at}
-          />
-
-          {isTransfer ? null : (
-            <SwitchField
-              label={t.newTransaction.forecast}
-              hint={t.newTransaction.forecastHint}
-              value={!settled}
-              onChange={(isForecast) => setSettled(!isForecast)}
-            />
-          )}
-
-          {formError ? <Text variant="error">{formError}</Text> : null}
-
-          <Button
-            label={isTransfer ? t.transfers.create : t.newTransaction.submit}
-            loading={mutation.isPending}
-            disabled={isTransfer && sameAccount}
-            onPress={submit}
-            className={cn(
-              'mt-2',
-              type === 'expense' && 'bg-negative active:opacity-90',
-              type === 'income' && 'bg-positive active:opacity-90',
-              type === 'transfer' && 'bg-blue-600 active:bg-blue-700',
-            )}
-          />
-        </View>
-      )}
-    </Screen>
+        {isConsolidated ? null : (
+          <View
+            className="absolute left-0 right-0 items-center"
+            style={{ bottom: 20 + insets.bottom }}
+            pointerEvents="box-none"
+          >
+            <Pressable
+              accessibilityLabel={t.newTransaction.submit}
+              onPress={submit}
+              disabled={!canSubmit}
+              className={cn(
+                'size-16 items-center justify-center rounded-full shadow-lg',
+                !canSubmit && 'opacity-50',
+              )}
+              style={{ backgroundColor: tone.hex, elevation: 8 }}
+            >
+              {mutation.isPending ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Feather name="check" size={28} color="#fff" />
+              )}
+            </Pressable>
+          </View>
+        )}
+      </KeyboardAvoidingView>
+    </SafeAreaView>
   );
 }
