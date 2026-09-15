@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -124,6 +124,7 @@ export default function NewTransactionScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
   const [notes, setNotes] = useState('');
   const [fixedExpense, setFixedExpense] = useState(false);
   const [repeat, setRepeat] = useState(false);
@@ -320,6 +321,7 @@ export default function NewTransactionScreen() {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          ref={scrollViewRef}
           className="flex-1"
           contentContainerClassName="grow"
           keyboardShouldPersistTaps="handled"
@@ -351,7 +353,7 @@ export default function NewTransactionScreen() {
               <ContextSwitcher />
             </View>
           ) : (
-            <View className="grow gap-4 rounded-t-3xl bg-surface-2 px-5 pb-28 pt-6">
+            <View className="grow gap-4 rounded-t-3xl bg-surface-2 px-5 pb-48 pt-6">
               {/* Tipo */}
               <View className="flex-row rounded-xl border border-line bg-surface p-1">
                 {(['expense', 'income', 'transfer'] as EntryType[]).map((option) => (
@@ -478,7 +480,15 @@ export default function NewTransactionScreen() {
               {isTransfer ? null : (
                 <>
                   <Pressable
-                    onPress={() => setShowMoreDetails((v) => !v)}
+                    onPress={() => {
+                      setShowMoreDetails((v) => !v);
+                      // Os campos novos (despesa fixa/repetir/observação) só
+                      // entram no layout depois deste render — sem o atraso,
+                      // `scrollToEnd` mede o scroll ANTES deles existirem e
+                      // não desce o suficiente, deixando Observação atrás do
+                      // botão flutuante de salvar.
+                      setTimeout(() => scrollViewRef.current?.scrollToEnd({ animated: true }), 80);
+                    }}
                     className="items-center py-1"
                   >
                     <Text
