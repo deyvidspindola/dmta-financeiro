@@ -13,10 +13,13 @@ use App\Http\Requests\Api\UpdateAccountRequest;
 use App\Http\Resources\AccountResource;
 use App\Models\Account;
 use App\Models\Context;
+use App\Services\HistoricalBalanceService;
 use App\UseCases\Account\RegisterAccount;
 use App\UseCases\Account\UpdateAccount;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Carbon;
 
 /**
  * Contas bancárias de cadastro manual (F0), sempre dentro de um contexto.
@@ -25,17 +28,38 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 1.2.0
  *
  * @since   21/08/2026
  *
- * @updated 07/09/2026
+ * @updated 15/09/2026
  */
 final class AccountController extends Controller
 {
-    public function index(Context $context): AnonymousResourceCollection
+    /**
+     * `?month=YYYY-MM` opcional — quando aponta pra um mês já fechado, cada
+     * conta volta com o saldo **como estava** no fim daquele mês (replay via
+     * {@see HistoricalBalanceService::perAccountAsOf}), pro passador de mês
+     * da tela de Contas. Mês corrente/futuro (ou sem o param) devolve o
+     * `balance` de agora, igual antes.
+     */
+    public function index(Context $context, Request $request, HistoricalBalanceService $history): AnonymousResourceCollection
     {
-        return AccountResource::collection($context->accounts()->get());
+        $accounts = $context->accounts()->get();
+        $month = $request->query('month');
+
+        if (is_string($month) && $month !== '') {
+            $monthEnd = Carbon::createFromFormat('Y-m-d', $month.'-01')->endOfMonth();
+
+            if ($monthEnd->lt(Carbon::now()->startOfMonth())) {
+                $balances = $history->perAccountAsOf($context, $monthEnd);
+                $accounts->each(function (Account $account) use ($balances): void {
+                    $account->setAttribute('balance', $balances[$account->id] ?? 0.0);
+                });
+            }
+        }
+
+        return AccountResource::collection($accounts);
     }
 
     /** Uma conta do contexto. `scopeBindings` garante 404 para conta de outro contexto. */

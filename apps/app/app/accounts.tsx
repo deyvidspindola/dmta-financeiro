@@ -19,9 +19,12 @@ import {
   Text,
   TextField,
 } from '@/components/ui';
+import { MonthNavigator } from '@/components/MonthNavigator';
 import { t } from '@/i18n';
+import { currentMonthKey } from '@/lib/dates';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
+import { useMonthStore } from '@/store/monthStore';
 import type { Account, AccountType } from '@/types/models';
 
 const TYPE_OPTIONS = (['checking', 'savings', 'wallet', 'other'] as AccountType[]).map((v) => ({
@@ -44,14 +47,16 @@ export default function AccountsScreen() {
   const sessionRoute = useSessionRoute();
   const activeScope = useAuthStore((s) => s.activeScope);
   const isConsolidated = activeScope === CONSOLIDATED;
+  const month = useMonthStore((s) => s.month);
+  const isHistorical = month < currentMonthKey();
 
   const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<Account | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
 
   const accountsQuery = useQuery({
-    queryKey: ['accounts', activeScope],
-    queryFn: () => accountsApi.listAccounts(activeScope),
+    queryKey: ['accounts', activeScope, month],
+    queryFn: () => accountsApi.listAccounts(activeScope, month),
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
@@ -100,6 +105,12 @@ export default function AccountsScreen() {
         </Pressable>
       </View>
 
+      {isConsolidated ? null : (
+        <View className="mb-4 items-center">
+          <MonthNavigator />
+        </View>
+      )}
+
       {isConsolidated ? (
         <Text variant="muted">{t.accounts.needContext}</Text>
       ) : accountsQuery.isLoading ? (
@@ -143,21 +154,23 @@ export default function AccountsScreen() {
                     </View>
                     <View className="flex-row items-center gap-2">
                       <Money amount={account.balance} size="sm" />
-                      <Pressable
-                        onPress={() =>
-                          setForm({
-                            id: account.id,
-                            name: account.name,
-                            bank: account.bank_name ?? '',
-                            type: account.type,
-                            balance: account.balance,
-                          })
-                        }
-                        hitSlop={8}
-                        className="p-1 active:opacity-60"
-                      >
-                        <Feather name="edit-2" size={15} color="#7c918b" />
-                      </Pressable>
+                      {isHistorical ? null : (
+                        <Pressable
+                          onPress={() =>
+                            setForm({
+                              id: account.id,
+                              name: account.name,
+                              bank: account.bank_name ?? '',
+                              type: account.type,
+                              balance: account.balance,
+                            })
+                          }
+                          hitSlop={8}
+                          className="p-1 active:opacity-60"
+                        >
+                          <Feather name="edit-2" size={15} color="#7c918b" />
+                        </Pressable>
+                      )}
                     </View>
                   </View>
                 </ListRow>
@@ -165,7 +178,9 @@ export default function AccountsScreen() {
             </View>
           )}
 
-          <Button label={t.accounts.create} onPress={() => setForm({ ...EMPTY })} />
+          {isHistorical ? null : (
+            <Button label={t.accounts.create} onPress={() => setForm({ ...EMPTY })} />
+          )}
         </View>
       )}
 
