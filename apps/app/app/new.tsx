@@ -1,15 +1,17 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
-import { Redirect, useRouter } from 'expo-router';
+import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { accountsApi, categoriesApi, transactionsApi, transfersApi } from '@/api';
 import { ApiError } from '@/api/http';
 import { ContextSwitcher } from '@/components/ContextSwitcher';
 import {
+  AccountIcon,
+  AmountHero,
   Button,
+  CategoryIcon,
   DateField,
-  MoneyField,
   Screen,
   SelectField,
   SwitchField,
@@ -20,6 +22,7 @@ import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
+import type { AccountType } from '@/types/models';
 
 type EntryType = 'income' | 'expense' | 'transfer';
 
@@ -63,8 +66,11 @@ export default function NewTransactionScreen() {
   const activeScope = useAuthStore((s) => s.activeScope);
   const contexts = useAuthStore((s) => s.contexts);
   const isConsolidated = activeScope === CONSOLIDATED;
+  const params = useLocalSearchParams<{ type?: EntryType }>();
+  const initialType: EntryType =
+    params.type === 'income' || params.type === 'transfer' ? params.type : 'expense';
 
-  const [type, setType] = useState<EntryType>('expense');
+  const [type, setType] = useState<EntryType>(initialType);
   const [amount, setAmount] = useState(0);
   const [description, setDescription] = useState('');
   const [accountId, setAccountId] = useState<string | null>(null);
@@ -101,6 +107,12 @@ export default function NewTransactionScreen() {
     () => (accountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
     [accountsQuery.data],
   );
+  const accountTypeMap = useMemo(() => {
+    const map = new Map<string, AccountType>();
+    for (const a of accountsQuery.data ?? []) map.set(a.id, a.type);
+    for (const a of toAccountsQuery.data ?? []) map.set(a.id, a.type);
+    return map;
+  }, [accountsQuery.data, toAccountsQuery.data]);
   const toAccountOptions = useMemo(
     () => (toAccountsQuery.data ?? []).map((a) => ({ value: a.id, label: a.name })),
     [toAccountsQuery.data],
@@ -269,10 +281,10 @@ export default function NewTransactionScreen() {
             ))}
           </View>
 
-          <MoneyField
-            label={t.newTransaction.amount}
+          <AmountHero
             value={amount}
             onChange={setAmount}
+            toneClassName={TYPE_TONE[type].text}
             error={errors.amount}
           />
           <TextField
@@ -289,6 +301,10 @@ export default function NewTransactionScreen() {
             options={accountOptions}
             onChange={setAccountId}
             error={errors.account_id}
+            renderIcon={(opt) => {
+              const accType = accountTypeMap.get(opt.value);
+              return accType ? <AccountIcon type={accType} size="sm" /> : null;
+            }}
           />
 
           {isTransfer ? (
@@ -309,6 +325,10 @@ export default function NewTransactionScreen() {
                 value={toAccountId}
                 options={toAccountOptions}
                 onChange={setToAccountId}
+                renderIcon={(opt) => {
+                  const accType = accountTypeMap.get(opt.value);
+                  return accType ? <AccountIcon type={accType} size="sm" /> : null;
+                }}
               />
               {sameAccount ? <Text variant="error">{t.transfers.sameAccount}</Text> : null}
             </>
@@ -320,6 +340,9 @@ export default function NewTransactionScreen() {
               options={categoryOptions}
               onChange={(v) => setCategoryId(v || null)}
               searchable
+              renderIcon={(opt) => (
+                <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+              )}
             />
           )}
 
@@ -346,7 +369,12 @@ export default function NewTransactionScreen() {
             loading={mutation.isPending}
             disabled={isTransfer && sameAccount}
             onPress={submit}
-            className="mt-2"
+            className={cn(
+              'mt-2',
+              type === 'expense' && 'bg-negative active:opacity-90',
+              type === 'income' && 'bg-positive active:opacity-90',
+              type === 'transfer' && 'bg-blue-600 active:bg-blue-700',
+            )}
           />
         </View>
       )}

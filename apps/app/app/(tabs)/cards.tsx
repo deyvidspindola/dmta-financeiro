@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View } from 'react-native';
+import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { creditCardsApi } from '@/api';
 import { ApiError } from '@/api/http';
@@ -46,13 +47,18 @@ function CardRow({ card, onPress }: { card: CreditCard; onPress: () => void }) {
   return (
     <PressableCard onPress={onPress} className="gap-3">
       <View className="flex-row items-start justify-between gap-3">
-        <View className="min-w-0 flex-1">
-          <Text className="font-semibold" numberOfLines={1}>
-            {card.name}
-          </Text>
-          <Text variant="muted" className="text-xs">
-            {card.brand ?? t.creditCards.cycle(card.closing_day, card.due_day)}
-          </Text>
+        <View className="min-w-0 flex-1 flex-row items-center gap-3">
+          <View className="size-9 items-center justify-center rounded-full bg-accent-600">
+            <Feather name="credit-card" size={16} color="#fff" />
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="font-semibold" numberOfLines={1}>
+              {card.name}
+            </Text>
+            <Text variant="muted" className="text-xs">
+              {card.brand ?? t.creditCards.cycle(card.closing_day, card.due_day)}
+            </Text>
+          </View>
         </View>
         <View className="items-end">
           <Text variant="muted" className="text-xs">

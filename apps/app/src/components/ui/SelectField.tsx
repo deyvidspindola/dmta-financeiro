@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
 import { cn } from '@/lib/cn';
@@ -16,6 +16,8 @@ type Props = {
   placeholder: string;
   error?: string | null;
   searchable?: boolean;
+  /** Ícone/avatar por opção (ex.: `CategoryIcon`) — telas tipo Mobills mostram cor/ícone na lista. */
+  renderIcon?: (option: SelectOption) => ReactNode;
 };
 
 function normalizeText(text: string): string {
@@ -26,7 +28,16 @@ function normalizeText(text: string): string {
 }
 
 /** Select rotulado — toca e escolhe numa bottom sheet (o app não tem `<select>`). */
-export function SelectField({ label, value, options, onChange, placeholder, error, searchable = false }: Props) {
+export function SelectField({
+  label,
+  value,
+  options,
+  onChange,
+  placeholder,
+  error,
+  searchable = false,
+  renderIcon,
+}: Props) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
   const selected = options.find((o) => o.value === value);
@@ -52,9 +63,12 @@ export function SelectField({ label, value, options, onChange, placeholder, erro
           error && 'border-negative',
         )}
       >
-        <Text className={cn(selected ? 'text-fg' : 'text-fg-subtle')} numberOfLines={1}>
-          {selected?.label ?? placeholder}
-        </Text>
+        <View className="min-w-0 flex-1 flex-row items-center gap-2">
+          {selected && renderIcon ? renderIcon(selected) : null}
+          <Text className={cn(selected ? 'text-fg' : 'text-fg-subtle')} numberOfLines={1}>
+            {selected?.label ?? placeholder}
+          </Text>
+        </View>
         <Feather name="chevron-down" size={18} color="#7c918b" />
       </Pressable>
       {error ? <Text variant="error">{error}</Text> : null}
@@ -86,9 +100,18 @@ export function SelectField({ label, value, options, onChange, placeholder, erro
                   }}
                   className="flex-row items-center justify-between border-b border-line py-3 active:bg-surface-2"
                 >
-                  <Text className={cn(option.value === value && 'font-semibold text-brand-600')}>
-                    {option.label}
-                  </Text>
+                  <View className="min-w-0 flex-1 flex-row items-center gap-3">
+                    {renderIcon ? renderIcon(option) : null}
+                    <Text
+                      className={cn(
+                        'min-w-0 flex-1',
+                        option.value === value && 'font-semibold text-brand-600',
+                      )}
+                      numberOfLines={1}
+                    >
+                      {option.label}
+                    </Text>
+                  </View>
                   {option.value === value ? (
                     <Feather name="check" size={18} color="#0f9d58" />
                   ) : null}

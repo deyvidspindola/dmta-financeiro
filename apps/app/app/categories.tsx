@@ -6,6 +6,7 @@ import { categoriesApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   Button,
+  CategoryIcon,
   ConfirmSheet,
   ListRow,
   Screen,
@@ -46,10 +47,7 @@ export default function CategoriesScreen() {
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
-  const roots = useMemo(
-    () => (query.data ?? []).filter((c) => c.parent_id === null),
-    [query.data],
-  );
+  const roots = useMemo(() => (query.data ?? []).filter((c) => c.parent_id === null), [query.data]);
   const childrenOf = useMemo(() => {
     const map = new Map<string, Category[]>();
     for (const c of query.data ?? []) {
@@ -120,7 +118,12 @@ export default function CategoriesScreen() {
                 onPress={() => setTab(option)}
                 className={cn('flex-1 items-center rounded-lg py-2', tab === option && 'bg-canvas')}
               >
-                <Text className={cn('text-sm', tab === option ? 'font-semibold text-fg' : 'text-fg-muted')}>
+                <Text
+                  className={cn(
+                    'text-sm',
+                    tab === option ? 'font-semibold text-fg' : 'text-fg-muted',
+                  )}
+                >
                   {t.categories.types[option]}
                 </Text>
               </Pressable>
@@ -141,6 +144,7 @@ export default function CategoriesScreen() {
                     onPress={() =>
                       setForm({ id: root.id, name: root.name, type: tab, parentId: null })
                     }
+                    leading={<CategoryIcon categoryId={root.id} name={root.name} size="sm" />}
                   >
                     <Text className="font-medium">{root.name}</Text>
                   </ListRow>
@@ -150,8 +154,9 @@ export default function CategoriesScreen() {
                       onPress={() =>
                         setForm({ id: child.id, name: child.name, type: tab, parentId: root.id })
                       }
+                      leading={<CategoryIcon categoryId={child.id} name={child.name} size="sm" />}
                     >
-                      <Text className="pl-4 text-fg-muted">↳ {child.name}</Text>
+                      <Text className="text-fg-muted">↳ {child.name}</Text>
                     </ListRow>
                   ))}
                 </View>

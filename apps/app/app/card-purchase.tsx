@@ -6,9 +6,10 @@ import { z } from 'zod';
 import { categoriesApi, creditCardsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
+  AmountHero,
   Button,
+  CategoryIcon,
   DateField,
-  MoneyField,
   Screen,
   SelectField,
   Text,
@@ -137,10 +138,10 @@ export default function CardPurchaseScreen() {
       </View>
 
       <View className="gap-4">
-        <MoneyField
-          label={t.creditCards.purchaseAmount}
+        <AmountHero
           value={amount}
           onChange={setAmount}
+          toneClassName="text-accent-600 dark:text-accent-400"
           error={errors.amount}
         />
         <TextField
@@ -156,6 +157,9 @@ export default function CardPurchaseScreen() {
           options={categoryOptions}
           onChange={(v) => setCategoryId(v || null)}
           searchable
+          renderIcon={(opt) => (
+            <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+          )}
         />
         <DateField
           label={t.creditCards.purchaseDate}
@@ -178,7 +182,7 @@ export default function CardPurchaseScreen() {
           label={t.creditCards.savePurchase}
           loading={mutation.isPending}
           onPress={submit}
-          className="mt-2"
+          className="mt-2 bg-accent-600 active:bg-accent-700"
         />
       </View>
     </Screen>

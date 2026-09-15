@@ -28,6 +28,9 @@ export const strings = {
     security: 'Segurança',
     more: 'Mais',
     quickAdd: 'Lançar',
+    fabTransfer: 'Transferência',
+    fabCardExpense: 'Despesa no cartão',
+    fabClose: 'Fechar',
     budgets: 'Orçamentos',
     notifications: 'Notificações',
     groups: {
@@ -127,6 +130,7 @@ export const strings = {
     of: 'de',
     save: 'Salvar orçamento',
     editBudget: 'Editar orçamento',
+    confirmDelete: 'Excluir este orçamento?',
     spentEffective: (v: string) => `${v} já efetivado`,
     detail: {
       title: 'Consumo do orçamento',
@@ -227,6 +231,9 @@ export const strings = {
     noGoals: 'Nenhuma meta ativa.',
     projectedLabel: '(previsto)',
     effectiveHint: (amount: string) => `${amount} já efetivado`,
+    hideBalance: 'Ocultar saldo',
+    showBalance: 'Mostrar saldo',
+    hiddenBalance: '••••••',
   },
 
   transactionDetail: {

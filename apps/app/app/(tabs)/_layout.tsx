@@ -1,15 +1,61 @@
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, Tabs, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Text } from '@/components/ui';
 import { useNotificationCaptureSync } from '@/hooks/useNotificationCaptureSync';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { t } from '@/i18n';
 
-function FabButton() {
+type FabAction = {
+  key: string;
+  label: string;
+  icon: keyof typeof Feather.glyphMap;
+  color: string;
+  onPress: () => void;
+};
+
+// Leque de opções do "+", igual ao padrão do Mobills: em vez de ir direto
+// pra um formulário genérico, o toque abre 4 atalhos coloridos (receita,
+// despesa, despesa no cartão, transferência) — cada um já leva o tipo certo
+// pra `/new` via param, ou pra aba Cartões (compra no cartão exige escolher
+// o cartão primeiro, feito lá).
+function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+
+  const actions: FabAction[] = [
+    {
+      key: 'transfer',
+      label: t.nav.fabTransfer,
+      icon: 'repeat',
+      color: '#2563eb',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
+    },
+    {
+      key: 'card',
+      label: t.nav.fabCardExpense,
+      icon: 'credit-card',
+      color: '#7c3aed',
+      onPress: () => router.push('/(tabs)/cards'),
+    },
+    {
+      key: 'expense',
+      label: t.newTransaction.typeExpense,
+      icon: 'arrow-down-circle',
+      color: '#dc2626',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'expense' } }),
+    },
+    {
+      key: 'income',
+      label: t.newTransaction.typeIncome,
+      icon: 'arrow-up-circle',
+      color: '#059669',
+      onPress: () => router.push({ pathname: '/new', params: { type: 'income' } }),
+    },
+  ];
 
   return (
     <View
@@ -17,13 +63,41 @@ function FabButton() {
       style={{ bottom: 56 + insets.bottom - 12 }}
       pointerEvents="box-none"
     >
+      {open ? (
+        <View className="mb-3 items-end gap-3 pr-1">
+          {actions.map((action) => (
+            <Pressable
+              key={action.key}
+              accessibilityLabel={action.label}
+              onPress={() => {
+                onToggle();
+                action.onPress();
+              }}
+              className="flex-row items-center gap-3"
+            >
+              <View
+                className="rounded-lg bg-surface px-2.5 py-1.5 shadow-sm"
+                style={{ elevation: 3 }}
+              >
+                <Text className="text-sm font-medium text-fg">{action.label}</Text>
+              </View>
+              <View
+                className="size-11 items-center justify-center rounded-full shadow-lg"
+                style={{ backgroundColor: action.color, elevation: 6 }}
+              >
+                <Feather name={action.icon} size={20} color="#fff" />
+              </View>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
       <Pressable
-        accessibilityLabel={t.nav.quickAdd}
-        onPress={() => router.push('/new')}
+        accessibilityLabel={open ? t.nav.fabClose : t.nav.quickAdd}
+        onPress={onToggle}
         className="size-14 items-center justify-center rounded-full bg-brand-600 shadow-lg active:bg-brand-700"
         style={{ elevation: 8 }}
       >
-        <Feather name="plus" size={26} color="#fff" />
+        <Feather name={open ? 'x' : 'plus'} size={26} color="#fff" />
       </Pressable>
     </View>
   );
@@ -34,6 +108,7 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const [fabOpen, setFabOpen] = useState(false);
 
   useNotificationCaptureSync();
 
@@ -87,7 +162,14 @@ export default function TabsLayout() {
           }}
         />
       </Tabs>
-      <FabButton />
+      {fabOpen ? (
+        <Pressable
+          accessibilityLabel={t.nav.fabClose}
+          className="absolute inset-0 bg-black/30"
+          onPress={() => setFabOpen(false)}
+        />
+      ) : null}
+      <FabButton open={fabOpen} onToggle={() => setFabOpen((o) => !o)} />
     </View>
   );
 }

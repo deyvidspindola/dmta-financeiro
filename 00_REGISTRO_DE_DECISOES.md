@@ -115,6 +115,30 @@ web + mobile numa base React Native / NativeWind.
   aceitou esse retrabalho para ter o web apresentável já.
 **Data:** rodada 9 (F0, 01/09/2026).
 
+### D-19 — Reforma visual do `apps/app` inspirada no Mobills (mobile)
+**Contexto:** o dono passou (15/09/2026) 51 prints do app Mobills e pediu
+pra reformular o layout do `apps/app` (mobile) com a mesma referência
+visual já usada na D-17 (`apps/web`), melhorando também a forma de
+imputar lançamentos e a organização das telas. O `tailwind.config.js` do
+`apps/app` já citava "verde 'dinheiro' tipo Mobills" desde o B0 — a
+intenção já existia, faltava aplicar.
+**Decisão:**
+- NativeWind próprio continua (D-09/D-17: Preline é só-web) — a reforma é
+  só de composição/telas em cima dos tokens que já existem
+  (`brand`/`accent`/`cat-1..12`, semânticos
+  `canvas/surface/positive/negative`).
+- Elemento novo: `CategoryIcon` — círculo colorido (`categoryColor`) + ícone
+  Feather escolhido por heurística de palavra-chave no nome da categoria
+  (client-side, sem mudar o domínio/backend).
+- Maior mudança de fluxo: tela de novo lançamento (`app/new.tsx`) ganha
+  valor em destaque (estilo "calculadora") e o FAB da tab bar vira um leque
+  de 4 opções (Receita/Despesa/Despesa no cartão/Transferência), igual ao
+  padrão do Mobills.
+- Branch de trabalho `claude/app-mobills-redesign`, com
+  `backup/app-pre-mobills-redesign` como ponto de retorno caso precise
+  reverter.
+**Data:** 15/09/2026.
+
 ---
 
 ## ABERTA
