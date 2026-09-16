@@ -212,20 +212,20 @@ export default function TransactionsTab() {
     >
       <View className="gap-4">
         {/* Resumo do mês */}
-        <Card className="flex-row justify-between">
-          <View className="gap-1">
+        <Card className="flex-row gap-3">
+          <View className="min-w-0 flex-1 gap-1">
             <View className="flex-row items-center gap-2">
               <Feather name="lock" size={14} color="#7c918b" />
-              <Text variant="muted" className="text-xs">
+              <Text variant="muted" className="text-xs" numberOfLines={1}>
                 {t.dashboard.balanceReal}
               </Text>
             </View>
             <Money amount={currentBalance} size="md" className="font-semibold" />
           </View>
-          <View className="items-end gap-1">
+          <View className="min-w-0 flex-1 items-end gap-1">
             <View className="flex-row items-center gap-2">
               <Feather name="briefcase" size={14} color="#7c918b" />
-              <Text variant="muted" className="text-xs">
+              <Text variant="muted" className="text-xs" numberOfLines={1}>
                 {t.transactions.monthNet}
               </Text>
             </View>
