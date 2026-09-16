@@ -493,6 +493,8 @@ export const strings = {
       searchPlaceholder: 'Buscar por descrição…',
       allAccounts: 'Todas as contas',
       allCategories: 'Todas as categorias',
+      settled: 'Efetuadas',
+      pending: 'Pendentes',
     },
     detail: {
       title: 'Lançamento',
@@ -528,6 +530,16 @@ export const strings = {
       expense: 'Despesa',
       transfer: 'Transferência',
     },
+  },
+
+  transactionFilters: {
+    title: 'Filtrar',
+    status: 'Situação',
+    categories: 'Categorias',
+    accounts: 'Contas',
+    period: 'Filtrar período',
+    periodFrom: 'De',
+    periodTo: 'Até',
   },
 
   transfers: {
