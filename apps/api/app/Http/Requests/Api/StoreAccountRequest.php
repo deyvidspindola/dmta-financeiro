@@ -35,6 +35,7 @@ final class StoreAccountRequest extends FormRequest
             'type' => ['sometimes', Rule::in(['checking', 'savings', 'wallet', 'other'])],
             'institution' => ['nullable', 'string', 'max:100'],
             'initial_balance' => ['sometimes', 'numeric'],
+            'include_in_dashboard' => ['sometimes', 'boolean'],
         ];
     }
 }

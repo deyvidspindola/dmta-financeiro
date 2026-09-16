@@ -25,11 +25,17 @@ final class UpdateAccount
 {
     public function execute(Account $account, UpdateAccountData $data): Account
     {
-        $account->update([
+        $updates = [
             'name' => $data->name,
             'type' => $data->type->value,
             'institution' => $data->institution,
-        ]);
+        ];
+
+        if ($data->includeInDashboard !== null) {
+            $updates['include_in_dashboard'] = $data->includeInDashboard;
+        }
+
+        $account->update($updates);
 
         return $account;
     }

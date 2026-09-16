@@ -34,6 +34,7 @@ final class UpdateAccountRequest extends FormRequest
             'name' => ['required', 'string', 'max:100'],
             'type' => ['sometimes', Rule::in(['checking', 'savings', 'wallet', 'other'])],
             'institution' => ['nullable', 'string', 'max:100'],
+            'include_in_dashboard' => ['sometimes', 'boolean'],
         ];
     }
 }
