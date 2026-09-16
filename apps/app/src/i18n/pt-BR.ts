@@ -553,7 +553,7 @@ export const strings = {
 
   companies: {
     title: 'Empresas',
-    hint: 'Cria a empresa e o contexto PJ juntos (POST /contexts).',
+    hint: 'Cria a empresa e o contexto PJ dela juntos, num só passo.',
     create: 'Nova empresa',
     contextName: 'Nome do contexto',
     contextNameHint: 'Ex.: Minha Empresa',
@@ -561,6 +561,7 @@ export const strings = {
     document: 'CNPJ',
     empty: 'Nenhuma empresa cadastrada ainda.',
     created: 'Empresa e contexto criados.',
+    switchHint: 'Toque para entrar neste contexto.',
   },
 
   investments: {
