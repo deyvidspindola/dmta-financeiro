@@ -3,15 +3,14 @@ import { Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { accountsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   AccountIcon,
   Button,
   ConfirmSheet,
-  ListRow,
   Money,
-  MoneyField,
   Screen,
   SelectField,
   Sheet,
@@ -45,6 +44,7 @@ export default function AccountsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const sessionRoute = useSessionRoute();
+  const insets = useSafeAreaInsets();
   const activeScope = useAuthStore((s) => s.activeScope);
   const isConsolidated = activeScope === CONSOLIDATED;
   const month = useMonthStore((s) => s.month);
@@ -60,10 +60,8 @@ export default function AccountsScreen() {
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
-  const total = useMemo(
-    () => (accountsQuery.data ?? []).reduce((sum, a) => sum + a.balance, 0),
-    [accountsQuery.data],
-  );
+  const accounts = accountsQuery.data?.accounts ?? [];
+  const totals = accountsQuery.data?.totals;
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['accounts'] });
@@ -98,11 +96,29 @@ export default function AccountsScreen() {
 
   return (
     <Screen scroll>
+      {/* Cabeçalho */}
       <View className="mb-4 flex-row items-center justify-between">
-        <Text variant="title">{t.accounts.title}</Text>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text variant="muted">{t.common.close}</Text>
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Feather name="arrow-left" size={24} className="text-fg" />
+          </Pressable>
+          <Text variant="title">{t.accounts.title}</Text>
+        </View>
+        <View className="flex-row items-center gap-4">
+          {/* Ícones sem função real — visual + no-op */}
+          <Pressable hitSlop={8} onPress={() => {}}>
+            {/* Inbox: sem tela de notificações de contas ainda */}
+            <Feather name="inbox" size={20} className="text-fg-muted" />
+          </Pressable>
+          <Pressable hitSlop={8} onPress={() => {}}>
+            {/* Reordenar: sem reordenação manual de contas ainda */}
+            <Feather name="refresh-cw" size={20} className="text-fg-muted" />
+          </Pressable>
+          <Pressable hitSlop={8} onPress={() => {}}>
+            {/* Menu: sem menu adicional de opções ainda */}
+            <Feather name="more-vertical" size={20} className="text-fg-muted" />
+          </Pressable>
+        </View>
       </View>
 
       {isConsolidated ? null : (
@@ -123,64 +139,110 @@ export default function AccountsScreen() {
         <Text variant="error">{t.common.error}</Text>
       ) : (
         <View className="gap-4">
-          <View className="flex-row items-center justify-between rounded-2xl border border-line bg-surface p-4">
-            <Text variant="muted">{t.accounts.total}</Text>
-            <Money amount={total} size="lg" />
+          {/* Card de resumo com duas colunas */}
+          <View className="flex-row gap-3 rounded-2xl border border-line bg-surface p-4">
+            <View className="flex-1 gap-1">
+              <View className="flex-row items-center gap-2">
+                <Feather name="dollar-sign" size={16} className="text-fg-muted" />
+                <Text variant="muted" className="text-xs">
+                  {t.accounts.currentBalance}
+                </Text>
+              </View>
+              <Money amount={totals?.current_balance ?? 0} size="lg" />
+            </View>
+            <View className="flex-1 gap-1">
+              <View className="flex-row items-center gap-2">
+                <Feather name="credit-card" size={16} className="text-fg-muted" />
+                <Text variant="muted" className="text-xs">
+                  {t.accounts.projectedBalance}
+                </Text>
+              </View>
+              <Money amount={totals?.projected_balance ?? 0} size="lg" />
+            </View>
           </View>
 
-          {(accountsQuery.data ?? []).length === 0 ? (
+          {/* Lista de contas */}
+          {accounts.length === 0 ? (
             <Text variant="muted">{t.accounts.empty}</Text>
           ) : (
             <View className="rounded-2xl border border-line bg-surface">
-              {(accountsQuery.data ?? []).map((account) => (
-                <ListRow
-                  key={account.id}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/account',
-                      params: { id: account.id, contextId: activeScope },
-                    })
-                  }
-                  leading={<AccountIcon type={account.type} size="sm" />}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="min-w-0 flex-1 gap-0.5">
-                      <Text className="font-medium" numberOfLines={1}>
-                        {account.name}
-                      </Text>
-                      <Text variant="muted" className="text-xs" numberOfLines={1}>
-                        {account.bank_name ?? t.accounts.types[account.type]}
-                      </Text>
+              {accounts.map((account, index) => (
+                <View key={account.id}>
+                  <Pressable
+                    onPress={() =>
+                      router.push({
+                        pathname: '/account',
+                        params: { id: account.id, contextId: activeScope },
+                      })
+                    }
+                    className="flex-row items-center justify-between p-4 active:opacity-70"
+                  >
+                    <View className="flex-row items-center gap-3 flex-1">
+                      <AccountIcon type={account.type} size="sm" />
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-semibold" numberOfLines={1}>
+                          {account.name}
+                        </Text>
+                        <View className="flex-row gap-4">
+                          <View className="gap-0.5">
+                            <Text variant="muted" className="text-xs">
+                              {t.accounts.currentBalance}
+                            </Text>
+                            <Money amount={account.balance} size="sm" />
+                          </View>
+                          <View className="gap-0.5">
+                            <Text variant="muted" className="text-xs">
+                              {t.accounts.projectedBalance}
+                            </Text>
+                            <Money amount={account.balance} size="sm" className="text-fg-muted" />
+                            {/* Nota: saldo previsto por conta não está calculado — seria account.balance + pending entries daquela conta */}
+                          </View>
+                        </View>
+                      </View>
                     </View>
-                    <View className="flex-row items-center gap-2">
-                      <Money amount={account.balance} size="sm" />
-                      {isHistorical ? null : (
-                        <Pressable
-                          onPress={() =>
-                            setForm({
-                              id: account.id,
-                              name: account.name,
-                              bank: account.bank_name ?? '',
-                              type: account.type,
-                              balance: account.balance,
-                            })
-                          }
-                          hitSlop={8}
-                          className="p-1 active:opacity-60"
-                        >
-                          <Feather name="edit-2" size={15} color="#7c918b" />
-                        </Pressable>
-                      )}
-                    </View>
-                  </View>
-                </ListRow>
+                    {isHistorical ? null : (
+                      <Pressable
+                        onPress={() =>
+                          setForm({
+                            id: account.id,
+                            name: account.name,
+                            bank: account.bank_name ?? '',
+                            type: account.type,
+                            balance: account.balance,
+                          })
+                        }
+                        hitSlop={8}
+                        className="p-1 active:opacity-60"
+                      >
+                        <Feather name="more-vertical" size={20} color="#7c918b" />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                  {index < accounts.length - 1 ? (
+                    <View className="ml-16 h-px bg-line" />
+                  ) : null}
+                </View>
               ))}
             </View>
           )}
+        </View>
+      )}
 
-          {isHistorical ? null : (
-            <Button label={t.accounts.create} onPress={() => setForm({ ...EMPTY })} />
-          )}
+      {/* FAB circular flutuante */}
+      {isConsolidated || isHistorical ? null : (
+        <View
+          className="absolute right-4 items-center justify-center"
+          style={{ bottom: 16 + insets.bottom }}
+          pointerEvents="box-none"
+        >
+          <Pressable
+            accessibilityLabel={t.accounts.create}
+            onPress={() => setForm({ ...EMPTY })}
+            className="size-14 items-center justify-center rounded-full bg-brand-600 shadow-lg active:bg-brand-700"
+            style={{ elevation: 8 }}
+          >
+            <Feather name="plus" size={26} color="#fff" />
+          </Pressable>
         </View>
       )}
 
@@ -216,13 +278,7 @@ export default function AccountsScreen() {
               <Text variant="muted" className="text-xs">
                 {t.accounts.balanceEditHint}
               </Text>
-            ) : (
-              <MoneyField
-                label={t.accounts.balance}
-                value={form.balance}
-                onChange={(v) => setForm({ ...form, balance: v })}
-              />
-            )}
+            ) : null}
 
             {formError ? <Text variant="error">{formError}</Text> : null}
 
@@ -232,7 +288,7 @@ export default function AccountsScreen() {
                   label={t.common.delete}
                   variant="ghost"
                   onPress={() => {
-                    const acc = accountsQuery.data?.find((a) => a.id === form.id) ?? null;
+                    const acc = accounts.find((a) => a.id === form.id) ?? null;
                     setForm(null);
                     setToDelete(acc);
                   }}

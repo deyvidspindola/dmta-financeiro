@@ -1,10 +1,12 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, ApiError, categoriesApi, transactionsApi } from '@/api';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
 import {
+  AccountIcon,
   Badge,
   Button,
   Card,
@@ -15,6 +17,7 @@ import {
   Screen,
   Sheet,
   Skeleton,
+  SwitchField,
   Text,
 } from '@/components/ui';
 import { t } from '@/i18n';
@@ -71,7 +74,8 @@ export default function AccountDetailScreen() {
     queryFn: () => accountsApi.listAccounts(contextId, month),
     enabled: Boolean(contextId),
   });
-  const account = accountsQuery.data?.find((a) => a.id === id) ?? null;
+  const accounts = accountsQuery.data?.accounts ?? [];
+  const account = accounts.find((a) => a.id === id) ?? null;
 
   const adjust = useMutation({
     mutationFn: async (target: number) => {
@@ -97,6 +101,22 @@ export default function AccountDetailScreen() {
     },
     onError: (err) =>
       setAdjustError(err instanceof ApiError && err.message ? err.message : (err as Error).message),
+  });
+
+  const updateIncludeMutation = useMutation({
+    mutationFn: (includeInDashboard: boolean) => {
+      if (!account || !contextId) return Promise.resolve(account!);
+      return accountsApi.updateAccount(contextId, account.id, {
+        name: account.name,
+        bank_name: account.bank_name,
+        type: account.type,
+        include_in_dashboard: includeInDashboard,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 
   const { from, to } = monthDateRange(month);
@@ -140,13 +160,27 @@ export default function AccountDetailScreen() {
 
   return (
     <Screen scroll>
+      {/* Cabeçalho */}
       <View className="mb-4 flex-row items-center justify-between">
-        <Text variant="title" numberOfLines={1}>
-          {account?.name ?? t.accountDetail.title}
-        </Text>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text variant="muted">{t.common.close}</Text>
-        </Pressable>
+        <View className="flex-row items-center gap-2">
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Feather name="arrow-left" size={24} className="text-fg" />
+          </Pressable>
+          <Text variant="title" numberOfLines={1}>
+            {t.accountDetail.title}
+          </Text>
+        </View>
+        <View className="flex-row items-center gap-4">
+          {/* Ícones sem função real — visual + no-op */}
+          <Pressable hitSlop={8} onPress={() => {}}>
+            {/* Lista: sem função específica de lista aqui */}
+            <Feather name="list" size={20} className="text-fg-muted" />
+          </Pressable>
+          <Pressable hitSlop={8} onPress={() => {}}>
+            {/* Balança/comparação: sem comparação entre contas ainda */}
+            <Feather name="bar-chart-2" size={20} className="text-fg-muted" />
+          </Pressable>
+        </View>
       </View>
 
       {accountsQuery.isLoading ? (
@@ -155,14 +189,26 @@ export default function AccountDetailScreen() {
         <Text variant="muted">{t.accountDetail.notFound}</Text>
       ) : (
         <View className="gap-4">
-          <Card className="gap-1">
-            <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
+          {/* Seletor de conta (só visual por enquanto) */}
+          <Pressable
+            onPress={() => {}}
+            className="items-center py-2 active:opacity-70"
+          >
+            <View className="flex-row items-center gap-2">
+              <Text className="text-base font-semibold" numberOfLines={1}>
+                {account.name}
+              </Text>
+              <Feather name="chevron-down" size={16} className="text-fg-muted" />
+              {/* Dropdown de contas: sem implementação real — precisaria de Sheet com lista de contas */}
+            </View>
+          </Pressable>
+
+          {/* Card do saldo */}
+          <Card className="items-center gap-3 py-6">
+            <Text variant="muted" className="text-xs uppercase tracking-wide">
               {t.accountDetail.currentBalance}
             </Text>
             <Money amount={account.balance} size="xl" />
-            <Text variant="muted" className="text-xs" numberOfLines={1}>
-              {account.bank_name ?? t.accounts.types[account.type]}
-            </Text>
             {isHistorical ? null : (
               <Pressable
                 onPress={() => {
@@ -170,7 +216,7 @@ export default function AccountDetailScreen() {
                   setAdjustError(null);
                   setAdjustOpen(true);
                 }}
-                className="mt-3 self-start rounded-full bg-negative px-4 py-2 active:opacity-80"
+                className="mt-2 rounded-full bg-negative px-6 py-2.5 active:opacity-80"
               >
                 <Text className="text-xs font-semibold uppercase tracking-wide text-white">
                   {t.accountDetail.adjustBalance}
@@ -179,41 +225,89 @@ export default function AccountDetailScreen() {
             )}
           </Card>
 
-          <Card className="gap-3">
-            <View className="flex-row items-center justify-between">
-              <Text variant="muted" className="text-xs">
-                {t.accountDetail.institution}
-              </Text>
-              <Text className="text-sm font-medium" numberOfLines={1}>
-                {account.bank_name ?? '—'}
-              </Text>
+          {/* Painel de informações */}
+          <Card className="gap-4">
+            {/* Instituição bancária */}
+            <View className="flex-row items-center gap-3">
+              <AccountIcon type={account.type} size="sm" />
+              <View className="min-w-0 flex-1 gap-0.5">
+                <Text variant="muted" className="text-xs">
+                  {t.accountDetail.institution}
+                </Text>
+                <Text className="font-semibold" numberOfLines={1}>
+                  {account.bank_name ?? '—'}
+                </Text>
+              </View>
             </View>
-            <View className="flex-row items-center justify-between">
-              <Text variant="muted" className="text-xs">
-                {t.accountDetail.initialBalance}
-              </Text>
-              <Money amount={account.initial_balance} size="sm" />
+
+            {/* Duas colunas: Tipo da conta e Saldo inicial */}
+            <View className="flex-row gap-3">
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Feather name="credit-card" size={14} className="text-fg-muted" />
+                  <Text variant="muted" className="text-xs">
+                    {t.accountDetail.accountType}
+                  </Text>
+                </View>
+                <Text className="text-sm font-medium">{t.accounts.types[account.type]}</Text>
+              </View>
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Feather name="dollar-sign" size={14} className="text-fg-muted" />
+                  <Text variant="muted" className="text-xs">
+                    {t.accountDetail.initialBalance}
+                  </Text>
+                </View>
+                <Money amount={account.initial_balance} size="sm" />
+              </View>
             </View>
-            <View className="flex-row items-center justify-between">
-              <Text variant="muted" className="text-xs">
-                {t.accountDetail.incomeCount}
-              </Text>
-              <Text className="text-sm font-medium">{counts.income}</Text>
+
+            {/* Duas colunas: Despesas e Receitas */}
+            <View className="flex-row gap-3">
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Feather name="trending-down" size={14} className="text-negative" />
+                  <Text variant="muted" className="text-xs">
+                    {t.accountDetail.expenseCount}
+                  </Text>
+                </View>
+                <Text className="text-sm font-medium text-negative">{counts.expense}</Text>
+              </View>
+              <View className="flex-1 gap-0.5">
+                <View className="flex-row items-center gap-2">
+                  <Feather name="trending-up" size={14} className="text-positive" />
+                  <Text variant="muted" className="text-xs">
+                    {t.accountDetail.incomeCount}
+                  </Text>
+                </View>
+                <Text className="text-sm font-medium text-positive">{counts.income}</Text>
+              </View>
             </View>
-            <View className="flex-row items-center justify-between">
-              <Text variant="muted" className="text-xs">
-                {t.accountDetail.expenseCount}
-              </Text>
-              <Text className="text-sm font-medium">{counts.expense}</Text>
-            </View>
-            <View className="flex-row items-center justify-between">
-              <Text variant="muted" className="text-xs">
-                {t.accountDetail.transferCount}
-              </Text>
+
+            {/* Uma linha: Transferências */}
+            <View className="gap-0.5">
+              <View className="flex-row items-center gap-2">
+                <Feather name="repeat" size={14} className="text-fg-muted" />
+                <Text variant="muted" className="text-xs">
+                  {t.accountDetail.transferCount}
+                </Text>
+              </View>
               <Text className="text-sm font-medium">{counts.transfer}</Text>
             </View>
+
+            {/* Separador */}
+            <View className="h-px bg-line" />
+
+            {/* Switch: Incluir na tela inicial */}
+            <SwitchField
+              label={t.accounts.includeInDashboard}
+              hint={t.accounts.includeInDashboardHint}
+              value={account.include_in_dashboard}
+              onChange={(value) => updateIncludeMutation.mutate(value)}
+            />
           </Card>
 
+          {/* Extrato do mês (mantém como está) */}
           <View className="flex-row items-center justify-between">
             <Text variant="title" className="text-base">
               {t.accountDetail.statement}

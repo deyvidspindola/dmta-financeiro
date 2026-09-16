@@ -71,6 +71,7 @@ export interface Account {
   balance: number;
   initial_balance: number;
   currency: 'BRL';
+  include_in_dashboard: boolean;
   context?: ContextRef | null;
 }
 

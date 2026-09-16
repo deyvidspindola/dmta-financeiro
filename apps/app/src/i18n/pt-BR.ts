@@ -258,18 +258,20 @@ export const strings = {
   },
 
   accountDetail: {
-    title: 'Extrato da conta',
+    title: 'Detalhes',
     back: 'Voltar às contas',
     notFound: 'Conta não encontrada.',
     currentBalance: 'Saldo atual',
+    projectedBalance: 'Saldo previsto',
     statement: 'Extrato',
     runningBalance: 'Saldo',
     emptyStatement: 'Nenhum lançamento nesta conta.',
     institution: 'Instituição bancária',
     initialBalance: 'Saldo inicial',
-    incomeCount: 'Receitas no mês',
-    expenseCount: 'Despesas no mês',
-    transferCount: 'Transferências no mês',
+    accountType: 'Tipo da conta',
+    incomeCount: 'Quantidade de receitas',
+    expenseCount: 'Quantidade de despesas',
+    transferCount: 'Quantidade de transferências',
     adjustBalance: 'Reajustar saldo',
     adjustBalanceHint:
       'Informe o saldo real da conta hoje — um lançamento de ajuste é criado para cobrir a diferença.',
@@ -304,6 +306,10 @@ export const strings = {
     save: 'Salvar conta',
     balanceEditHint: 'O saldo só muda por lançamento.',
     emptyMonth: 'Nenhuma conta nesse mês.',
+    currentBalance: 'Saldo atual',
+    projectedBalance: 'Saldo previsto',
+    includeInDashboard: 'Incluir na tela inicial',
+    includeInDashboardHint: 'Quando desligado, esta conta não entra no cálculo do saldo do dashboard.',
   },
 
   creditCards: {
