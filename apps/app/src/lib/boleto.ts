@@ -37,8 +37,7 @@ function dueDateFromFactor(factor: number, now: number = Date.now()): string | n
   // (que datava errado todo boleto atrasado de antes de 22/02/2025).
   const oldCycle = FACTOR_BASE + factor * DAY_MS;
   const newCycle = FACTOR_BASE + (factor + FACTOR_NEW_CYCLE_OFFSET) * DAY_MS;
-  const ms =
-    Math.abs(oldCycle - now) <= Math.abs(newCycle - now) ? oldCycle : newCycle;
+  const ms = Math.abs(oldCycle - now) <= Math.abs(newCycle - now) ? oldCycle : newCycle;
   const d = new Date(ms);
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(
     d.getUTCDate(),

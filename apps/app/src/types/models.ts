@@ -330,10 +330,101 @@ export interface ImportFailure {
 
 export interface BillImportSummary {
   imported: number;
+  duplicates?: number;
   failed: ImportFailure[];
 }
 
 export interface StatementImportSummary {
+  imported: number;
+  duplicates: number;
+  failed: ImportFailure[];
+}
+
+export type ImportPreviewStatus = 'ok' | 'duplicate' | 'invalid';
+
+export interface ImportPreviewSummary {
+  total: number;
+  ok: number;
+  duplicates: number;
+  invalid: number;
+}
+
+export interface StatementImportParsed {
+  occurred_at: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category_name: string | null;
+}
+
+export interface StatementImportPreviewRow {
+  line: number;
+  raw: Record<string, string>;
+  parsed: StatementImportParsed | null;
+  status: ImportPreviewStatus;
+  reason: string | null;
+}
+
+export interface StatementImportPreview {
+  rows: StatementImportPreviewRow[];
+  summary: ImportPreviewSummary;
+}
+
+export interface BillImportParsed {
+  description: string;
+  amount: number;
+  due_date: string;
+  direction: 'payable' | 'receivable';
+  category_name: string | null;
+  beneficiary: string | null;
+}
+
+export interface BillImportPreviewRow {
+  line: number;
+  raw: Record<string, string>;
+  parsed: BillImportParsed | null;
+  status: ImportPreviewStatus;
+  reason: string | null;
+}
+
+export interface BillImportPreview {
+  rows: BillImportPreviewRow[];
+  summary: ImportPreviewSummary;
+}
+
+export interface CardInvoiceImportParsed {
+  description: string;
+  /** Valor de UMA parcela (ou o total, quando à vista). */
+  amount: number;
+  occurred_at: string;
+  category_name: string | null;
+  /** Nº da parcela que essa linha representa; null = compra à vista. */
+  installment_number: number | null;
+  installment_total: number | null;
+  /** Quantas compras a linha ainda vai criar (parcela atual + futuras não importadas). */
+  installments_pending: number;
+}
+
+export interface CardInvoiceImportPreviewRow {
+  line: number;
+  raw: Record<string, string>;
+  parsed: CardInvoiceImportParsed | null;
+  status: ImportPreviewStatus;
+  reason: string | null;
+}
+
+export interface CardInvoiceImportPreview {
+  rows: CardInvoiceImportPreviewRow[];
+  summary: ImportPreviewSummary;
+  /** PDF protegido: nenhuma senha cadastrada abriu — pedir a senha ao usuário. */
+  needs_password: boolean;
+  /** PDF cifrado num formato que o servidor não sabe abrir. */
+  unsupported: boolean;
+  /** Texto extraído do PDF (só PDF) — para diagnóstico quando a leitura falha. */
+  raw_text: string | null;
+}
+
+export interface CardInvoiceImportSummary {
   imported: number;
   duplicates: number;
   failed: ImportFailure[];

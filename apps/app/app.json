@@ -3,12 +3,12 @@
     "name": "DMTA Financeiro",
     "slug": "dmta-financeiro-app",
     "owner": "drspindola",
-    "version": "1.0.17",
+    "version": "1.0.18",
     "scheme": "dmtafinanceiro",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
-    "runtimeVersion": "1.1.0",
+    "runtimeVersion": "1.2.0",
     "updates": {
       "fallbackToCacheTimeout": 0,
       "checkAutomatically": "ON_LOAD",
@@ -41,6 +41,7 @@
       "expo-router",
       "expo-secure-store",
       "expo-local-authentication",
+      "expo-document-picker",
       "./plugins/withAndroidLeanApk",
       [
         "expo-splash-screen",
@@ -60,7 +61,8 @@
           "cameraPermission": "O app usa a câmera para ler o código de barras do boleto e o QR do PIX."
         }
       ],
-      "expo-notification-listener"
+      "expo-notification-listener",
+      "expo-sharing"
     ],
     "experiments": {
       "typedRoutes": true
