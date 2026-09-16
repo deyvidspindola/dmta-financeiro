@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Badge, Button, Card, Screen, SelectField, Text, TextField } from '@/components/ui';
 import { t } from '@/i18n';
+import { downloadAndShare } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import * as importsApi from '@/api/imports';
@@ -12,7 +13,7 @@ import type { CardInvoiceImportPreview, ImportPreviewStatus } from '@/types/mode
 
 const STATUS_COLOR: Record<ImportPreviewStatus, string> = {
   ok: 'bg-positive text-white',
-  duplicate: 'bg-warning text-gray-900',
+  duplicate: 'bg-amber-500 text-gray-900',
   invalid: 'bg-negative text-white',
 };
 
@@ -34,9 +35,16 @@ export default function ImportInvoicePage() {
   const cards = cardsQuery.data || [];
   const cardOptions = cards.map((card) => ({ value: card.id, label: card.name }));
 
-  // Download template está desabilitado por enquanto (precisa de expo-file-system configurado)
-  const handleDownloadTemplate = () => {
-    push('Download de template não disponível nesta versão', 'error');
+  const handleDownloadTemplate = async () => {
+    if (!contextId || !cardId) return;
+    try {
+      await downloadAndShare(
+        await importsApi.downloadInvoiceTemplate(contextId, cardId),
+        'modelo-importacao-fatura-cartao.csv',
+      );
+    } catch {
+      push(t.imports.downloadTemplateError, 'error');
+    }
   };
 
   // Preview
@@ -151,7 +159,7 @@ export default function ImportInvoicePage() {
           {cardId && (
             <>
               <TextField
-                label="Senha do PDF (opcional)"
+                label={t.imports.passwordLabel}
                 value={password}
                 onChangeText={setPassword}
                 placeholder={t.imports.passwordPlaceholder}
@@ -161,7 +169,6 @@ export default function ImportInvoicePage() {
                 label={t.imports.downloadTemplate}
                 variant="secondary"
                 onPress={handleDownloadTemplate}
-                disabled
               />
               <Button label={t.imports.uploadFile} onPress={handlePickFile} />
             </>
@@ -179,14 +186,14 @@ export default function ImportInvoicePage() {
           <Card className="gap-3">
             <Text className="font-semibold text-negative">{t.imports.needsPassword}</Text>
             <TextField
-              label="Senha do PDF"
+              label={t.imports.passwordLabelRequired}
               value={password}
               onChangeText={setPassword}
               placeholder={t.imports.passwordPlaceholder}
               secureTextEntry
             />
             <Button
-              label="Tentar novamente"
+              label={t.imports.retry}
               onPress={handleRetryWithPassword}
               loading={previewMutation.isPending}
             />
@@ -209,16 +216,16 @@ export default function ImportInvoicePage() {
             <View className="gap-2 rounded-lg border border-line bg-canvas p-3">
               <View className="flex-row gap-2">
                 <Text variant="muted" className="text-xs">
-                  Total: {preview.summary.total}
+                  {t.imports.total}: {preview.summary.total}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · OK: {preview.summary.ok}
+                  · {t.imports.rowStatus.ok}: {preview.summary.ok}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · Duplicados: {preview.summary.duplicates}
+                  · {t.imports.duplicates}: {preview.summary.duplicates}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · Inválidos: {preview.summary.invalid}
+                  · {t.imports.invalidCount}: {preview.summary.invalid}
                 </Text>
               </View>
             </View>
@@ -231,7 +238,9 @@ export default function ImportInvoicePage() {
                     className="gap-1 rounded-lg border border-line bg-canvas p-2"
                   >
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-medium">Linha {row.line}</Text>
+                      <Text className="text-xs font-medium">
+                        {t.imports.failedRow} {row.line}
+                      </Text>
                       <View
                         className={`rounded px-2 py-0.5 ${STATUS_COLOR[row.status] || 'bg-gray-500'}`}
                       >
@@ -247,7 +256,10 @@ export default function ImportInvoicePage() {
                         </Text>
                         {row.parsed.installment_number && row.parsed.installment_total && (
                           <Text variant="muted" className="text-xs">
-                            Parcela {row.parsed.installment_number}/{row.parsed.installment_total}
+                            {t.imports.installment(
+                              row.parsed.installment_number,
+                              row.parsed.installment_total,
+                            )}
                           </Text>
                         )}
                       </View>

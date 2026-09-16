@@ -29,6 +29,12 @@ export function bindAuthToken(getter: TokenGetter): void {
   getToken = getter;
 }
 
+/** Cabeçalho de autenticação pronto — usado por quem precisa de `fetch` cru (ex.: download de arquivo). */
+export function authHeaders(): Record<string, string> {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   if (!headers.has('Accept')) {

@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { AccountIcon, Badge, Button, Card, Screen, SelectField, Text } from '@/components/ui';
 import { t } from '@/i18n';
+import { downloadAndShare } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import * as importsApi from '@/api/imports';
@@ -12,7 +13,7 @@ import type { ImportPreviewStatus, StatementImportPreview } from '@/types/models
 
 const STATUS_COLOR: Record<ImportPreviewStatus, string> = {
   ok: 'bg-positive text-white',
-  duplicate: 'bg-warning text-gray-900',
+  duplicate: 'bg-amber-500 text-gray-900',
   invalid: 'bg-negative text-white',
 };
 
@@ -33,9 +34,16 @@ export default function ImportStatementPage() {
   const accounts = accountsQuery.data || [];
   const accountOptions = accounts.map((acc) => ({ value: acc.id, label: acc.name }));
 
-  // Download template está desabilitado por enquanto (precisa de expo-file-system configurado)
-  const handleDownloadTemplate = () => {
-    push('Download de template não disponível nesta versão', 'error');
+  const handleDownloadTemplate = async () => {
+    if (!contextId || !accountId) return;
+    try {
+      await downloadAndShare(
+        await importsApi.downloadStatementImportTemplate(contextId, accountId),
+        'modelo-importacao-extrato.csv',
+      );
+    } catch {
+      push(t.imports.downloadTemplateError, 'error');
+    }
   };
 
   // Preview
@@ -154,7 +162,6 @@ export default function ImportStatementPage() {
                 label={t.imports.downloadTemplate}
                 variant="secondary"
                 onPress={handleDownloadTemplate}
-                disabled
               />
               <Button label={t.imports.uploadFile} onPress={handlePickFile} />
             </>
@@ -178,16 +185,16 @@ export default function ImportStatementPage() {
             <View className="gap-2 rounded-lg border border-line bg-canvas p-3">
               <View className="flex-row gap-2">
                 <Text variant="muted" className="text-xs">
-                  Total: {preview.summary.total}
+                  {t.imports.total}: {preview.summary.total}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · OK: {preview.summary.ok}
+                  · {t.imports.rowStatus.ok}: {preview.summary.ok}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · Duplicados: {preview.summary.duplicates}
+                  · {t.imports.duplicates}: {preview.summary.duplicates}
                 </Text>
                 <Text variant="muted" className="text-xs">
-                  · Inválidos: {preview.summary.invalid}
+                  · {t.imports.invalidCount}: {preview.summary.invalid}
                 </Text>
               </View>
             </View>
@@ -200,7 +207,9 @@ export default function ImportStatementPage() {
                     className="gap-1 rounded-lg border border-line bg-canvas p-2"
                   >
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-medium">Linha {row.line}</Text>
+                      <Text className="text-xs font-medium">
+                        {t.imports.failedRow} {row.line}
+                      </Text>
                       <View
                         className={`rounded px-2 py-0.5 ${STATUS_COLOR[row.status] || 'bg-gray-500'}`}
                       >
@@ -212,7 +221,9 @@ export default function ImportStatementPage() {
                     {row.parsed && (
                       <Text variant="muted" className="text-xs" numberOfLines={1}>
                         {row.parsed.description} · R$ {row.parsed.amount.toFixed(2)} ·{' '}
-                        {row.parsed.type === 'income' ? 'Entrada' : 'Saída'}
+                        {row.parsed.type === 'income'
+                          ? t.imports.entryTypeIncome
+                          : t.imports.entryTypeExpense}
                       </Text>
                     )}
                     {row.reason && <Text className="text-xs text-negative">{row.reason}</Text>}
