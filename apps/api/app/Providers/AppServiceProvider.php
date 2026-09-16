@@ -6,11 +6,18 @@ namespace App\Providers;
 
 use App\Domain\Capture\EmailBoletoReaderInterface;
 use App\Domain\Capture\PdfBoletoReader;
+use App\Domain\Capture\PdfDecryption\EncryptedPdfDecryptor;
 use App\Domain\Capture\PdfPasswordResolverInterface;
 use App\Domain\Capture\QuickEntryChannelInterface;
 use App\Domain\Capture\RuleBasedPasswordResolver;
 use App\Domain\Capture\TelegramQuickEntryChannel;
 use App\Models\IntegrationSettings;
+use App\Services\StatementParsers\BradescoParser;
+use App\Services\StatementParsers\C6BankParser;
+use App\Services\StatementParsers\InterParser;
+use App\Services\StatementParsers\ItauParser;
+use App\Services\StatementParsers\NubankParser;
+use App\Services\StatementPdfExtractor;
 use Illuminate\Support\ServiceProvider;
 use Smalot\PdfParser\Config as PdfParserConfig;
 use Smalot\PdfParser\Parser as PdfParser;
@@ -64,6 +71,25 @@ class AppServiceProvider extends ServiceProvider
             $config->setIgnoreEncryption(true);
 
             return new PdfParser([], $config);
+        });
+
+        // Motores de extrato em PDF por banco (leia-se: cada item da
+        // lista sabe reconhecer e ler o layout de um banco só) — ordem
+        // importa, StatementPdfExtractor usa o primeiro que reconhecer o
+        // texto. Novo banco = nova classe aqui, nada mais muda.
+        $this->app->bind(StatementPdfExtractor::class, function ($app): StatementPdfExtractor {
+            return new StatementPdfExtractor(
+                $app->make(EncryptedPdfDecryptor::class),
+                $app->make(PdfPasswordResolverInterface::class),
+                $app->make(PdfParser::class),
+                [
+                    $app->make(BradescoParser::class),
+                    $app->make(ItauParser::class),
+                    $app->make(NubankParser::class),
+                    $app->make(InterParser::class),
+                    $app->make(C6BankParser::class),
+                ],
+            );
         });
     }
 

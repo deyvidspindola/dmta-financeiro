@@ -7,18 +7,19 @@ namespace App\Http\Requests\Api;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * Validação de preview/store de importação de extrato CSV.
- * `lines` só entra no store (subconjunto a importar).
+ * Validação de preview/store de importação de extrato (CSV ou PDF).
+ * `password` só faz efeito quando o arquivo é PDF protegido; `lines` só
+ * entra no store (subconjunto a importar).
  *
  * @package App\Http\Requests\Api
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 2.0.0
  *
  * @since   22/08/2026
  *
- * @updated 03/09/2026
+ * @updated 16/09/2026
  */
 final class StoreStatementImportRequest extends FormRequest
 {
@@ -31,7 +32,8 @@ final class StoreStatementImportRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'mimes:csv,txt', 'max:4096'],
+            'file' => ['required', 'file', 'mimes:csv,txt,pdf', 'max:15360'],
+            'password' => ['sometimes', 'nullable', 'string', 'max:200'],
             'lines' => ['sometimes', 'array', 'distinct'],
             'lines.*' => ['integer', 'min:2'],
         ];

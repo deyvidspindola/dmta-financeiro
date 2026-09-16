@@ -716,8 +716,10 @@ export const strings = {
     billsHint: 'Envie um CSV com seus boletos a pagar ou receber',
     billsDescription: 'Baixe o modelo, preencha e envie. Linhas inválidas não derrubam o lote.',
     statementTitle: 'Importar extrato',
-    statementHint: 'Envie o CSV do extrato da sua conta bancária',
-    statementDescription: 'Mesmo arquivo pode ser reenviado — duplicatas são ignoradas.',
+    statementHint: 'Envie o extrato da sua conta bancária em CSV ou PDF',
+    statementDescription:
+      'CSV ou PDF do banco — reconhecemos o layout de Bradesco, Itaú, Nubank, Inter e C6 Bank automaticamente. Mesmo arquivo pode ser reenviado, duplicatas são ignoradas.',
+    statementBankDetected: (bank: string) => `Banco identificado: ${bank}`,
     cardInvoiceTitle: 'Importar fatura de cartão',
     cardInvoiceHint: 'Envie a fatura em CSV ou PDF do banco',
     cardInvoiceDescription:

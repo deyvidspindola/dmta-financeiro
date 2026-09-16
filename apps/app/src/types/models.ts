@@ -368,6 +368,14 @@ export interface StatementImportPreviewRow {
 export interface StatementImportPreview {
   rows: StatementImportPreviewRow[];
   summary: ImportPreviewSummary;
+  /** Banco detectado pelo motor de leitura de PDF (só PDF) — null em CSV ou layout não reconhecido. */
+  bank: string | null;
+  /** PDF protegido: nenhuma senha cadastrada abriu — pedir a senha ao usuário. */
+  needs_password: boolean;
+  /** PDF cifrado num formato que o servidor não sabe abrir. */
+  unsupported: boolean;
+  /** Texto extraído do PDF (só PDF) — para diagnóstico quando a leitura falha. */
+  raw_text: string | null;
 }
 
 export interface BillImportParsed {

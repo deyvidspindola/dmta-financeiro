@@ -79,28 +79,32 @@ export async function downloadStatementImportTemplate(
   return `/contexts/${contextId}/accounts/${accountId}/statement-imports/template`;
 }
 
-export async function previewStatementCsv(
+export async function previewStatement(
   contextId: string,
   accountId: string,
   file: DocumentPickerAsset,
+  password?: string,
 ): Promise<StatementImportPreview> {
   const body = new FormData();
   body.append('file', assetToFormDataBlob(file) as any);
+  if (password) body.append('password', password);
   return http.postForm<StatementImportPreview>(
     `/contexts/${contextId}/accounts/${accountId}/statement-imports/preview`,
     body,
   );
 }
 
-export async function importStatementCsv(
+export async function importStatement(
   contextId: string,
   accountId: string,
   file: DocumentPickerAsset,
   lines?: number[],
+  password?: string,
 ): Promise<StatementImportSummary> {
   const body = new FormData();
   body.append('file', assetToFormDataBlob(file) as any);
   appendLines(body, lines);
+  if (password) body.append('password', password);
   return http.postForm<StatementImportSummary>(
     `/contexts/${contextId}/accounts/${accountId}/statement-imports`,
     body,

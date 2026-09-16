@@ -2,7 +2,16 @@ import { useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 import * as DocumentPicker from 'expo-document-picker';
 import { useMutation, useQuery } from '@tanstack/react-query';
-import { AccountIcon, Badge, Button, Card, Screen, SelectField, Text } from '@/components/ui';
+import {
+  AccountIcon,
+  Badge,
+  Button,
+  Card,
+  Screen,
+  SelectField,
+  Text,
+  TextField,
+} from '@/components/ui';
 import { t } from '@/i18n';
 import { downloadAndShare } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
@@ -22,6 +31,7 @@ export default function ImportStatementPage() {
   const push = useToastStore((s) => s.push);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [file, setFile] = useState<importsApi.DocumentPickerAsset | null>(null);
+  const [password, setPassword] = useState('');
   const [preview, setPreview] = useState<StatementImportPreview | null>(null);
   const [summary, setSummary] = useState<{ imported: number; failed: number } | null>(null);
 
@@ -48,9 +58,9 @@ export default function ImportStatementPage() {
 
   // Preview
   const previewMutation = useMutation({
-    mutationFn: async (f: importsApi.DocumentPickerAsset) => {
+    mutationFn: async ({ f, pwd }: { f: importsApi.DocumentPickerAsset; pwd?: string }) => {
       if (!contextId || !accountId) throw new Error('no context or account');
-      return importsApi.previewStatementCsv(contextId, accountId, f);
+      return importsApi.previewStatement(contextId, accountId, f, pwd);
     },
     onSuccess: (data) => setPreview(data),
     onError: () => push(t.common.error, 'error'),
@@ -60,12 +70,19 @@ export default function ImportStatementPage() {
   const importMutation = useMutation({
     mutationFn: async () => {
       if (!contextId || !accountId || !file) throw new Error('no context, account or file');
-      return importsApi.importStatementCsv(contextId, accountId, file);
+      return importsApi.importStatement(
+        contextId,
+        accountId,
+        file,
+        undefined,
+        password || undefined,
+      );
     },
     onSuccess: (data) => {
       setSummary({ imported: data.imported, failed: data.failed.length });
       setPreview(null);
       setFile(null);
+      setPassword('');
       push(t.imports.done);
     },
     onError: () => push(t.common.error, 'error'),
@@ -73,25 +90,26 @@ export default function ImportStatementPage() {
 
   const handlePickFile = async () => {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/csv'],
+      type: ['text/csv', 'text/comma-separated-values', 'application/csv', 'application/pdf'],
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    setFile({
+    const f = {
       uri: asset.uri,
       name: asset.name,
-      mimeType: asset.mimeType ?? 'text/csv',
+      mimeType: asset.mimeType ?? 'application/octet-stream',
       size: asset.size,
-    });
+    };
+    setFile(f);
     setPreview(null);
     setSummary(null);
-    previewMutation.mutate({
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: asset.mimeType ?? 'text/csv',
-      size: asset.size,
-    });
+    previewMutation.mutate({ f, pwd: password || undefined });
+  };
+
+  const handleRetryWithPassword = () => {
+    if (!file) return;
+    previewMutation.mutate({ f: file, pwd: password });
   };
 
   if (!contextId) {
@@ -124,6 +142,7 @@ export default function ImportStatementPage() {
             onPress={() => {
               setSummary(null);
               setAccountId(null);
+              setPassword('');
             }}
           />
         </Card>
@@ -158,6 +177,13 @@ export default function ImportStatementPage() {
 
           {accountId && (
             <>
+              <TextField
+                label={t.imports.passwordLabel}
+                value={password}
+                onChangeText={setPassword}
+                placeholder={t.imports.passwordPlaceholder}
+                secureTextEntry
+              />
               <Button
                 label={t.imports.downloadTemplate}
                 variant="secondary"
@@ -175,12 +201,42 @@ export default function ImportStatementPage() {
           </Card>
         )}
 
-        {preview && (
+        {preview?.needs_password && !previewMutation.isPending && (
+          <Card className="gap-3">
+            <Text className="font-semibold text-negative">{t.imports.needsPassword}</Text>
+            <TextField
+              label={t.imports.passwordLabelRequired}
+              value={password}
+              onChangeText={setPassword}
+              placeholder={t.imports.passwordPlaceholder}
+              secureTextEntry
+            />
+            <Button
+              label={t.imports.retry}
+              onPress={handleRetryWithPassword}
+              loading={previewMutation.isPending}
+            />
+          </Card>
+        )}
+
+        {preview?.unsupported && !previewMutation.isPending && (
+          <Card>
+            <Text className="text-sm text-negative">{t.imports.unsupportedPdf}</Text>
+          </Card>
+        )}
+
+        {preview && !preview.needs_password && !preview.unsupported && (
           <Card className="gap-3">
             <View className="flex-row items-center justify-between">
               <Text className="text-lg font-semibold">{t.imports.previewTitle}</Text>
               <Badge tone="brand">{preview.summary.ok} OK</Badge>
             </View>
+
+            {preview.bank && (
+              <Text variant="muted" className="text-xs">
+                {t.imports.statementBankDetected(preview.bank)}
+              </Text>
+            )}
 
             <View className="gap-2 rounded-lg border border-line bg-canvas p-3">
               <View className="flex-row gap-2">

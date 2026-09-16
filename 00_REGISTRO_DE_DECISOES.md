@@ -169,6 +169,29 @@ receita adicional.
   estavam corretos, o problema era só nas métricas de receita/despesa.
 **Data:** 16/09/2026.
 
+### D-21 — Importação de extrato bancário em PDF, com motor por banco
+**Contexto:** a importação de extrato só aceitava CSV; o dono quer poder
+enviar direto o PDF que o próprio internet banking exporta.
+**Decisão:**
+- `apps/api/accounts/{account}/statement-imports/(preview|store)` (já
+  existentes) passam a aceitar **CSV ou PDF** no mesmo campo `file` —
+  detecção por mimetype/extensão, sem rota nova. Mesmo contrato de
+  resposta (`rows`/`summary`), com `bank`/`needs_password`/`unsupported`/
+  `raw_text` adicionados (mesmo padrão já usado em
+  `credit-cards/{card}/invoice-import`, DT-07).
+- Cada banco tem seu próprio motor de leitura em
+  `App\Services\StatementParsers\*Parser` (Bradesco, Itaú, Nubank,
+  Inter, C6 Bank hoje) — um regex genérico não aguentava os layouts tão
+  diferentes. Novo banco = nova classe implementando
+  `StatementParserInterface`, registrada em `AppServiceProvider`; nada
+  mais muda.
+- PDF protegido por senha reusa a mesma infra de descriptografia 100%
+  PHP do DT-07 (`EncryptedPdfDecryptor` + `BoletoPasswordRule`) — **não**
+  a abordagem que chegou a ser cogitada de invocar `qpdf`/`pdftk` via
+  `shell_exec`, descartada porque a hospedagem-alvo (compartilhada,
+  HostGator) não garante esses binários nem `exec()` liberado.
+**Data:** 16/09/2026.
+
 ---
 
 ## ABERTA
