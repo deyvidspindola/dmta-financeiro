@@ -76,6 +76,8 @@ final class AccountController extends Controller
             institution: $request->input('institution'),
             initialBalance: (float) $request->input('initial_balance', 0),
             type: AccountType::from($request->string('type', AccountType::Checking->value)->toString()),
+            includeInDashboard: $request->boolean('include_in_dashboard', true),
+            color: $request->input('color'),
         ));
 
         return new AccountResource($account);
@@ -88,6 +90,8 @@ final class AccountController extends Controller
             // @phpstan-ignore-next-line property.nonObject (cast AccountType da migration, confirmado em runtime)
             type: AccountType::from($request->string('type', $account->type->value)->toString()),
             institution: $request->input('institution'),
+            includeInDashboard: $request->boolean('include_in_dashboard', $account->include_in_dashboard ?? true),
+            color: $request->input('color', $account->color),
         ));
 
         return new AccountResource($updated);

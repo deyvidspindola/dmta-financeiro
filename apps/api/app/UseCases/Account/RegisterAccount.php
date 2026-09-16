@@ -34,6 +34,8 @@ final class RegisterAccount
             'institution' => $data->institution,
             'initial_balance' => $data->initialBalance,
             'balance' => $data->initialBalance,
+            'include_in_dashboard' => $data->includeInDashboard,
+            'color' => $data->color,
         ]);
     }
 }

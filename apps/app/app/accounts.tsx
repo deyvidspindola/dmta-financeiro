@@ -4,42 +4,16 @@ import { Redirect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi } from '@/api';
-import { ApiError } from '@/api/http';
-import {
-  AccountIcon,
-  Button,
-  ConfirmSheet,
-  ListRow,
-  Money,
-  MoneyField,
-  Screen,
-  SelectField,
-  Sheet,
-  Skeleton,
-  Text,
-  TextField,
-} from '@/components/ui';
+import { ConfirmSheet, ListRow, Money, Screen, Skeleton, Text } from '@/components/ui';
 import { MonthNavigator } from '@/components/MonthNavigator';
 import { t } from '@/i18n';
 import { currentMonthKey } from '@/lib/dates';
+import { formatMoney } from '@/lib/format';
+import { accountColor } from '@/lib/accountColor';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import { useMonthStore } from '@/store/monthStore';
-import type { Account, AccountType } from '@/types/models';
-
-const TYPE_OPTIONS = (['checking', 'savings', 'wallet', 'other'] as AccountType[]).map((v) => ({
-  value: v,
-  label: t.accounts.types[v],
-}));
-
-type FormState = {
-  id: string | null;
-  name: string;
-  bank: string;
-  type: AccountType;
-  balance: number;
-};
-const EMPTY: FormState = { id: null, name: '', bank: '', type: 'checking', balance: 0 };
+import type { Account } from '@/types/models';
 
 export default function AccountsScreen() {
   const router = useRouter();
@@ -50,9 +24,8 @@ export default function AccountsScreen() {
   const month = useMonthStore((s) => s.month);
   const isHistorical = month < currentMonthKey();
 
-  const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<Account | null>(null);
-  const [formError, setFormError] = useState<string | null>(null);
+  const [menuAccount, setMenuAccount] = useState<string | null>(null);
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', activeScope, month],
@@ -60,36 +33,27 @@ export default function AccountsScreen() {
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
-  const total = useMemo(
+  // Saldo atual: soma dos saldos reais de todas as contas
+  const currentTotal = useMemo(
     () => (accountsQuery.data ?? []).reduce((sum, a) => sum + a.balance, 0),
     [accountsQuery.data],
   );
+
+  // Saldo previsto: por enquanto igual ao atual (pendentes viriam de outra query)
+  // TODO: implementar lógica de saldo previsto quando necessário
+  const projectedTotal = currentTotal;
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['accounts'] });
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
   };
 
-  const save = useMutation({
-    mutationFn: (f: FormState) => {
-      const base = { name: f.name.trim(), bank_name: f.bank.trim() || null, type: f.type };
-      return f.id
-        ? accountsApi.updateAccount(activeScope, f.id, base)
-        : accountsApi.createAccount(activeScope, { ...base, balance: f.balance });
-    },
-    onSuccess: () => {
-      invalidate();
-      setForm(null);
-    },
-    onError: (err) =>
-      setFormError(err instanceof ApiError && err.message ? err.message : t.common.error),
-  });
-
   const remove = useMutation({
     mutationFn: (id: string) => accountsApi.deleteAccount(activeScope, id),
     onSuccess: () => {
       invalidate();
       setToDelete(null);
+      setMenuAccount(null);
     },
     onError: () => setToDelete(null),
   });
@@ -123,136 +87,155 @@ export default function AccountsScreen() {
         <Text variant="error">{t.common.error}</Text>
       ) : (
         <View className="gap-4">
-          <View className="flex-row items-center justify-between rounded-2xl border border-line bg-surface p-4">
-            <Text variant="muted">{t.accounts.total}</Text>
-            <Money amount={total} size="lg" />
+          {/* Cabeçalho com saldo atual e previsto lado a lado */}
+          <View className="flex-row gap-3">
+            <View className="flex-1 rounded-2xl border border-line bg-surface p-4">
+              <View className="flex-row items-center gap-2 mb-1">
+                <Feather name="dollar-sign" size={16} color="#7c918b" />
+                <Text variant="muted" className="text-xs">
+                  {t.accounts.currentBalance}
+                </Text>
+              </View>
+              <Money amount={currentTotal} size="lg" className="font-semibold" />
+            </View>
+            <View className="flex-1 rounded-2xl border border-line bg-surface p-4">
+              <View className="flex-row items-center gap-2 mb-1">
+                <Feather name="trending-up" size={16} color="#7c918b" />
+                <Text variant="muted" className="text-xs">
+                  {t.accounts.projectedBalance}
+                </Text>
+              </View>
+              <Money amount={projectedTotal} size="lg" className="font-semibold" />
+            </View>
           </View>
 
           {(accountsQuery.data ?? []).length === 0 ? (
             <Text variant="muted">{t.accounts.empty}</Text>
           ) : (
             <View className="rounded-2xl border border-line bg-surface">
-              {(accountsQuery.data ?? []).map((account) => (
-                <ListRow
-                  key={account.id}
-                  onPress={() =>
-                    router.push({
-                      pathname: '/account',
-                      params: { id: account.id, contextId: activeScope },
-                    })
-                  }
-                  leading={<AccountIcon type={account.type} size="sm" />}
-                >
-                  <View className="flex-row items-center justify-between gap-3">
-                    <View className="min-w-0 flex-1 gap-0.5">
-                      <Text className="font-medium" numberOfLines={1}>
-                        {account.name}
-                      </Text>
-                      <Text variant="muted" className="text-xs" numberOfLines={1}>
-                        {account.bank_name ?? t.accounts.types[account.type]}
-                      </Text>
-                    </View>
-                    <View className="flex-row items-center gap-2">
-                      <Money amount={account.balance} size="sm" />
+              {(accountsQuery.data ?? []).map((account) => {
+                const color = accountColor(account.color);
+                const projectedBalance = account.balance; // TODO: adicionar lógica de previsto
+
+                return (
+                  <ListRow
+                    key={account.id}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/account',
+                        params: { id: account.id, contextId: activeScope },
+                      })
+                    }
+                    leading={
+                      <View
+                        className="h-12 w-12 items-center justify-center rounded-full"
+                        style={{ backgroundColor: color }}
+                      >
+                        <Feather
+                          name={
+                            account.type === 'checking'
+                              ? 'credit-card'
+                              : account.type === 'savings'
+                                ? 'home'
+                                : account.type === 'wallet'
+                                  ? 'dollar-sign'
+                                  : 'briefcase'
+                          }
+                          size={24}
+                          color="#ffffff"
+                        />
+                      </View>
+                    }
+                  >
+                    <View className="flex-row items-center justify-between gap-3">
+                      <View className="min-w-0 flex-1 gap-1">
+                        <Text className="font-medium" numberOfLines={1}>
+                          {account.name}
+                        </Text>
+                        <View className="gap-0.5">
+                          <Text variant="muted" className="text-xs">
+                            {t.accounts.currentBalance}
+                          </Text>
+                          <Text variant="muted" className="text-xs">
+                            {t.accounts.projectedBalance}
+                          </Text>
+                        </View>
+                      </View>
+                      <View className="items-end gap-1">
+                        <Money amount={account.balance} size="sm" />
+                        <View className="gap-0.5">
+                          <Text variant="muted" className="text-xs">
+                            {formatMoney(account.balance)}
+                          </Text>
+                          <Text variant="muted" className="text-xs">
+                            {formatMoney(projectedBalance)}
+                          </Text>
+                        </View>
+                      </View>
                       {isHistorical ? null : (
                         <Pressable
-                          onPress={() =>
-                            setForm({
-                              id: account.id,
-                              name: account.name,
-                              bank: account.bank_name ?? '',
-                              type: account.type,
-                              balance: account.balance,
-                            })
-                          }
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            setMenuAccount(menuAccount === account.id ? null : account.id);
+                          }}
                           hitSlop={8}
                           className="p-1 active:opacity-60"
                         >
-                          <Feather name="edit-2" size={15} color="#7c918b" />
+                          <Feather name="more-vertical" size={18} color="#7c918b" />
                         </Pressable>
                       )}
                     </View>
-                  </View>
-                </ListRow>
-              ))}
-            </View>
-          )}
 
-          {isHistorical ? null : (
-            <Button label={t.accounts.create} onPress={() => setForm({ ...EMPTY })} />
+                    {/* Menu dropdown expandido abaixo da linha */}
+                    {menuAccount === account.id && (
+                      <View className="mt-3 gap-2 border-t border-line pt-3">
+                        <Pressable
+                          onPress={() => {
+                            setMenuAccount(null);
+                            router.push({
+                              pathname: '/account-edit',
+                              params: { id: account.id, contextId: activeScope },
+                            });
+                          }}
+                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-hover"
+                        >
+                          <Feather name="edit-2" size={16} color="#7c918b" />
+                          <Text>{t.common.edit}</Text>
+                        </Pressable>
+                        <Pressable
+                          onPress={() => {
+                            setMenuAccount(null);
+                            setToDelete(account);
+                          }}
+                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-hover"
+                        >
+                          <Feather name="trash-2" size={16} color="#ef4444" />
+                          <Text className="text-negative">{t.common.delete}</Text>
+                        </Pressable>
+                      </View>
+                    )}
+                  </ListRow>
+                );
+              })}
+            </View>
           )}
         </View>
       )}
 
-      {/* Form (criar / editar) */}
-      <Sheet
-        open={form !== null}
-        onClose={() => {
-          setForm(null);
-          setFormError(null);
-        }}
-        title={form?.id ? t.accounts.edit : t.accounts.create}
-      >
-        {form ? (
-          <View className="gap-4">
-            <TextField
-              label={t.accounts.name}
-              value={form.name}
-              onChangeText={(v) => setForm({ ...form, name: v })}
-            />
-            <TextField
-              label={t.accounts.bankName}
-              value={form.bank}
-              onChangeText={(v) => setForm({ ...form, bank: v })}
-            />
-            <SelectField
-              label={t.accounts.type}
-              placeholder={t.common.select}
-              value={form.type}
-              options={TYPE_OPTIONS}
-              onChange={(v) => setForm({ ...form, type: v as AccountType })}
-            />
-            {form.id ? (
-              <Text variant="muted" className="text-xs">
-                {t.accounts.balanceEditHint}
-              </Text>
-            ) : (
-              <MoneyField
-                label={t.accounts.balance}
-                value={form.balance}
-                onChange={(v) => setForm({ ...form, balance: v })}
-              />
-            )}
-
-            {formError ? <Text variant="error">{formError}</Text> : null}
-
-            <View className="flex-row justify-between gap-2">
-              {form.id ? (
-                <Button
-                  label={t.common.delete}
-                  variant="ghost"
-                  onPress={() => {
-                    const acc = accountsQuery.data?.find((a) => a.id === form.id) ?? null;
-                    setForm(null);
-                    setToDelete(acc);
-                  }}
-                />
-              ) : (
-                <View />
-              )}
-              <Button
-                label={t.accounts.save}
-                loading={save.isPending}
-                disabled={!form.name.trim()}
-                onPress={() => {
-                  setFormError(null);
-                  save.mutate(form);
-                }}
-              />
-            </View>
-          </View>
-        ) : null}
-      </Sheet>
+      {/* FAB para criar nova conta */}
+      {!isConsolidated && !isHistorical && (
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: '/account-edit',
+              params: { contextId: activeScope },
+            })
+          }
+          className="absolute bottom-6 right-6 h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:opacity-80"
+        >
+          <Feather name="plus" size={24} color="#ffffff" />
+        </Pressable>
+      )}
 
       <ConfirmSheet
         open={toDelete !== null}

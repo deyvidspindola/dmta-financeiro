@@ -29,6 +29,8 @@ final class UpdateAccount
             'name' => $data->name,
             'type' => $data->type->value,
             'institution' => $data->institution,
+            'include_in_dashboard' => $data->includeInDashboard,
+            'color' => $data->color,
         ]);
 
         return $account;

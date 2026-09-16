@@ -72,10 +72,11 @@ final class DashboardSummaryService
 
         // Mês já fechado → saldo "como o mês fechou" (replay do histórico).
         // Mês corrente ou futuro → saldo real de agora.
+        // Só contas com `include_in_dashboard` entram no cálculo.
         $isPastMonth = $monthEnd->lt($now->copy()->startOfMonth());
         $accountsBalance = $isPastMonth
-            ? $this->history->asOf($context, $monthEnd)
-            : (float) $context->accounts()->sum('balance');
+            ? $this->history->asOf($context, $monthEnd, includeInDashboardOnly: true)
+            : (float) $context->accounts()->where('include_in_dashboard', true)->sum('balance');
 
         return [
             'context_id' => $context->id,

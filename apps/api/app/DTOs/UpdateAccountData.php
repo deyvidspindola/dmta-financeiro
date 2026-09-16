@@ -30,5 +30,7 @@ final readonly class UpdateAccountData
         public string $name,
         public AccountType $type,
         public ?string $institution,
+        public bool $includeInDashboard = true,
+        public ?string $color = null,
     ) {}
 }
