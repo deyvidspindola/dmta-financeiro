@@ -37,23 +37,19 @@ type RawBudgetDetail = {
 
 export async function listBudgets(contextId: string, month?: string): Promise<BudgetRow[]> {
   const query = month ? `?month=${encodeURIComponent(month)}` : '';
-  const payload = await http.get<{ data: RawRow[] }>(
-    `/contexts/${contextId}/budgets${query}`,
-  );
-  return (payload.data ?? []).map(
-    (row) => ({
-      budget_id: String(row.budget_id),
-      category_id: String(row.category_id),
-      category_name: row.category_name,
-      is_override: row.is_override,
-      limit: Number(row.limit),
-      spent: Number(row.spent),
-      spent_effective: Number(row.spent_effective),
-      remaining: Number(row.remaining),
-      percent: Number(row.percent),
-      over: row.over,
-    }),
-  );
+  const payload = await http.get<{ data: RawRow[] }>(`/contexts/${contextId}/budgets${query}`);
+  return (payload.data ?? []).map((row) => ({
+    budget_id: String(row.budget_id),
+    category_id: String(row.category_id),
+    category_name: row.category_name,
+    is_override: row.is_override,
+    limit: Number(row.limit),
+    spent: Number(row.spent),
+    spent_effective: Number(row.spent_effective),
+    remaining: Number(row.remaining),
+    percent: Number(row.percent),
+    over: row.over,
+  }));
 }
 
 export async function getBudgetDetail(

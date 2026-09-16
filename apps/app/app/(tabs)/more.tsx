@@ -21,6 +21,7 @@ const MANAGE: Item[] = [
   { label: t.nav.goals, icon: 'target', href: '/goals' },
   { label: t.nav.debts, icon: 'users', href: '/debts' },
   { label: t.nav.bills, icon: 'file-text', href: '/bills' },
+  { label: t.imports.title, icon: 'upload', href: '/imports' },
   { label: t.nav.notifications, icon: 'bell', href: '/notifications' },
   { label: t.nav.security, icon: 'shield', href: '/security' },
 ];
