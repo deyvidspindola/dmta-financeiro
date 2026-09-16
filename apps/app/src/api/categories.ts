@@ -30,7 +30,7 @@ export async function createCategory(
 export async function updateCategory(
   contextId: string,
   categoryId: string,
-  input: { name: string },
+  input: { name: string; parent_id?: string | null },
 ): Promise<Category> {
   const payload = await http.patch<
     Parameters<typeof mapCategory>[1] | { data: Parameters<typeof mapCategory>[1] }

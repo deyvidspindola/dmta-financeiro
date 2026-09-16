@@ -25,11 +25,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 16/09/2026
  */
 final class CategoryController extends Controller
 {
@@ -63,7 +63,12 @@ final class CategoryController extends Controller
         Category $category,
         UpdateCategory $useCase,
     ): CategoryResource {
-        $updated = $useCase->execute($category, $request->string('name')->toString());
+        $updated = $useCase->execute(
+            $category,
+            $request->string('name')->toString(),
+            $request->has('parent_id'),
+            $request->integer('parent_id') ?: null,
+        );
 
         return new CategoryResource($updated);
     }

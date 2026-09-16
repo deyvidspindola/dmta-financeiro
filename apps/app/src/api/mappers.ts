@@ -225,8 +225,15 @@ export function toCreateCategoryBody(payload: {
   };
 }
 
-export function toUpdateCategoryBody(payload: { name: string }): { name: string } {
-  return { name: payload.name };
+export function toUpdateCategoryBody(payload: {
+  name: string;
+  parent_id?: string | null;
+}): { name: string; parent_id?: number | null } {
+  if (payload.parent_id === undefined) return { name: payload.name };
+  return {
+    name: payload.name,
+    parent_id: payload.parent_id === null ? null : asApiId(payload.parent_id),
+  };
 }
 
 export function mapBill(
