@@ -18,15 +18,20 @@ use Illuminate\Support\Carbon;
  * Separado de {@see DashboardSummaryService} (que soma os indicadores do
  * mês): são duas leituras diferentes do mesmo dashboard.
  *
+ * `forConsolidated` exclui a perna de transferência entre contextos
+ * diferentes (D-20, `transfer_pair_id` não nulo) — é receita/despesa de
+ * verdade em cada contexto isolado (por isso `forContext` não exclui),
+ * mas não é dinheiro novo pro conjunto.
+ *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   02/09/2026
  *
- * @updated 02/09/2026
+ * @updated 16/09/2026
  */
 final class DashboardEvolutionService
 {
@@ -51,7 +56,7 @@ final class DashboardEvolutionService
      */
     public function forConsolidated(User $user, ?int $months = null): array
     {
-        return $this->series($user->contexts()->pluck('id')->all(), $months);
+        return $this->series($user->contexts()->pluck('id')->all(), $months, excludeCrossContextTransfers: true);
     }
 
     /**
@@ -62,7 +67,7 @@ final class DashboardEvolutionService
      * @param  list<int>  $contextIds
      * @return list<array{month: string, income: float, expense: float, balance: float}>
      */
-    private function series(array $contextIds, ?int $months): array
+    private function series(array $contextIds, ?int $months, bool $excludeCrossContextTransfers = false): array
     {
         $months = max(1, min($months ?? self::DEFAULT_MONTHS, self::MAX_MONTHS));
         $start = Carbon::now()->startOfMonth()->subMonths($months - 1);
@@ -71,6 +76,7 @@ final class DashboardEvolutionService
             ->settled()
             ->whereIn('context_id', $contextIds)
             ->whereIn('type', [StatementEntryType::Income->value, StatementEntryType::Expense->value])
+            ->when($excludeCrossContextTransfers, fn ($q) => $q->whereNull('transfer_pair_id'))
             ->where('occurred_at', '>=', $start->toDateString())
             ->selectRaw("DATE_FORMAT(occurred_at, '%Y-%m') as month")
             ->selectRaw("SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) as income")

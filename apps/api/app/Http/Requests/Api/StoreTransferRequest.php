@@ -15,15 +15,19 @@ use Illuminate\Foundation\Http\FormRequest;
  * destino ({@see ScopedExists}). O caso de uso mantém a checagem
  * (`AccountContextMismatchException`) como defesa em profundidade.
  *
+ * `from_category_id`/`to_category_id` (D-20) só fazem sentido quando
+ * `to_context_id` diverge do `{context}` da rota (transferência entre
+ * contextos) — o caso de uso ignora os dois quando é o mesmo contexto.
+ *
  * @package App\Http\Requests\Api
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 3.0.0
  *
  * @since   21/08/2026
  *
- * @updated 31/08/2026
+ * @updated 16/09/2026
  */
 final class StoreTransferRequest extends FormRequest
 {
@@ -45,6 +49,8 @@ final class StoreTransferRequest extends FormRequest
             'from_account_id' => ['required', 'integer', $this->existsInRouteContext('accounts')],
             'to_account_id' => ['required', 'integer', $this->existsInContext('accounts', $toContextId)],
             'to_context_id' => ['nullable', 'integer', $this->existsUserContext()],
+            'from_category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
+            'to_category_id' => ['nullable', 'integer', $this->existsInContext('categories', $toContextId)],
             'amount' => ['required', 'numeric', 'min:0.01'],
             'description' => ['required', 'string', 'max:150'],
             'occurred_at' => ['required', 'date'],

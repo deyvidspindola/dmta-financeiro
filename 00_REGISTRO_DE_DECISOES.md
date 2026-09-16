@@ -139,6 +139,36 @@ intenção já existia, faltava aplicar.
   reverter.
 **Data:** 15/09/2026.
 
+### D-20 — Transferência entre contextos diferentes conta como receita/despesa em cada lado
+**Contexto:** o dono percebeu (16/09/2026) que uma transferência PJ→PF
+(ex.: pró-labore) não aparecia em lugar nenhum como receita/despesa —
+só movia saldo. Isso escondia o evento real: pra PJ é uma saída de caixa
+de verdade, pra PF é uma entrada de verdade. Mas o consolidado (soma de
+todos os contextos) não pode contar isso como dinheiro novo — é o mesmo
+dinheiro trocando de "bolso" entre entidades do próprio dono, não uma
+receita adicional.
+**Decisão:**
+- Transferência **dentro do mesmo contexto** continua exatamente como
+  era: `type = transfer`, sem categoria, nunca soma em receita/despesa
+  em lugar nenhum. Não mudou.
+- Transferência **entre contextos diferentes** (PF ⇄ empresa, ou entre
+  duas empresas): a perna de origem vira um lançamento de **despesa**
+  de verdade no contexto de origem; a de destino vira um lançamento de
+  **receita** de verdade no contexto de destino. Cada perna pode levar
+  categoria do seu próprio contexto (opcional) — conta em relatório de
+  categoria e consumo de orçamento como qualquer lançamento normal.
+  Ligadas por `transfer_pair_id` (mesmo mecanismo de sempre), pra manter
+  a rastreabilidade "isso veio de uma transferência".
+- Na visão **consolidada** (`DashboardSummaryService::consolidated` e
+  `DashboardEvolutionService::forConsolidated`), essas duas pernas são
+  identificadas (`transfer_pair_id` não nulo + tipo receita/despesa, o
+  que só existe pra transferência cross-context) e **excluídas** da
+  soma de receita/despesa total — o consolidado mostra sempre o dinheiro
+  que entrou de fora, nunca o que só mudou de contexto interno.
+- Saldo por conta e saldo total (real e consolidado) **não mudam** —já
+  estavam corretos, o problema era só nas métricas de receita/despesa.
+**Data:** 16/09/2026.
+
 ---
 
 ## ABERTA

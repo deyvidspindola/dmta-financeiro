@@ -10,18 +10,20 @@ use App\UseCases\Transaction\TransferBetweenAccounts;
 /**
  * Qual perna de uma transferência um {@see StatementEntry} representa —
  * `Origin` é o débito (sai da conta de origem), `Destination` é o crédito
- * (entra na de destino). Só lançamento com `type = transfer` tem isto
- * preenchido; ver {@see TransferBetweenAccounts}.
+ * (entra na de destino). Preenchido em toda perna de transferência,
+ * mesmo quando `type` não é `transfer` — transferência entre contextos
+ * diferentes vira `expense`/`income` de verdade (D-20), mas continua
+ * marcada aqui. Ver {@see TransferBetweenAccounts}.
  *
  * @package App\Enums
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   31/08/2026
  *
- * @updated 31/08/2026
+ * @updated 16/09/2026
  */
 enum TransferRole: string
 {

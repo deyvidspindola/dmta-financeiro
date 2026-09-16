@@ -10,6 +10,14 @@ export type CreateTransferInput = {
   amount: number;
   description: string;
   occurred_at: string;
+  /**
+   * Só fazem efeito quando `to_context_id` é de outro contexto (D-20) — aí
+   * a transferência vira despesa de verdade na origem/receita de verdade
+   * no destino, cada uma podendo levar categoria do seu próprio contexto.
+   * Dentro do mesmo contexto a API ignora os dois.
+   */
+  from_category_id?: string | null;
+  to_category_id?: string | null;
 };
 
 export type TransferResult = {

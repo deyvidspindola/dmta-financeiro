@@ -121,6 +121,8 @@ export default function NewTransactionScreen() {
   const [settled, setSettled] = useState(true);
   const [toContextId, setToContextId] = useState(activeScope);
   const [toAccountId, setToAccountId] = useState<string | null>(null);
+  const [transferFromCategoryId, setTransferFromCategoryId] = useState<string | null>(null);
+  const [transferToCategoryId, setTransferToCategoryId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [showMoreDetails, setShowMoreDetails] = useState(false);
@@ -131,6 +133,9 @@ export default function NewTransactionScreen() {
   const [repeatMonths, setRepeatMonths] = useState('2');
 
   const isTransfer = type === 'transfer';
+  // D-20: transferência pra outro contexto (PF ⇄ empresa) é receita/despesa
+  // de verdade em cada lado — só aí faz sentido escolher categoria.
+  const isCrossContextTransfer = isTransfer && toContextId !== activeScope;
   const tone = TYPE_TONE[type];
 
   const accountsQuery = useQuery({
@@ -150,6 +155,17 @@ export default function NewTransactionScreen() {
     queryFn: () =>
       categoriesApi.listCategories(activeScope, { type: type as 'income' | 'expense' }),
     enabled: !isConsolidated && !isTransfer && Boolean(activeScope),
+  });
+
+  const transferFromCategoriesQuery = useQuery({
+    queryKey: ['categories', activeScope, 'expense'],
+    queryFn: () => categoriesApi.listCategories(activeScope, { type: 'expense' }),
+    enabled: !isConsolidated && isCrossContextTransfer,
+  });
+  const transferToCategoriesQuery = useQuery({
+    queryKey: ['categories', toContextId, 'income'],
+    queryFn: () => categoriesApi.listCategories(toContextId, { type: 'income' }),
+    enabled: !isConsolidated && isCrossContextTransfer && Boolean(toContextId),
   });
 
   const accountOptions = useMemo(
@@ -177,6 +193,20 @@ export default function NewTransactionScreen() {
     ],
     [categoriesQuery.data],
   );
+  const transferFromCategoryOptions = useMemo(
+    () => [
+      { value: '', label: t.newTransaction.categoryNone },
+      ...(transferFromCategoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    ],
+    [transferFromCategoriesQuery.data],
+  );
+  const transferToCategoryOptions = useMemo(
+    () => [
+      { value: '', label: t.newTransaction.categoryNone },
+      ...(transferToCategoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
+    ],
+    [transferToCategoriesQuery.data],
+  );
 
   const sameAccount =
     isTransfer && accountId !== null && accountId === toAccountId && toContextId === activeScope;
@@ -191,6 +221,8 @@ export default function NewTransactionScreen() {
           amount,
           description: description.trim(),
           occurred_at: occurredAt,
+          from_category_id: transferFromCategoryId,
+          to_category_id: transferToCategoryId,
         });
         return variables;
       }
@@ -364,6 +396,8 @@ export default function NewTransactionScreen() {
                       setCategoryId(null);
                       setToAccountId(null);
                       setToContextId(activeScope);
+                      setTransferFromCategoryId(null);
+                      setTransferToCategoryId(null);
                     }}
                     className={cn(
                       'flex-1 items-center rounded-lg py-2',
@@ -434,6 +468,8 @@ export default function NewTransactionScreen() {
                     onChange={(v) => {
                       setToContextId(v);
                       setToAccountId(null);
+                      setTransferFromCategoryId(null);
+                      setTransferToCategoryId(null);
                     }}
                   />
                   <SelectField
@@ -448,6 +484,32 @@ export default function NewTransactionScreen() {
                     }}
                   />
                   {sameAccount ? <Text variant="error">{t.transfers.sameAccount}</Text> : null}
+                  {isCrossContextTransfer ? (
+                    <>
+                      <SelectField
+                        label={t.transfers.fromCategory}
+                        placeholder={t.newTransaction.categoryPlaceholder}
+                        value={transferFromCategoryId ?? ''}
+                        options={transferFromCategoryOptions}
+                        onChange={(v) => setTransferFromCategoryId(v || null)}
+                        searchable
+                        renderIcon={(opt) => (
+                          <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+                        )}
+                      />
+                      <SelectField
+                        label={t.transfers.toCategory}
+                        placeholder={t.newTransaction.categoryPlaceholder}
+                        value={transferToCategoryId ?? ''}
+                        options={transferToCategoryOptions}
+                        onChange={(v) => setTransferToCategoryId(v || null)}
+                        searchable
+                        renderIcon={(opt) => (
+                          <CategoryIcon categoryId={opt.value || null} name={opt.label} size="sm" />
+                        )}
+                      />
+                    </>
+                  ) : null}
                 </>
               ) : (
                 <>

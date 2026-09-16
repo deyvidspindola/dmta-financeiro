@@ -33,7 +33,7 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.1.0
+ * @version 2.2.0
  *
  * @since   21/08/2026
  *
@@ -44,6 +44,7 @@ final class DashboardSummaryService
     public function __construct(
         private readonly MonthlyFlowProjector $projector,
         private readonly HistoricalBalanceService $history,
+        private readonly CrossContextTransferCorrectionService $transferCorrection,
     ) {}
 
     /**
@@ -162,6 +163,8 @@ final class DashboardSummaryService
     /**
      * Soma o resumo de todos os contextos do usuário — visão consolidada.
      * Nunca usada para decidir de onde um lançamento sai; só para exibir.
+     * Receita/despesa descontam a transferência entre contextos do
+     * próprio usuário (D-20, {@see CrossContextTransferCorrectionService}).
      *
      * @return array{contexts: list<array<string, mixed>>, totals: array<string, float|int>}
      */
@@ -171,6 +174,7 @@ final class DashboardSummaryService
 
         $sum = fn (string $key): float => (float) $perContext->sum($key);
         $count = fn (string $key): int => (int) $perContext->sum($key);
+        $correction = $this->transferCorrection->forMonth($user, $month ?? Carbon::now());
 
         $totals = [
             'accounts_balance' => $sum('accounts_balance'),
@@ -179,10 +183,10 @@ final class DashboardSummaryService
             'pending_bills_amount' => $sum('pending_bills_amount'),
             'overdue_bills_count' => $count('overdue_bills_count'),
             'overdue_bills_amount' => $sum('overdue_bills_amount'),
-            'month_income' => $sum('month_income'),
-            'month_expense' => $sum('month_expense'),
-            'month_projected_income' => $sum('month_projected_income'),
-            'month_projected_expense' => $sum('month_projected_expense'),
+            'month_income' => round($sum('month_income') - $correction['income'], 2),
+            'month_expense' => round($sum('month_expense') - $correction['expense'], 2),
+            'month_projected_income' => round($sum('month_projected_income') - $correction['income'], 2),
+            'month_projected_expense' => round($sum('month_projected_expense') - $correction['expense'], 2),
             'investments_total' => $sum('investments_total'),
             'credit_card_open_invoices_amount' => $sum('credit_card_open_invoices_amount'),
             'pending_debts_count' => $count('pending_debts_count'),

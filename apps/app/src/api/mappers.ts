@@ -501,6 +501,8 @@ export function toCreateTransferBody(
     amount: number;
     description: string;
     occurred_at: string;
+    from_category_id?: string | null;
+    to_category_id?: string | null;
   },
   originContextId: string,
 ): {
@@ -510,19 +512,29 @@ export function toCreateTransferBody(
   amount: number;
   description: string;
   occurred_at: string;
+  from_category_id?: number | null;
+  to_category_id?: number | null;
 } {
+  const crossContext = payload.to_context_id !== originContextId;
+
   return {
     from_account_id: asApiId(payload.from_account_id),
     to_account_id: asApiId(payload.to_account_id),
     // Omitido quando o destino é o mesmo contexto de origem — API trata
     // isso como "dentro do mesmo contexto de sempre" (comportamento
     // padrão), ver docblock de StoreTransferRequest.
-    ...(payload.to_context_id !== originContextId
-      ? { to_context_id: asApiId(payload.to_context_id) }
-      : {}),
+    ...(crossContext ? { to_context_id: asApiId(payload.to_context_id) } : {}),
     amount: payload.amount,
     description: payload.description,
     occurred_at: payload.occurred_at,
+    // Categoria só faz sentido entre contextos diferentes (D-20) — mesmo
+    // contexto nunca manda, mesmo que o form tenha algo em memória.
+    ...(crossContext
+      ? {
+          from_category_id: payload.from_category_id ? asApiId(payload.from_category_id) : null,
+          to_category_id: payload.to_category_id ? asApiId(payload.to_category_id) : null,
+        }
+      : {}),
   };
 }
 
