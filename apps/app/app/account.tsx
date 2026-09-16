@@ -16,6 +16,7 @@ import {
   Screen,
   Sheet,
   Skeleton,
+  SwitchField,
   Text,
 } from '@/components/ui';
 import { t } from '@/i18n';
@@ -158,7 +159,24 @@ export default function AccountDetailScreen() {
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      fab={
+        !isHistorical && account ? (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/account-edit',
+                params: { id: account.id, contextId: contextId ?? '' },
+              })
+            }
+            className="h-14 w-14 items-center justify-center rounded-full bg-negative shadow-lg active:opacity-80"
+          >
+            <Feather name="edit-2" size={20} color="#ffffff" />
+          </Pressable>
+        ) : undefined
+      }
+    >
       <View className="mb-4 flex-row items-center justify-between">
         {/* Dropdown para trocar de conta */}
         <Pressable
@@ -180,7 +198,7 @@ export default function AccountDetailScreen() {
       ) : !account ? (
         <Text variant="muted">{t.accountDetail.notFound}</Text>
       ) : (
-        <View className="gap-4">
+        <View className="gap-4 pb-20">
           <Card className="gap-1">
             <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
               {t.accountDetail.currentBalance}
@@ -243,31 +261,13 @@ export default function AccountDetailScreen() {
             {!isHistorical && (
               <>
                 <View className="border-t border-line my-1" />
-                <Pressable
-                  onPress={() => toggleIncludeInDashboard.mutate()}
-                  disabled={toggleIncludeInDashboard.isPending}
-                  className="flex-row items-center justify-between active:opacity-70"
-                >
-                  <View className="flex-row items-center gap-2">
-                    <Feather name="home" size={16} color="#7c918b" />
-                    <Text variant="muted" className="text-xs">
-                      {t.accounts.includeInDashboard}
-                    </Text>
-                  </View>
-                  <View
-                    className={cn(
-                      'h-6 w-11 rounded-full p-0.5 transition-colors',
-                      account.include_in_dashboard ? 'bg-primary' : 'bg-fg-muted',
-                    )}
-                  >
-                    <View
-                      className={cn(
-                        'h-5 w-5 rounded-full bg-white transition-transform',
-                        account.include_in_dashboard && 'translate-x-5',
-                      )}
-                    />
-                  </View>
-                </Pressable>
+                <SwitchField
+                  label={t.accounts.includeInDashboard}
+                  value={account.include_in_dashboard}
+                  onChange={() => {
+                    if (!toggleIncludeInDashboard.isPending) toggleIncludeInDashboard.mutate();
+                  }}
+                />
               </>
             )}
           </Card>
@@ -339,21 +339,6 @@ export default function AccountDetailScreen() {
         </View>
       )}
 
-      {/* FAB para editar */}
-      {!isHistorical && account && (
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/account-edit',
-              params: { id: account.id, contextId: contextId ?? '' },
-            })
-          }
-          className="absolute bottom-6 right-6 h-14 w-14 items-center justify-center rounded-full bg-negative shadow-lg active:opacity-80"
-        >
-          <Feather name="edit-2" size={20} color="#ffffff" />
-        </Pressable>
-      )}
-
       <TransactionDetailSheet
         entry={selected}
         contextId={contextId ?? null}
@@ -379,12 +364,13 @@ export default function AccountDetailScreen() {
                   params: { id: acc.id, contextId: contextId ?? '' },
                 });
               }}
-              className={cn(
-                'rounded-lg p-3 active:opacity-70',
-                acc.id === id && 'bg-surface-hover',
-              )}
+              className={cn('rounded-lg p-3 active:opacity-70', acc.id === id && 'bg-surface-2')}
             >
-              <Text className={cn('font-medium', acc.id === id && 'text-primary')}>{acc.name}</Text>
+              <Text
+                className={cn('font-medium', acc.id === id && 'text-brand-600 dark:text-brand-400')}
+              >
+                {acc.name}
+              </Text>
               <Text variant="muted" className="text-xs">
                 {acc.bank_name ?? t.accounts.types[acc.type]}
               </Text>

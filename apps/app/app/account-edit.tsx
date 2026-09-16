@@ -12,6 +12,7 @@ import {
   Screen,
   SelectField,
   Skeleton,
+  SwitchField,
   Text,
   TextField,
 } from '@/components/ui';
@@ -142,7 +143,7 @@ export default function AccountEditScreen() {
         {id && account ? (
           <View className="mb-4">
             <Text variant="muted" className="mb-1 text-xs">
-              Saldo atual da conta
+              {t.accounts.currentBalance}
             </Text>
             <Money amount={account.balance} size="xl" className="font-semibold" />
           </View>
@@ -171,7 +172,7 @@ export default function AccountEditScreen() {
             label={t.accounts.name}
             value={form.name}
             onChangeText={(v) => setForm({ ...form, name: v })}
-            placeholder="Ex: Nubank, Bradesco, Carteira..."
+            placeholder={t.accounts.namePlaceholder}
           />
 
           {/* Banco */}
@@ -179,7 +180,7 @@ export default function AccountEditScreen() {
             label={t.accounts.bankName}
             value={form.bank}
             onChangeText={(v) => setForm({ ...form, bank: v })}
-            placeholder="Ex: Bradesco, Nubank..."
+            placeholder={t.accounts.bankNamePlaceholder}
           />
 
           {/* Tipo da conta */}
@@ -208,36 +209,22 @@ export default function AccountEditScreen() {
             <View className="flex-row items-center justify-between">
               <Text className="font-medium">
                 {form.color
-                  ? (ACCOUNT_COLOR_OPTIONS.find((c) => c.name === form.color)?.name ?? 'Padrão')
-                  : 'Padrão'}
+                  ? (ACCOUNT_COLOR_OPTIONS.find((c) => c.name === form.color)?.name ??
+                    t.accounts.defaultColor)
+                  : t.accounts.defaultColor}
               </Text>
               <Feather name="chevron-right" size={20} color="#7c918b" />
             </View>
           </Pressable>
 
           {/* Toggle incluir na soma da tela inicial */}
-          <Pressable
-            onPress={() => setForm({ ...form, includeInDashboard: !form.includeInDashboard })}
-            className="flex-row items-center justify-between rounded-2xl border border-line bg-surface p-4 active:opacity-70"
-          >
-            <View className="flex-row items-center gap-2">
-              <Feather name="help-circle" size={16} color="#7c918b" />
-              <Text>{t.accounts.includeInDashboard}</Text>
-            </View>
-            <View
-              className={cn(
-                'h-7 w-12 rounded-full p-0.5 transition-colors',
-                form.includeInDashboard ? 'bg-primary' : 'bg-fg-muted',
-              )}
-            >
-              <View
-                className={cn(
-                  'h-6 w-6 rounded-full bg-white transition-transform',
-                  form.includeInDashboard && 'translate-x-5',
-                )}
-              />
-            </View>
-          </Pressable>
+          <View className="rounded-2xl border border-line bg-surface p-4">
+            <SwitchField
+              label={t.accounts.includeInDashboard}
+              value={form.includeInDashboard}
+              onChange={(v) => setForm({ ...form, includeInDashboard: v })}
+            />
+          </View>
 
           {/* Saldo inicial (só em criação) */}
           {!id && (
@@ -299,7 +286,7 @@ export default function AccountEditScreen() {
                   <View
                     className={cn(
                       'h-12 w-12 items-center justify-center rounded-full',
-                      form.color === colorOption.name && 'border-4 border-primary',
+                      form.color === colorOption.name && 'border-4 border-brand-600',
                     )}
                     style={{ backgroundColor: colorOption.hex }}
                   >

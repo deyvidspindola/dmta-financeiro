@@ -33,15 +33,16 @@ export default function AccountsScreen() {
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
-  // Saldo atual: soma dos saldos reais de todas as contas
   const currentTotal = useMemo(
     () => (accountsQuery.data ?? []).reduce((sum, a) => sum + a.balance, 0),
     [accountsQuery.data],
   );
-
-  // Saldo previsto: por enquanto igual ao atual (pendentes viriam de outra query)
-  // TODO: implementar lógica de saldo previsto quando necessário
-  const projectedTotal = currentTotal;
+  // Soma dos `projected_balance` de cada conta — a API já resolve pending
+  // vs. mês fechado (ver AccountResource::projectedBalance no backend).
+  const projectedTotal = useMemo(
+    () => (accountsQuery.data ?? []).reduce((sum, a) => sum + a.projected_balance, 0),
+    [accountsQuery.data],
+  );
 
   const invalidate = () => {
     void queryClient.invalidateQueries({ queryKey: ['accounts'] });
@@ -61,7 +62,24 @@ export default function AccountsScreen() {
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      fab={
+        !isConsolidated && !isHistorical ? (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/account-edit',
+                params: { contextId: activeScope },
+              })
+            }
+            className="h-14 w-14 items-center justify-center rounded-full bg-brand-600 shadow-lg active:bg-brand-700"
+          >
+            <Feather name="plus" size={24} color="#ffffff" />
+          </Pressable>
+        ) : undefined
+      }
+    >
       <View className="mb-4 flex-row items-center justify-between">
         <Text variant="title">{t.accounts.title}</Text>
         <Pressable onPress={() => router.back()} hitSlop={8}>
@@ -86,7 +104,7 @@ export default function AccountsScreen() {
       ) : accountsQuery.isError ? (
         <Text variant="error">{t.common.error}</Text>
       ) : (
-        <View className="gap-4">
+        <View className="gap-4 pb-20">
           {/* Cabeçalho com saldo atual e previsto lado a lado */}
           <View className="flex-row gap-3">
             <View className="flex-1 rounded-2xl border border-line bg-surface p-4">
@@ -115,7 +133,6 @@ export default function AccountsScreen() {
             <View className="rounded-2xl border border-line bg-surface">
               {(accountsQuery.data ?? []).map((account) => {
                 const color = accountColor(account.color);
-                const projectedBalance = account.balance; // TODO: adicionar lógica de previsto
 
                 return (
                   <ListRow
@@ -161,16 +178,13 @@ export default function AccountsScreen() {
                           </Text>
                         </View>
                       </View>
-                      <View className="items-end gap-1">
-                        <Money amount={account.balance} size="sm" />
-                        <View className="gap-0.5">
-                          <Text variant="muted" className="text-xs">
-                            {formatMoney(account.balance)}
-                          </Text>
-                          <Text variant="muted" className="text-xs">
-                            {formatMoney(projectedBalance)}
-                          </Text>
-                        </View>
+                      <View className="items-end gap-0.5">
+                        <Text variant="muted" className="text-xs">
+                          {formatMoney(account.balance)}
+                        </Text>
+                        <Text variant="muted" className="text-xs">
+                          {formatMoney(account.projected_balance)}
+                        </Text>
                       </View>
                       {isHistorical ? null : (
                         <Pressable
@@ -197,7 +211,7 @@ export default function AccountsScreen() {
                               params: { id: account.id, contextId: activeScope },
                             });
                           }}
-                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-hover"
+                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-2"
                         >
                           <Feather name="edit-2" size={16} color="#7c918b" />
                           <Text>{t.common.edit}</Text>
@@ -207,7 +221,7 @@ export default function AccountsScreen() {
                             setMenuAccount(null);
                             setToDelete(account);
                           }}
-                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-hover"
+                          className="flex-row items-center gap-3 rounded-lg p-2 active:bg-surface-2"
                         >
                           <Feather name="trash-2" size={16} color="#ef4444" />
                           <Text className="text-negative">{t.common.delete}</Text>
@@ -220,21 +234,6 @@ export default function AccountsScreen() {
             </View>
           )}
         </View>
-      )}
-
-      {/* FAB para criar nova conta */}
-      {!isConsolidated && !isHistorical && (
-        <Pressable
-          onPress={() =>
-            router.push({
-              pathname: '/account-edit',
-              params: { contextId: activeScope },
-            })
-          }
-          className="absolute bottom-6 right-6 h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg active:opacity-80"
-        >
-          <Feather name="plus" size={24} color="#ffffff" />
-        </Pressable>
       )}
 
       <ConfirmSheet

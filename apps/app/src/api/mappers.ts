@@ -142,6 +142,7 @@ export function mapAccount(
     bank_name?: string | null;
     type: AccountType;
     balance: number;
+    projected_balance?: number;
     initial_balance?: number;
     include_in_dashboard?: boolean;
     color?: string | null;
@@ -156,6 +157,7 @@ export function mapAccount(
     bank_name: raw.institution ?? raw.bank_name ?? null,
     type: raw.type,
     balance: Number(raw.balance),
+    projected_balance: Number(raw.projected_balance ?? raw.balance),
     initial_balance: Number(raw.initial_balance ?? 0),
     include_in_dashboard: raw.include_in_dashboard ?? true,
     color: raw.color ?? null,

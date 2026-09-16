@@ -7,6 +7,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\DTOs\RegisterAccountData;
 use App\DTOs\UpdateAccountData;
 use App\Enums\AccountType;
+use App\Enums\StatementEntryType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreAccountRequest;
 use App\Http\Requests\Api\UpdateAccountRequest;
@@ -16,6 +17,7 @@ use App\Models\Context;
 use App\Services\HistoricalBalanceService;
 use App\UseCases\Account\RegisterAccount;
 use App\UseCases\Account\UpdateAccount;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,24 +30,23 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.2.0
+ * @version 1.3.0
  *
  * @since   21/08/2026
  *
- * @updated 15/09/2026
+ * @updated 16/09/2026
  */
 final class AccountController extends Controller
 {
     /**
-     * `?month=YYYY-MM` opcional — quando aponta pra um mês já fechado, cada
-     * conta volta com o saldo **como estava** no fim daquele mês (replay via
-     * {@see HistoricalBalanceService::perAccountAsOf}), pro passador de mês
-     * da tela de Contas. Mês corrente/futuro (ou sem o param) devolve o
-     * `balance` de agora, igual antes.
+     * `?month=YYYY-MM` opcional — mês fechado devolve o saldo **como
+     * estava** no fim dele ({@see HistoricalBalanceService::perAccountAsOf}).
+     * Mês corrente/futuro (ou sem o param) usa o `balance` de agora e soma
+     * o pending de hoje em `projected_balance` ({@see AccountResource}).
      */
     public function index(Context $context, Request $request, HistoricalBalanceService $history): AnonymousResourceCollection
     {
-        $accounts = $context->accounts()->get();
+        $accounts = $this->accountsWithPendingSums($context)->get();
         $month = $request->query('month');
 
         if (is_string($month) && $month !== '') {
@@ -53,13 +54,35 @@ final class AccountController extends Controller
 
             if ($monthEnd->lt(Carbon::now()->startOfMonth())) {
                 $balances = $history->perAccountAsOf($context, $monthEnd);
+                // Mês fechado é história — sem "previsto" (mesma regra do
+                // DashboardSummaryService), então zera o pending carregado.
                 $accounts->each(function (Account $account) use ($balances): void {
                     $account->setAttribute('balance', $balances[$account->id] ?? 0.0);
+                    $account->setAttribute('pending_income_sum', 0);
+                    $account->setAttribute('pending_expense_sum', 0);
                 });
             }
         }
 
         return AccountResource::collection($accounts);
+    }
+
+    /**
+     * Contas do contexto com os somatórios de pending que {@see AccountResource} usa pro `projected_balance`.
+     *
+     * @return HasMany<Account, Context>
+     */
+    private function accountsWithPendingSums(Context $context): HasMany
+    {
+        return $context->accounts()
+            ->withSum(
+                ['statementEntries as pending_income_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Income->value)],
+                'amount',
+            )
+            ->withSum(
+                ['statementEntries as pending_expense_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Expense->value)],
+                'amount',
+            );
     }
 
     /** Uma conta do contexto. `scopeBindings` garante 404 para conta de outro contexto. */
