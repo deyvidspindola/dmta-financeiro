@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DTOs\CreateCategoryData;
+use App\DTOs\UpdateCategoryData;
 use App\Enums\CategoryType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCategoryRequest;
@@ -47,12 +49,14 @@ final class CategoryController extends Controller
 
     public function store(StoreCategoryRequest $request, Context $context, CreateCategory $useCase): CategoryResource
     {
-        $category = $useCase->execute(
-            $context->id,
-            $request->string('name')->toString(),
-            CategoryType::from($request->string('type')->toString()),
-            $request->integer('parent_id') ?: null,
-        );
+        $category = $useCase->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: $request->string('name')->toString(),
+            type: CategoryType::from($request->string('type')->toString()),
+            parentId: $request->integer('parent_id') ?: null,
+            color: $request->string('color')->toString() ?: null,
+            icon: $request->string('icon')->toString() ?: null,
+        ));
 
         return new CategoryResource($category);
     }
@@ -63,12 +67,13 @@ final class CategoryController extends Controller
         Category $category,
         UpdateCategory $useCase,
     ): CategoryResource {
-        $updated = $useCase->execute(
-            $category,
-            $request->string('name')->toString(),
-            $request->has('parent_id'),
-            $request->integer('parent_id') ?: null,
-        );
+        $updated = $useCase->execute($category, new UpdateCategoryData(
+            name: $request->string('name')->toString(),
+            color: $request->string('color')->toString() ?: null,
+            icon: $request->string('icon')->toString() ?: null,
+            parentProvided: $request->has('parent_id'),
+            parentId: $request->integer('parent_id') ?: null,
+        ));
 
         return new CategoryResource($updated);
     }

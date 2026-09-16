@@ -34,6 +34,8 @@ final class UpdateCategoryRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:100'],
             'parent_id' => ['sometimes', 'nullable', 'integer'],
+            'color' => ['nullable', 'string', 'max:20'],
+            'icon' => ['nullable', 'string', 'max:40'],
         ];
     }
 }
