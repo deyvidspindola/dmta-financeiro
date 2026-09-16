@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace App\UseCases\Category;
 
-use App\Enums\CategoryType;
+use App\DTOs\CreateCategoryData;
 use App\Exceptions\Domain\CategoryParentMismatchException;
 use App\Exceptions\Domain\CategoryTypeMismatchException;
 use App\Models\Category;
@@ -17,11 +17,11 @@ use App\Models\Category;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 16/09/2026
  */
 final class CreateCategory
 {
@@ -29,27 +29,29 @@ final class CreateCategory
      * @throws CategoryParentMismatchException Se `parentId` for de outro contexto.
      * @throws CategoryTypeMismatchException Se `type` divergir do tipo da categoria-mãe.
      */
-    public function execute(int $contextId, string $name, CategoryType $type, ?int $parentId = null): Category
+    public function execute(CreateCategoryData $data): Category
     {
-        if ($parentId !== null) {
+        if ($data->parentId !== null) {
             /** @var Category|null $parent */
-            $parent = Category::query()->whereKey($parentId)->where('context_id', $contextId)->first();
+            $parent = Category::query()->whereKey($data->parentId)->where('context_id', $data->contextId)->first();
 
             if ($parent === null) {
                 throw new CategoryParentMismatchException;
             }
 
             // @phpstan-ignore-next-line notIdentical.alwaysTrue (cast CategoryType da migration — larastan não infere casts() aqui)
-            if ($parent->type !== $type) {
+            if ($parent->type !== $data->type) {
                 throw new CategoryTypeMismatchException;
             }
         }
 
         return Category::create([
-            'context_id' => $contextId,
-            'parent_id' => $parentId,
-            'name' => $name,
-            'type' => $type->value,
+            'context_id' => $data->contextId,
+            'parent_id' => $data->parentId,
+            'name' => $data->name,
+            'type' => $data->type->value,
+            'color' => $data->color,
+            'icon' => $data->icon,
         ]);
     }
 }

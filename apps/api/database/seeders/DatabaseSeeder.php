@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Database\Seeders;
 
+use App\DTOs\CreateCategoryData;
 use App\DTOs\CreateContextData;
 use App\DTOs\RegisterAccountData;
 use App\DTOs\RegisterTransactionData;
@@ -85,9 +86,21 @@ class DatabaseSeeder extends Seeder
             initialBalance: 1000.0,
         ));
 
-        $category = app(CreateCategory::class)->execute($context->id, 'Alimentação', CategoryType::Expense);
-        app(CreateCategory::class)->execute($context->id, 'Moradia', CategoryType::Expense);
-        app(CreateCategory::class)->execute($context->id, 'Salário', CategoryType::Income);
+        $category = app(CreateCategory::class)->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: 'Alimentação',
+            type: CategoryType::Expense,
+        ));
+        app(CreateCategory::class)->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: 'Moradia',
+            type: CategoryType::Expense,
+        ));
+        app(CreateCategory::class)->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: 'Salário',
+            type: CategoryType::Income,
+        ));
 
         app(RegisterTransaction::class)->execute(new RegisterTransactionData(
             contextId: $context->id,
@@ -123,7 +136,15 @@ class DatabaseSeeder extends Seeder
             initialBalance: 5000.0,
         ));
 
-        app(CreateCategory::class)->execute($context->id, 'Despesas operacionais', CategoryType::Expense);
-        app(CreateCategory::class)->execute($context->id, 'Receita de serviços', CategoryType::Income);
+        app(CreateCategory::class)->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: 'Despesas operacionais',
+            type: CategoryType::Expense,
+        ));
+        app(CreateCategory::class)->execute(new CreateCategoryData(
+            contextId: $context->id,
+            name: 'Receita de serviços',
+            type: CategoryType::Income,
+        ));
     }
 }

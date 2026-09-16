@@ -80,6 +80,9 @@ export interface Category {
   name: string;
   parent_id: string | null;
   type: MoneyDirection;
+  /** `null` = sem escolha explícita — o app deriva por heurística do nome. */
+  color: string | null;
+  icon: string | null;
 }
 
 export interface Bill {

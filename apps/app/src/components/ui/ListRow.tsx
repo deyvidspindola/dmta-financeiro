@@ -22,7 +22,7 @@ export function ListRow({
   ) : (
     children
   );
-  const inner = <View className={cn('border-b border-line px-1 py-3', className)}>{row}</View>;
+  const inner = <View className={cn('border-b border-line px-4 py-3', className)}>{row}</View>;
 
   if (onPress) {
     return (

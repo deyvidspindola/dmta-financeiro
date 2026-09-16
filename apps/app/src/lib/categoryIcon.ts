@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react';
 import type { Feather } from '@expo/vector-icons';
 
-type FeatherName = ComponentProps<typeof Feather>['name'];
+export type FeatherName = ComponentProps<typeof Feather>['name'];
 
 function normalize(text: string): string {
   return text
@@ -45,3 +45,32 @@ export function categoryIconName(name: string): FeatherName {
   }
   return 'tag';
 }
+
+/**
+ * Conjunto fixo pro seletor manual de ícone (cadastro/edição de
+ * categoria) — mistura os ícones que a heurística acima já usa com
+ * alguns genéricos a mais, pra cobrir categoria fora do dicionário de
+ * palavras-chave.
+ */
+export const CATEGORY_ICON_CHOICES: readonly FeatherName[] = [
+  'shopping-cart',
+  'coffee',
+  'home',
+  'truck',
+  'umbrella',
+  'refresh-cw',
+  'heart',
+  'book-open',
+  'dollar-sign',
+  'trending-up',
+  'shopping-bag',
+  'gift',
+  'smartphone',
+  'zap',
+  'scissors',
+  'file',
+  'shield',
+  'send',
+  'briefcase',
+  'tag',
+];
