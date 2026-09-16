@@ -36,6 +36,7 @@ final class AccountResource extends JsonResource
             'institution' => $this->institution,
             'initial_balance' => (float) $this->initial_balance,
             'balance' => (float) $this->balance,
+            'include_in_dashboard' => (bool) $this->include_in_dashboard,
             // Só presente quando o controller carrega a relação (visão
             // consolidada) — não repete o próprio contexto em toda linha
             // das listagens aninhadas normais, que já sabem qual é.

@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['context_id', 'name', 'type', 'institution', 'initial_balance', 'balance'])]
+#[Fillable(['context_id', 'name', 'type', 'institution', 'initial_balance', 'balance', 'include_in_dashboard'])]
 /**
  * Conta bancária de cadastro manual. `balance` é mantido pelos casos de
  * uso que criam {@see StatementEntry} — nunca recalculado por query
@@ -58,6 +58,7 @@ class Account extends Model
             'type' => AccountType::class,
             'initial_balance' => 'decimal:2',
             'balance' => 'decimal:2',
+            'include_in_dashboard' => 'boolean',
         ];
     }
 }

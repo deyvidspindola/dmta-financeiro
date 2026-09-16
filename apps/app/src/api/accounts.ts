@@ -15,6 +15,29 @@ export async function listAccounts(contextId: string, month?: string): Promise<A
   return unwrapData(payload).map((row) => mapAccount(contextId, row));
 }
 
+export type AccountTotals = { current_balance: number; projected_balance: number };
+
+/**
+ * Mesma listagem de `listAccounts`, mas também devolve os totais do
+ * contexto (`meta.totals` da API) — usado só pela tela de Contas, que
+ * mostra "Saldo atual"/"Saldo previsto" agregados no topo.
+ */
+export async function listAccountsSummary(
+  contextId: string,
+  month?: string,
+): Promise<{ accounts: Account[]; totals?: AccountTotals }> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
+  const payload = await http.get<{
+    data: Parameters<typeof mapAccount>[1][];
+    meta?: { totals?: AccountTotals };
+  }>(`/contexts/${contextId}/accounts${query}`);
+
+  return {
+    accounts: payload.data.map((row) => mapAccount(contextId, row)),
+    totals: payload.meta?.totals,
+  };
+}
+
 export type AccountInput = {
   name: string;
   bank_name: string | null;
@@ -32,11 +55,14 @@ export async function createAccount(contextId: string, input: AccountInput): Pro
 export async function updateAccount(
   contextId: string,
   accountId: string,
-  input: Omit<AccountInput, 'balance'>,
+  input: Omit<AccountInput, 'balance'> & { include_in_dashboard?: boolean },
 ): Promise<Account> {
   const payload = await http.patch<
     Parameters<typeof mapAccount>[1] | { data: Parameters<typeof mapAccount>[1] }
-  >(`/contexts/${contextId}/accounts/${accountId}`, toUpdateAccountBody(input));
+  >(
+    `/contexts/${contextId}/accounts/${accountId}`,
+    toUpdateAccountBody({ ...input, include_in_dashboard: input.include_in_dashboard }),
+  );
   return mapAccount(contextId, unwrapData(payload));
 }
 

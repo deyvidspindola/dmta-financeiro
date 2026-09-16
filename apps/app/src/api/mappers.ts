@@ -143,6 +143,7 @@ export function mapAccount(
     type: AccountType;
     balance: number;
     initial_balance?: number;
+    include_in_dashboard?: boolean;
     context?: Parameters<typeof mapContextRef>[0] | null;
   },
 ): Account {
@@ -156,6 +157,7 @@ export function mapAccount(
     balance: Number(raw.balance),
     initial_balance: Number(raw.initial_balance ?? 0),
     currency: 'BRL',
+    include_in_dashboard: raw.include_in_dashboard ?? true,
     context,
   };
 }
@@ -165,17 +167,22 @@ export function toCreateAccountBody(payload: {
   bank_name: string | null;
   type: AccountType;
   balance: number;
+  include_in_dashboard?: boolean;
 }): {
   name: string;
   institution: string | null;
   type: AccountType;
   initial_balance: number;
+  include_in_dashboard?: boolean;
 } {
   return {
     name: payload.name,
     institution: payload.bank_name,
     type: payload.type,
     initial_balance: payload.balance,
+    ...(payload.include_in_dashboard !== undefined
+      ? { include_in_dashboard: payload.include_in_dashboard }
+      : {}),
   };
 }
 
@@ -183,15 +190,20 @@ export function toUpdateAccountBody(payload: {
   name: string;
   bank_name: string | null;
   type: AccountType;
+  include_in_dashboard?: boolean;
 }): {
   name: string;
   institution: string | null;
   type: AccountType;
+  include_in_dashboard?: boolean;
 } {
   return {
     name: payload.name,
     institution: payload.bank_name,
     type: payload.type,
+    ...(payload.include_in_dashboard !== undefined
+      ? { include_in_dashboard: payload.include_in_dashboard }
+      : {}),
   };
 }
 

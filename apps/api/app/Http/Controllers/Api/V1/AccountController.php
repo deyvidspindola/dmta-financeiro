@@ -42,6 +42,9 @@ final class AccountController extends Controller
      * {@see HistoricalBalanceService::perAccountAsOf}), pro passador de mês
      * da tela de Contas. Mês corrente/futuro (ou sem o param) devolve o
      * `balance` de agora, igual antes.
+     *
+     * Retorna também `meta.totals` com `current_balance` (soma dos saldos) e
+     * `projected_balance` (saldo + lançamentos pending do contexto).
      */
     public function index(Context $context, Request $request, HistoricalBalanceService $history): AnonymousResourceCollection
     {
@@ -59,7 +62,17 @@ final class AccountController extends Controller
             }
         }
 
-        return AccountResource::collection($accounts);
+        $currentBalance = (float) $accounts->sum('balance');
+        $projectedBalance = $history->projected($context, $currentBalance);
+
+        return AccountResource::collection($accounts)->additional([
+            'meta' => [
+                'totals' => [
+                    'current_balance' => (float) $currentBalance,
+                    'projected_balance' => (float) $projectedBalance,
+                ],
+            ],
+        ]);
     }
 
     /** Uma conta do contexto. `scopeBindings` garante 404 para conta de outro contexto. */
@@ -76,6 +89,7 @@ final class AccountController extends Controller
             institution: $request->input('institution'),
             initialBalance: (float) $request->input('initial_balance', 0),
             type: AccountType::from($request->string('type', AccountType::Checking->value)->toString()),
+            includeInDashboard: (bool) $request->input('include_in_dashboard', true),
         ));
 
         return new AccountResource($account);
@@ -88,6 +102,7 @@ final class AccountController extends Controller
             // @phpstan-ignore-next-line property.nonObject (cast AccountType da migration, confirmado em runtime)
             type: AccountType::from($request->string('type', $account->type->value)->toString()),
             institution: $request->input('institution'),
+            includeInDashboard: $request->has('include_in_dashboard') ? (bool) $request->input('include_in_dashboard') : null,
         ));
 
         return new AccountResource($updated);
