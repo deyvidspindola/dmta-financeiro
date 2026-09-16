@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace App\Models;
 
 use App\Enums\AccountType;
+use App\Enums\StatementEntryType;
+use App\Http\Resources\AccountResource;
 use Database\Factories\AccountFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -45,6 +48,27 @@ class Account extends Model
     public function statementEntries(): HasMany
     {
         return $this->hasMany(StatementEntry::class);
+    }
+
+    /**
+     * Carrega `pending_income_sum`/`pending_expense_sum` que
+     * {@see AccountResource} soma no `balance` pra
+     * formar o `projected_balance`.
+     *
+     * @param  Builder<Account>  $query
+     * @return Builder<Account>
+     */
+    public function scopeWithPendingSums(Builder $query): Builder
+    {
+        return $query
+            ->withSum(
+                ['statementEntries as pending_income_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Income->value)],
+                'amount',
+            )
+            ->withSum(
+                ['statementEntries as pending_expense_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Expense->value)],
+                'amount',
+            );
     }
 
     /**

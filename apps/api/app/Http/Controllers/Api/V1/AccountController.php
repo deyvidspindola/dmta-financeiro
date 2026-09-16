@@ -7,7 +7,6 @@ namespace App\Http\Controllers\Api\V1;
 use App\DTOs\RegisterAccountData;
 use App\DTOs\UpdateAccountData;
 use App\Enums\AccountType;
-use App\Enums\StatementEntryType;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreAccountRequest;
 use App\Http\Requests\Api\UpdateAccountRequest;
@@ -17,7 +16,6 @@ use App\Models\Context;
 use App\Services\HistoricalBalanceService;
 use App\UseCases\Account\RegisterAccount;
 use App\UseCases\Account\UpdateAccount;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -46,7 +44,7 @@ final class AccountController extends Controller
      */
     public function index(Context $context, Request $request, HistoricalBalanceService $history): AnonymousResourceCollection
     {
-        $accounts = $this->accountsWithPendingSums($context)->get();
+        $accounts = $context->accounts()->withPendingSums()->get();
         $month = $request->query('month');
 
         if (is_string($month) && $month !== '') {
@@ -65,24 +63,6 @@ final class AccountController extends Controller
         }
 
         return AccountResource::collection($accounts);
-    }
-
-    /**
-     * Contas do contexto com os somatórios de pending que {@see AccountResource} usa pro `projected_balance`.
-     *
-     * @return HasMany<Account, Context>
-     */
-    private function accountsWithPendingSums(Context $context): HasMany
-    {
-        return $context->accounts()
-            ->withSum(
-                ['statementEntries as pending_income_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Income->value)],
-                'amount',
-            )
-            ->withSum(
-                ['statementEntries as pending_expense_sum' => fn ($q) => $q->pending()->where('type', StatementEntryType::Expense->value)],
-                'amount',
-            );
     }
 
     /** Uma conta do contexto. `scopeBindings` garante 404 para conta de outro contexto. */
