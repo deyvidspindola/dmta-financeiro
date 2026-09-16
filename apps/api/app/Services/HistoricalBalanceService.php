@@ -83,6 +83,29 @@ final class HistoricalBalanceService
     }
 
     /**
+     * Saldo previsto de um contexto: saldo atual + o que os lançamentos
+     * `pending` ainda vão mudar (receita prevista soma, despesa prevista
+     * subtrai) — mesmo padrão do `pendingBalanceDelta` de
+     * {@see DashboardSummaryService}, só que aplicado ao saldo já calculado
+     * pelo chamador (a listagem de Contas passa o total das contas, já
+     * filtrado por `include_in_dashboard` quando for o caso).
+     */
+    public function projected(Context $context, float $currentBalance): float
+    {
+        $income = (float) $context->statementEntries()
+            ->pending()
+            ->where('type', StatementEntryType::Income->value)
+            ->sum('amount');
+
+        $expense = (float) $context->statementEntries()
+            ->pending()
+            ->where('type', StatementEntryType::Expense->value)
+            ->sum('amount');
+
+        return round($currentBalance + $income - $expense, 2);
+    }
+
+    /**
      * Query base do delta (CASE de sinal por tipo) usada por `asOf`/`perAccountAsOf`.
      *
      * @return HasMany<StatementEntry, Context>

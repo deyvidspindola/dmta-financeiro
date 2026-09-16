@@ -3,6 +3,7 @@ import { Pressable, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useColorScheme } from 'nativewind';
 import { accountsApi, ApiError, categoriesApi, transactionsApi } from '@/api';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
 import {
@@ -56,12 +57,23 @@ function groupByDay(rows: StatementLine[]): { date: string; rows: StatementLine[
     .map(([date, rows]) => ({ date, rows }));
 }
 
+// Feather não lê classe Tailwind (NativeWind não tem cssInterop registrado
+// pra `react-native-svg`) — cor sempre por hex via `color`, igual ao resto
+// do design system (ver apps/app/CLAUDE.md). Valores calcados em
+// src/styles/global.css.
+const ICON_COLORS = {
+  light: { fg: '#0d1b16', muted: '#48605a', positive: '#059669', negative: '#dc2626' },
+  dark: { fg: '#e7efec', muted: '#9db0aa', positive: '#34d399', negative: '#f87171' },
+} as const;
+
 export default function AccountDetailScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const sessionRoute = useSessionRoute();
   const { id, contextId } = useLocalSearchParams<{ id: string; contextId: string }>();
   const month = useMonthStore((s) => s.month);
+  const { colorScheme } = useColorScheme();
+  const palette = colorScheme === 'dark' ? ICON_COLORS.dark : ICON_COLORS.light;
   const [selected, setSelected] = useState<StatementEntry | null>(null);
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustBalance, setAdjustBalance] = useState(0);
@@ -74,8 +86,7 @@ export default function AccountDetailScreen() {
     queryFn: () => accountsApi.listAccounts(contextId, month),
     enabled: Boolean(contextId),
   });
-  const accounts = accountsQuery.data?.accounts ?? [];
-  const account = accounts.find((a) => a.id === id) ?? null;
+  const account = accountsQuery.data?.find((a) => a.id === id) ?? null;
 
   const adjust = useMutation({
     mutationFn: async (target: number) => {
@@ -164,7 +175,7 @@ export default function AccountDetailScreen() {
       <View className="mb-4 flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
           <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Feather name="arrow-left" size={24} className="text-fg" />
+            <Feather name="arrow-left" size={24} color={palette.fg} />
           </Pressable>
           <Text variant="title" numberOfLines={1}>
             {t.accountDetail.title}
@@ -174,11 +185,11 @@ export default function AccountDetailScreen() {
           {/* Ícones sem função real — visual + no-op */}
           <Pressable hitSlop={8} onPress={() => {}}>
             {/* Lista: sem função específica de lista aqui */}
-            <Feather name="list" size={20} className="text-fg-muted" />
+            <Feather name="list" size={20} color={palette.muted} />
           </Pressable>
           <Pressable hitSlop={8} onPress={() => {}}>
             {/* Balança/comparação: sem comparação entre contas ainda */}
-            <Feather name="bar-chart-2" size={20} className="text-fg-muted" />
+            <Feather name="bar-chart-2" size={20} color={palette.muted} />
           </Pressable>
         </View>
       </View>
@@ -190,15 +201,12 @@ export default function AccountDetailScreen() {
       ) : (
         <View className="gap-4">
           {/* Seletor de conta (só visual por enquanto) */}
-          <Pressable
-            onPress={() => {}}
-            className="items-center py-2 active:opacity-70"
-          >
+          <Pressable onPress={() => {}} className="items-center py-2 active:opacity-70">
             <View className="flex-row items-center gap-2">
               <Text className="text-base font-semibold" numberOfLines={1}>
                 {account.name}
               </Text>
-              <Feather name="chevron-down" size={16} className="text-fg-muted" />
+              <Feather name="chevron-down" size={16} color={palette.muted} />
               {/* Dropdown de contas: sem implementação real — precisaria de Sheet com lista de contas */}
             </View>
           </Pressable>
@@ -244,7 +252,7 @@ export default function AccountDetailScreen() {
             <View className="flex-row gap-3">
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center gap-2">
-                  <Feather name="credit-card" size={14} className="text-fg-muted" />
+                  <Feather name="credit-card" size={14} color={palette.muted} />
                   <Text variant="muted" className="text-xs">
                     {t.accountDetail.accountType}
                   </Text>
@@ -253,7 +261,7 @@ export default function AccountDetailScreen() {
               </View>
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center gap-2">
-                  <Feather name="dollar-sign" size={14} className="text-fg-muted" />
+                  <Feather name="dollar-sign" size={14} color={palette.muted} />
                   <Text variant="muted" className="text-xs">
                     {t.accountDetail.initialBalance}
                   </Text>
@@ -266,7 +274,7 @@ export default function AccountDetailScreen() {
             <View className="flex-row gap-3">
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center gap-2">
-                  <Feather name="trending-down" size={14} className="text-negative" />
+                  <Feather name="trending-down" size={14} color={palette.negative} />
                   <Text variant="muted" className="text-xs">
                     {t.accountDetail.expenseCount}
                   </Text>
@@ -275,7 +283,7 @@ export default function AccountDetailScreen() {
               </View>
               <View className="flex-1 gap-0.5">
                 <View className="flex-row items-center gap-2">
-                  <Feather name="trending-up" size={14} className="text-positive" />
+                  <Feather name="trending-up" size={14} color={palette.positive} />
                   <Text variant="muted" className="text-xs">
                     {t.accountDetail.incomeCount}
                   </Text>
@@ -287,7 +295,7 @@ export default function AccountDetailScreen() {
             {/* Uma linha: Transferências */}
             <View className="gap-0.5">
               <View className="flex-row items-center gap-2">
-                <Feather name="repeat" size={14} className="text-fg-muted" />
+                <Feather name="repeat" size={14} color={palette.muted} />
                 <Text variant="muted" className="text-xs">
                   {t.accountDetail.transferCount}
                 </Text>

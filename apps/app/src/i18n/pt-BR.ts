@@ -309,7 +309,8 @@ export const strings = {
     currentBalance: 'Saldo atual',
     projectedBalance: 'Saldo previsto',
     includeInDashboard: 'Incluir na tela inicial',
-    includeInDashboardHint: 'Quando desligado, esta conta não entra no cálculo do saldo do dashboard.',
+    includeInDashboardHint:
+      'Quando desligado, esta conta não entra no cálculo do saldo do dashboard.',
   },
 
   creditCards: {

@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useColorScheme } from 'nativewind';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { accountsApi } from '@/api';
 import { ApiError } from '@/api/http';
@@ -40,11 +41,22 @@ type FormState = {
 };
 const EMPTY: FormState = { id: null, name: '', bank: '', type: 'checking', balance: 0 };
 
+// Feather não lê classe Tailwind (NativeWind não tem cssInterop registrado
+// pra `react-native-svg`) — cor sempre por hex via `color`, igual ao resto
+// do design system (ver apps/app/CLAUDE.md). Valores calcados em
+// src/styles/global.css.
+const ICON_COLORS = {
+  light: { fg: '#0d1b16', muted: '#48605a' },
+  dark: { fg: '#e7efec', muted: '#9db0aa' },
+} as const;
+
 export default function AccountsScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const sessionRoute = useSessionRoute();
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const palette = colorScheme === 'dark' ? ICON_COLORS.dark : ICON_COLORS.light;
   const activeScope = useAuthStore((s) => s.activeScope);
   const isConsolidated = activeScope === CONSOLIDATED;
   const month = useMonthStore((s) => s.month);
@@ -56,7 +68,7 @@ export default function AccountsScreen() {
 
   const accountsQuery = useQuery({
     queryKey: ['accounts', activeScope, month],
-    queryFn: () => accountsApi.listAccounts(activeScope, month),
+    queryFn: () => accountsApi.listAccountsSummary(activeScope, month),
     enabled: !isConsolidated && Boolean(activeScope),
   });
 
@@ -100,7 +112,7 @@ export default function AccountsScreen() {
       <View className="mb-4 flex-row items-center justify-between">
         <View className="flex-row items-center gap-2">
           <Pressable onPress={() => router.back()} hitSlop={8}>
-            <Feather name="arrow-left" size={24} className="text-fg" />
+            <Feather name="arrow-left" size={24} color={palette.fg} />
           </Pressable>
           <Text variant="title">{t.accounts.title}</Text>
         </View>
@@ -108,15 +120,15 @@ export default function AccountsScreen() {
           {/* Ícones sem função real — visual + no-op */}
           <Pressable hitSlop={8} onPress={() => {}}>
             {/* Inbox: sem tela de notificações de contas ainda */}
-            <Feather name="inbox" size={20} className="text-fg-muted" />
+            <Feather name="inbox" size={20} color={palette.muted} />
           </Pressable>
           <Pressable hitSlop={8} onPress={() => {}}>
             {/* Reordenar: sem reordenação manual de contas ainda */}
-            <Feather name="refresh-cw" size={20} className="text-fg-muted" />
+            <Feather name="refresh-cw" size={20} color={palette.muted} />
           </Pressable>
           <Pressable hitSlop={8} onPress={() => {}}>
             {/* Menu: sem menu adicional de opções ainda */}
-            <Feather name="more-vertical" size={20} className="text-fg-muted" />
+            <Feather name="more-vertical" size={20} color={palette.muted} />
           </Pressable>
         </View>
       </View>
@@ -143,7 +155,7 @@ export default function AccountsScreen() {
           <View className="flex-row gap-3 rounded-2xl border border-line bg-surface p-4">
             <View className="flex-1 gap-1">
               <View className="flex-row items-center gap-2">
-                <Feather name="dollar-sign" size={16} className="text-fg-muted" />
+                <Feather name="dollar-sign" size={16} color={palette.muted} />
                 <Text variant="muted" className="text-xs">
                   {t.accounts.currentBalance}
                 </Text>
@@ -152,7 +164,7 @@ export default function AccountsScreen() {
             </View>
             <View className="flex-1 gap-1">
               <View className="flex-row items-center gap-2">
-                <Feather name="credit-card" size={16} className="text-fg-muted" />
+                <Feather name="credit-card" size={16} color={palette.muted} />
                 <Text variant="muted" className="text-xs">
                   {t.accounts.projectedBalance}
                 </Text>
@@ -218,9 +230,7 @@ export default function AccountsScreen() {
                       </Pressable>
                     )}
                   </Pressable>
-                  {index < accounts.length - 1 ? (
-                    <View className="ml-16 h-px bg-line" />
-                  ) : null}
+                  {index < accounts.length - 1 ? <View className="ml-16 h-px bg-line" /> : null}
                 </View>
               ))}
             </View>

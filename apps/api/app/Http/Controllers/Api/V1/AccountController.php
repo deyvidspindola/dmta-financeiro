@@ -62,8 +62,8 @@ final class AccountController extends Controller
             }
         }
 
-        $currentBalance = $accounts->sum('balance');
-        $projectedBalance = $this->calculateProjectedBalance($context, $currentBalance);
+        $currentBalance = (float) $accounts->sum('balance');
+        $projectedBalance = $history->projected($context, $currentBalance);
 
         return AccountResource::collection($accounts)->additional([
             'meta' => [
@@ -114,25 +114,5 @@ final class AccountController extends Controller
         $account->delete();
 
         return response()->json(status: 204);
-    }
-
-    /**
-     * Calcula o saldo previsto: saldo atual + delta de lançamentos pending.
-     * Receitas pending somam, despesas pending subtraem. Mesmo padrão do
-     * `pendingBalanceDelta` em {@see DashboardSummaryService}.
-     */
-    private function calculateProjectedBalance(Context $context, float $currentBalance): float
-    {
-        $pendingIncome = (float) $context->statementEntries()
-            ->pending()
-            ->where('type', 'income')
-            ->sum('amount');
-
-        $pendingExpense = (float) $context->statementEntries()
-            ->pending()
-            ->where('type', 'expense')
-            ->sum('amount');
-
-        return round($currentBalance + $pendingIncome - $pendingExpense, 2);
     }
 }

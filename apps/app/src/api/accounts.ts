@@ -6,25 +6,31 @@ import type { Account, AccountType } from '@/types/models';
  * `month` (YYYY-MM) opcional — mês fechado devolve o saldo de cada conta
  * como estava no fim daquele mês (replay no backend); mês atual/futuro (ou
  * omitido) devolve o saldo de agora, igual antes.
- *
- * Retorna também os totais (saldo atual e previsto) em `meta.totals`.
  */
-export async function listAccounts(
-  contextId: string,
-  month?: string,
-): Promise<{ accounts: Account[]; totals?: { current_balance: number; projected_balance: number } }> {
+export async function listAccounts(contextId: string, month?: string): Promise<Account[]> {
   const query = month ? `?month=${encodeURIComponent(month)}` : '';
   const payload = await http.get<
-    | Parameters<typeof mapAccount>[1][]
-    | {
-        data: Parameters<typeof mapAccount>[1][];
-        meta?: { totals?: { current_balance: number; projected_balance: number } };
-      }
+    Parameters<typeof mapAccount>[1][] | { data: Parameters<typeof mapAccount>[1][] }
   >(`/contexts/${contextId}/accounts${query}`);
+  return unwrapData(payload).map((row) => mapAccount(contextId, row));
+}
 
-  if (Array.isArray(payload)) {
-    return { accounts: payload.map((row) => mapAccount(contextId, row)) };
-  }
+export type AccountTotals = { current_balance: number; projected_balance: number };
+
+/**
+ * Mesma listagem de `listAccounts`, mas também devolve os totais do
+ * contexto (`meta.totals` da API) — usado só pela tela de Contas, que
+ * mostra "Saldo atual"/"Saldo previsto" agregados no topo.
+ */
+export async function listAccountsSummary(
+  contextId: string,
+  month?: string,
+): Promise<{ accounts: Account[]; totals?: AccountTotals }> {
+  const query = month ? `?month=${encodeURIComponent(month)}` : '';
+  const payload = await http.get<{
+    data: Parameters<typeof mapAccount>[1][];
+    meta?: { totals?: AccountTotals };
+  }>(`/contexts/${contextId}/accounts${query}`);
 
   return {
     accounts: payload.data.map((row) => mapAccount(contextId, row)),
