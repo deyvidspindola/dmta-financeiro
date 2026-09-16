@@ -182,6 +182,13 @@ export const strings = {
 
   security: {
     title: 'Segurança',
+    biometricTitle: 'Desbloqueio por biometria',
+    biometricHint: 'Pedir digital ou Face ID toda vez que você abrir o app.',
+    biometricPrompt: 'Desbloqueie para continuar',
+    biometricUnavailable: 'Nenhuma biometria cadastrada neste aparelho — configure em Ajustes.',
+    lockedTitle: 'App bloqueado',
+    lockedHint: 'Desbloqueie com sua digital ou Face ID para ver seus dados.',
+    unlock: 'Desbloquear',
     mfaStatus: 'Autenticação em duas etapas (TOTP)',
     mfaEnabled: 'Ativada',
     mfaDisabled: 'Desativada',

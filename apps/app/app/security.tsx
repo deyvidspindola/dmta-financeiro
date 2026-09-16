@@ -1,22 +1,24 @@
-import { useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Platform, Pressable, View } from 'react-native';
 import { Redirect, useRouter } from 'expo-router';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import * as LocalAuthentication from 'expo-local-authentication';
 import { authApi } from '@/api';
 import { ApiError } from '@/api/http';
-import { Button, Card, Screen, Text, TextField } from '@/components/ui';
+import { Button, Card, Screen, SwitchField, Text, TextField } from '@/components/ui';
 import { t } from '@/i18n';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { useAuthStore } from '@/store/authStore';
+import { useBiometricStore } from '@/store/biometricStore';
 import { toastSuccess } from '@/store/toastStore';
 
 type Step = 'warn' | 'password';
 
 /**
- * Mais > Segurança — só tem o botão de apagar todos os dados (D-recente:
- * "começar do zero"), não o menu completo do Mobills. Dois passos: aviso
- * (o que é apagado, o que não é) e depois a senha atual, checada no
- * backend ({@see authApi.resetAccountData}).
+ * Mais > Segurança — biometria de desbloqueio (D-10) e o botão de apagar
+ * todos os dados (D-recente: "começar do zero"), não o menu completo do
+ * Mobills. Reset em dois passos: aviso (o que é apagado, o que não é) e
+ * depois a senha atual, checada no backend ({@see authApi.resetAccountData}).
  */
 export default function SecurityScreen() {
   const router = useRouter();
@@ -27,6 +29,17 @@ export default function SecurityScreen() {
   const [step, setStep] = useState<Step>('warn');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const biometricEnabled = useBiometricStore((s) => s.enabled);
+  const setBiometricEnabled = useBiometricStore((s) => s.setEnabled);
+  const [biometricAvailable, setBiometricAvailable] = useState(true);
+
+  useEffect(() => {
+    if (Platform.OS === 'web') return;
+    Promise.all([LocalAuthentication.hasHardwareAsync(), LocalAuthentication.isEnrolledAsync()])
+      .then(([hardware, enrolled]) => setBiometricAvailable(hardware && enrolled))
+      .catch(() => setBiometricAvailable(false));
+  }, []);
 
   const reset = useMutation({
     mutationFn: (pwd: string) => authApi.resetAccountData(pwd),
@@ -57,6 +70,18 @@ export default function SecurityScreen() {
           <Text variant="muted">{t.common.close}</Text>
         </Pressable>
       </View>
+
+      {Platform.OS !== 'web' ? (
+        <Card className="mb-4 gap-2">
+          <SwitchField
+            label={t.security.biometricTitle}
+            hint={biometricAvailable ? t.security.biometricHint : t.security.biometricUnavailable}
+            value={biometricEnabled && biometricAvailable}
+            onChange={biometricAvailable ? setBiometricEnabled : () => {}}
+            toneColor="#0f9d58"
+          />
+        </Card>
+      ) : null}
 
       <Card className="gap-4">
         <Text className="font-medium">{t.security.resetTitle}</Text>
