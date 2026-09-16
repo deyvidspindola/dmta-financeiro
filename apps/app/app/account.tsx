@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
+import { Feather } from '@expo/vector-icons';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, ApiError, categoriesApi, transactionsApi } from '@/api';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
@@ -15,6 +16,7 @@ import {
   Screen,
   Sheet,
   Skeleton,
+  SwitchField,
   Text,
 } from '@/components/ui';
 import { t } from '@/i18n';
@@ -63,6 +65,7 @@ export default function AccountDetailScreen() {
   const [adjustOpen, setAdjustOpen] = useState(false);
   const [adjustBalance, setAdjustBalance] = useState(0);
   const [adjustError, setAdjustError] = useState<string | null>(null);
+  const [accountSwitcherOpen, setAccountSwitcherOpen] = useState(false);
 
   const isHistorical = month < currentMonthKey();
 
@@ -97,6 +100,23 @@ export default function AccountDetailScreen() {
     },
     onError: (err) =>
       setAdjustError(err instanceof ApiError && err.message ? err.message : (err as Error).message),
+  });
+
+  const toggleIncludeInDashboard = useMutation({
+    mutationFn: async () => {
+      if (!account || !contextId) return;
+      return accountsApi.updateAccount(contextId, account.id, {
+        name: account.name,
+        bank_name: account.bank_name,
+        type: account.type,
+        include_in_dashboard: !account.include_in_dashboard,
+        color: account.color,
+      });
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['accounts'] });
+      void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
   });
 
   const { from, to } = monthDateRange(month);
@@ -139,11 +159,35 @@ export default function AccountDetailScreen() {
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
   return (
-    <Screen scroll>
+    <Screen
+      scroll
+      fab={
+        !isHistorical && account ? (
+          <Pressable
+            onPress={() =>
+              router.push({
+                pathname: '/account-edit',
+                params: { id: account.id, contextId: contextId ?? '' },
+              })
+            }
+            className="h-14 w-14 items-center justify-center rounded-full bg-negative shadow-lg active:opacity-80"
+          >
+            <Feather name="edit-2" size={20} color="#ffffff" />
+          </Pressable>
+        ) : undefined
+      }
+    >
       <View className="mb-4 flex-row items-center justify-between">
-        <Text variant="title" numberOfLines={1}>
-          {account?.name ?? t.accountDetail.title}
-        </Text>
+        {/* Dropdown para trocar de conta */}
+        <Pressable
+          onPress={() => setAccountSwitcherOpen(true)}
+          className="flex-row items-center gap-2 active:opacity-70"
+        >
+          <Text variant="title" numberOfLines={1}>
+            {account?.name ?? t.accountDetail.title}
+          </Text>
+          <Feather name="chevron-down" size={20} color="#7c918b" />
+        </Pressable>
         <Pressable onPress={() => router.back()} hitSlop={8}>
           <Text variant="muted">{t.common.close}</Text>
         </Pressable>
@@ -154,7 +198,7 @@ export default function AccountDetailScreen() {
       ) : !account ? (
         <Text variant="muted">{t.accountDetail.notFound}</Text>
       ) : (
-        <View className="gap-4">
+        <View className="gap-4 pb-20">
           <Card className="gap-1">
             <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
               {t.accountDetail.currentBalance}
@@ -212,6 +256,20 @@ export default function AccountDetailScreen() {
               </Text>
               <Text className="text-sm font-medium">{counts.transfer}</Text>
             </View>
+
+            {/* Toggle "Incluir na tela inicial" */}
+            {!isHistorical && (
+              <>
+                <View className="border-t border-line my-1" />
+                <SwitchField
+                  label={t.accounts.includeInDashboard}
+                  value={account.include_in_dashboard}
+                  onChange={() => {
+                    if (!toggleIncludeInDashboard.isPending) toggleIncludeInDashboard.mutate();
+                  }}
+                />
+              </>
+            )}
           </Card>
 
           <View className="flex-row items-center justify-between">
@@ -288,6 +346,38 @@ export default function AccountDetailScreen() {
         categoryName={selected?.category_id ? categoryMap.get(selected.category_id) : undefined}
         onClose={() => setSelected(null)}
       />
+
+      {/* Sheet para trocar de conta */}
+      <Sheet
+        open={accountSwitcherOpen}
+        onClose={() => setAccountSwitcherOpen(false)}
+        title={t.accounts.title}
+      >
+        <View className="gap-2">
+          {(accountsQuery.data ?? []).map((acc) => (
+            <Pressable
+              key={acc.id}
+              onPress={() => {
+                setAccountSwitcherOpen(false);
+                router.replace({
+                  pathname: '/account',
+                  params: { id: acc.id, contextId: contextId ?? '' },
+                });
+              }}
+              className={cn('rounded-lg p-3 active:opacity-70', acc.id === id && 'bg-surface-2')}
+            >
+              <Text
+                className={cn('font-medium', acc.id === id && 'text-brand-600 dark:text-brand-400')}
+              >
+                {acc.name}
+              </Text>
+              <Text variant="muted" className="text-xs">
+                {acc.bank_name ?? t.accounts.types[acc.type]}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </Sheet>
 
       <Sheet
         open={adjustOpen}

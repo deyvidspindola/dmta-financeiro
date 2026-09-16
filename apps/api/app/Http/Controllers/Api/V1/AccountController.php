@@ -28,24 +28,23 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.2.0
+ * @version 1.3.0
  *
  * @since   21/08/2026
  *
- * @updated 15/09/2026
+ * @updated 16/09/2026
  */
 final class AccountController extends Controller
 {
     /**
-     * `?month=YYYY-MM` opcional — quando aponta pra um mês já fechado, cada
-     * conta volta com o saldo **como estava** no fim daquele mês (replay via
-     * {@see HistoricalBalanceService::perAccountAsOf}), pro passador de mês
-     * da tela de Contas. Mês corrente/futuro (ou sem o param) devolve o
-     * `balance` de agora, igual antes.
+     * `?month=YYYY-MM` opcional — mês fechado devolve o saldo **como
+     * estava** no fim dele ({@see HistoricalBalanceService::perAccountAsOf}).
+     * Mês corrente/futuro (ou sem o param) usa o `balance` de agora e soma
+     * o pending de hoje em `projected_balance` ({@see AccountResource}).
      */
     public function index(Context $context, Request $request, HistoricalBalanceService $history): AnonymousResourceCollection
     {
-        $accounts = $context->accounts()->get();
+        $accounts = $context->accounts()->withPendingSums()->get();
         $month = $request->query('month');
 
         if (is_string($month) && $month !== '') {
@@ -53,8 +52,12 @@ final class AccountController extends Controller
 
             if ($monthEnd->lt(Carbon::now()->startOfMonth())) {
                 $balances = $history->perAccountAsOf($context, $monthEnd);
+                // Mês fechado é história — sem "previsto" (mesma regra do
+                // DashboardSummaryService), então zera o pending carregado.
                 $accounts->each(function (Account $account) use ($balances): void {
                     $account->setAttribute('balance', $balances[$account->id] ?? 0.0);
+                    $account->setAttribute('pending_income_sum', 0);
+                    $account->setAttribute('pending_expense_sum', 0);
                 });
             }
         }
@@ -76,6 +79,8 @@ final class AccountController extends Controller
             institution: $request->input('institution'),
             initialBalance: (float) $request->input('initial_balance', 0),
             type: AccountType::from($request->string('type', AccountType::Checking->value)->toString()),
+            includeInDashboard: $request->boolean('include_in_dashboard', true),
+            color: $request->input('color'),
         ));
 
         return new AccountResource($account);
@@ -88,6 +93,8 @@ final class AccountController extends Controller
             // @phpstan-ignore-next-line property.nonObject (cast AccountType da migration, confirmado em runtime)
             type: AccountType::from($request->string('type', $account->type->value)->toString()),
             institution: $request->input('institution'),
+            includeInDashboard: $request->boolean('include_in_dashboard', $account->include_in_dashboard ?? true),
+            color: $request->input('color', $account->color),
         ));
 
         return new AccountResource($updated);

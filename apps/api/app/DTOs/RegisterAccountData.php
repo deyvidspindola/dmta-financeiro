@@ -28,5 +28,7 @@ final readonly class RegisterAccountData
         public ?string $institution,
         public float $initialBalance,
         public AccountType $type = AccountType::Checking,
+        public bool $includeInDashboard = true,
+        public ?string $color = null,
     ) {}
 }

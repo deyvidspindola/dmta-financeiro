@@ -33,11 +33,11 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 2.1.0
  *
  * @since   21/08/2026
  *
- * @updated 02/09/2026
+ * @updated 16/09/2026
  */
 final class DashboardSummaryService
 {
@@ -72,10 +72,11 @@ final class DashboardSummaryService
 
         // Mês já fechado → saldo "como o mês fechou" (replay do histórico).
         // Mês corrente ou futuro → saldo real de agora.
+        // Só contas com `include_in_dashboard` entram no cálculo.
         $isPastMonth = $monthEnd->lt($now->copy()->startOfMonth());
         $accountsBalance = $isPastMonth
-            ? $this->history->asOf($context, $monthEnd)
-            : (float) $context->accounts()->sum('balance');
+            ? $this->history->asOf($context, $monthEnd, includeInDashboardOnly: true)
+            : (float) $context->accounts()->where('include_in_dashboard', true)->sum('balance');
 
         return [
             'context_id' => $context->id,
@@ -85,7 +86,7 @@ final class DashboardSummaryService
             // previsto — é história, mostra o real. Ver StatementEntryStatus.
             'accounts_balance_provisioned' => $isPastMonth
                 ? $accountsBalance
-                : round($accountsBalance + $this->pendingBalanceDelta($context), 2),
+                : round($accountsBalance + $this->pendingBalanceDelta($context, includeInDashboardOnly: true), 2),
             'pending_bills_count' => $pending->count(),
             'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
@@ -125,13 +126,26 @@ final class DashboardSummaryService
      * contexto, com sinal: receita prevista soma, despesa prevista subtrai.
      * Sem filtro de mês — uma despesa prevista de um mês passado que você
      * ainda não pagou continua reduzindo o caixa projetado.
+     *
+     * `$includeInDashboardOnly` espelha o mesmo filtro do `accountsBalance`
+     * que este delta soma em cima — sem isso, um pending de conta excluída
+     * do dashboard vazava pro `accounts_balance_provisioned` mesmo a conta
+     * não contando no saldo real ao lado.
      */
-    private function pendingBalanceDelta(Context $context): float
+    private function pendingBalanceDelta(Context $context, bool $includeInDashboardOnly = false): float
     {
+        $accountIds = $includeInDashboardOnly
+            ? $context->accounts()->where('include_in_dashboard', true)->pluck('id')
+            : null;
+
         $income = (float) $context->statementEntries()->pending()
-            ->where('type', StatementEntryType::Income->value)->sum('amount');
+            ->where('type', StatementEntryType::Income->value)
+            ->when($accountIds, fn ($q) => $q->whereIn('account_id', $accountIds))
+            ->sum('amount');
         $expense = (float) $context->statementEntries()->pending()
-            ->where('type', StatementEntryType::Expense->value)->sum('amount');
+            ->where('type', StatementEntryType::Expense->value)
+            ->when($accountIds, fn ($q) => $q->whereIn('account_id', $accountIds))
+            ->sum('amount');
 
         return $income - $expense;
     }

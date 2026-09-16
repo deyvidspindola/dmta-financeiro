@@ -38,10 +38,15 @@ use Illuminate\Support\Carbon;
 final class HistoricalBalanceService
 {
     /** Soma dos saldos das contas do contexto ao fim do dia `$date`. */
-    public function asOf(Context $context, Carbon $date): float
+    public function asOf(Context $context, Carbon $date, bool $includeInDashboardOnly = false): float
     {
-        $initial = (float) $context->accounts()->sum('initial_balance');
-        $delta = $this->deltaQuery($context, $date)->value('delta');
+        $query = $context->accounts();
+        if ($includeInDashboardOnly) {
+            $query->where('include_in_dashboard', true);
+        }
+
+        $initial = (float) $query->sum('initial_balance');
+        $delta = $this->deltaQuery($context, $date, $includeInDashboardOnly)->value('delta');
 
         return round($initial + (float) $delta, 2);
     }
@@ -54,13 +59,18 @@ final class HistoricalBalanceService
      *
      * @return array<int, float> `account_id` => saldo.
      */
-    public function perAccountAsOf(Context $context, Carbon $date): array
+    public function perAccountAsOf(Context $context, Carbon $date, bool $includeInDashboardOnly = false): array
     {
-        $balances = $context->accounts()->pluck('initial_balance', 'id')
+        $query = $context->accounts();
+        if ($includeInDashboardOnly) {
+            $query->where('include_in_dashboard', true);
+        }
+
+        $balances = $query->pluck('initial_balance', 'id')
             ->map(fn ($value) => (float) $value)
             ->all();
 
-        $deltas = $this->deltaQuery($context, $date)
+        $deltas = $this->deltaQuery($context, $date, $includeInDashboardOnly)
             ->selectRaw('account_id')
             ->groupBy('account_id')
             ->pluck('delta', 'account_id');
@@ -77,21 +87,26 @@ final class HistoricalBalanceService
      *
      * @return HasMany<StatementEntry, Context>
      */
-    private function deltaQuery(Context $context, Carbon $date): HasMany
+    private function deltaQuery(Context $context, Carbon $date, bool $includeInDashboardOnly = false): HasMany
     {
-        return $context->statementEntries()
+        $query = $context->statementEntries()
             ->settled()
-            ->whereDate('occurred_at', '<=', $date->toDateString())
-            ->selectRaw(
-                'SUM(CASE '
-                .'WHEN type = ? THEN -amount '
-                .'WHEN type = ? AND transfer_role = ? THEN -amount '
-                .'ELSE amount END) as delta',
-                [
-                    StatementEntryType::Expense->value,
-                    StatementEntryType::Transfer->value,
-                    TransferRole::Origin->value,
-                ],
-            );
+            ->whereDate('occurred_at', '<=', $date->toDateString());
+
+        if ($includeInDashboardOnly) {
+            $query->whereIn('account_id', $context->accounts()->where('include_in_dashboard', true)->pluck('id'));
+        }
+
+        return $query->selectRaw(
+            'SUM(CASE '
+            .'WHEN type = ? THEN -amount '
+            .'WHEN type = ? AND transfer_role = ? THEN -amount '
+            .'ELSE amount END) as delta',
+            [
+                StatementEntryType::Expense->value,
+                StatementEntryType::Transfer->value,
+                TransferRole::Origin->value,
+            ],
+        );
     }
 }

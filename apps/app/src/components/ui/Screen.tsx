@@ -11,8 +11,11 @@ export type ScreenProps = {
   edges?: Edge[];
   /**
    * Botão flutuante (FAB) fixo no canto inferior direito — renderizado
-   * fora do `ScrollView`, então não rola com o conteúdo. Uso: passe um
-   * `Pressable` circular já pronto (ver `app/categories.tsx` pro padrão).
+   * fora do `ScrollView`, então não rola com o conteúdo. `position:
+   * absolute` dentro do `ScrollView` não fica fixo de verdade (o content
+   * container tem altura indefinida) — por isso este slot existe. Uso:
+   * passe um `Pressable` circular já pronto (ver `app/categories.tsx` ou
+   * `app/accounts.tsx` pro padrão).
    */
   fab?: ReactNode;
 };

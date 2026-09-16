@@ -69,8 +69,12 @@ export interface Account {
   bank_name: string | null;
   type: AccountType;
   balance: number;
+  /** Saldo + pending de hoje (receita soma, despesa subtrai) — igual ao `balance` em mês fechado. */
+  projected_balance: number;
   initial_balance: number;
   currency: 'BRL';
+  include_in_dashboard: boolean;
+  color: string | null;
   context?: ContextRef | null;
 }
 

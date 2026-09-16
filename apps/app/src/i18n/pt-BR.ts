@@ -304,6 +304,14 @@ export const strings = {
     save: 'Salvar conta',
     balanceEditHint: 'O saldo só muda por lançamento.',
     emptyMonth: 'Nenhuma conta nesse mês.',
+    currentBalance: 'Saldo atual',
+    projectedBalance: 'Saldo previsto',
+    includeInDashboard: 'Incluir na soma da tela inicial',
+    accountColor: 'Cor da conta',
+    selectColor: 'Selecione uma cor',
+    namePlaceholder: 'Ex: Nubank, Bradesco, Carteira...',
+    bankNamePlaceholder: 'Ex: Bradesco, Nubank...',
+    defaultColor: 'Padrão',
   },
 
   creditCards: {

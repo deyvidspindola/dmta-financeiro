@@ -20,6 +20,8 @@ export type AccountInput = {
   bank_name: string | null;
   type: AccountType;
   balance: number;
+  include_in_dashboard?: boolean;
+  color?: string | null;
 };
 
 export async function createAccount(contextId: string, input: AccountInput): Promise<Account> {
