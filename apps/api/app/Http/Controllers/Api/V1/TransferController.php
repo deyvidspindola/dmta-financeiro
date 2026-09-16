@@ -21,11 +21,11 @@ use App\UseCases\Transaction\TransferBetweenAccounts;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 16/09/2026
  */
 final class TransferController extends Controller
 {
@@ -48,6 +48,8 @@ final class TransferController extends Controller
             amount: (float) $request->input('amount'),
             description: $request->string('description')->toString(),
             occurredAt: $request->string('occurred_at')->toString(),
+            fromCategoryId: $request->integer('from_category_id') ?: null,
+            toCategoryId: $request->integer('to_category_id') ?: null,
         ));
 
         return new TransferResource($result);

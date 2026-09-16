@@ -550,6 +550,10 @@ export const strings = {
     toContext: 'Contexto de destino',
     created: 'Transferência registrada.',
     sameAccount: 'Origem e destino precisam ser contas diferentes.',
+    // D-20: só aparecem quando o destino é outro contexto — aí a
+    // transferência vira despesa/receita de verdade em cada lado.
+    fromCategory: 'Categoria (despesa na origem)',
+    toCategory: 'Categoria (receita no destino)',
   },
 
   recurring: {
