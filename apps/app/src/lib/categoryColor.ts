@@ -1,9 +1,11 @@
 /**
  * Mesma paleta `cat-1..12` do tailwind.config.js (e do apps/web,
  * CategoryChip/useChartPalette) — hex literal porque NativeWind não
- * resolve classe dinâmica tipo `bg-cat-${n}` em runtime.
+ * resolve classe dinâmica tipo `bg-cat-${n}` em runtime. Exportada (não só
+ * `categoryColor`) porque também alimenta o seletor de cor no
+ * cadastro/edição de categoria.
  */
-const CATEGORY_COLORS: readonly string[] = [
+export const CATEGORY_COLORS: readonly string[] = [
   '#10b981',
   '#3b82f6',
   '#8b5cf6',

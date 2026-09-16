@@ -19,7 +19,13 @@ export async function listCategories(
 
 export async function createCategory(
   contextId: string,
-  input: { name: string; type: MoneyDirection; parent_id: string | null },
+  input: {
+    name: string;
+    type: MoneyDirection;
+    parent_id: string | null;
+    color?: string | null;
+    icon?: string | null;
+  },
 ): Promise<Category> {
   const payload = await http.post<
     Parameters<typeof mapCategory>[1] | { data: Parameters<typeof mapCategory>[1] }
@@ -30,7 +36,12 @@ export async function createCategory(
 export async function updateCategory(
   contextId: string,
   categoryId: string,
-  input: { name: string; parent_id?: string | null },
+  input: {
+    name: string;
+    parent_id?: string | null;
+    color?: string | null;
+    icon?: string | null;
+  },
 ): Promise<Category> {
   const payload = await http.patch<
     Parameters<typeof mapCategory>[1] | { data: Parameters<typeof mapCategory>[1] }

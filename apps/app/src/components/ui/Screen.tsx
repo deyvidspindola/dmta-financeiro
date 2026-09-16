@@ -9,15 +9,22 @@ export type ScreenProps = {
   center?: boolean;
   className?: string;
   edges?: Edge[];
+  /**
+   * Botão flutuante (FAB) fixo no canto inferior direito — renderizado
+   * fora do `ScrollView`, então não rola com o conteúdo. Uso: passe um
+   * `Pressable` circular já pronto (ver `app/categories.tsx` pro padrão).
+   */
+  fab?: ReactNode;
 };
 
-/** Container de tela: safe area + fundo do tema + (opcional) scroll/centro. */
+/** Container de tela: safe area + fundo do tema + (opcional) scroll/centro/FAB. */
 export function Screen({
   children,
   scroll = false,
   center = false,
   className,
   edges = ['top', 'bottom'],
+  fab,
 }: ScreenProps) {
   const inner = cn('flex-1 px-5', center && 'justify-center', className);
 
@@ -39,6 +46,11 @@ export function Screen({
           <View className={inner}>{children}</View>
         )}
       </KeyboardAvoidingView>
+      {fab ? (
+        <View className="absolute bottom-5 right-5" pointerEvents="box-none">
+          {fab}
+        </View>
+      ) : null}
     </SafeAreaView>
   );
 }
