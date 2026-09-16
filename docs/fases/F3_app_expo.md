@@ -27,7 +27,10 @@
       notificação de banco (#107) — canal `scanner`.
 - [ ] Lista de pendências de confirmação (e-mail/Telegram/agregador) —
       parcial (tela de capturas existe; falta amarração fina).
-- [ ] Biometria no primeiro acesso após login (D-10) — **B7, pendente**.
+- [x] Biometria ao abrir o app (D-10) — trava no cold start e ao voltar de
+      segundo plano quando há sessão; toggle em Mais > Segurança.
+      Dependência nativa nova → precisa de build EAS novo pra valer
+      (`runtimeVersion` 1.1.0).
 - [ ] `build-mobile.yml` — path já ajustado para `apps/app` e `eas init`
       feito (#64); **primeiro build EAS de preview nunca verificado de ponta
       a ponta no Android** — só `expo export -p web`. **B7.**
