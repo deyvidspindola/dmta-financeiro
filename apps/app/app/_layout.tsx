@@ -1,6 +1,7 @@
 import '@/styles/global.css';
 
 import { useEffect, useState } from 'react';
+import { View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -48,10 +49,14 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <QueryClientProvider client={queryClient}>
-          {locked ? (
-            <BiometricLockScreen onUnlock={unlock} />
-          ) : (
-            <Stack screenOptions={{ headerShown: false }} />
+          {/* `Stack` sempre montado — trocar por `BiometricLockScreen` no
+              lugar dele (em vez de sobrepor) derrubava a pilha de navegação
+              e o estado de qualquer tela toda vez que a trava disparava. */}
+          <Stack screenOptions={{ headerShown: false }} />
+          {locked && (
+            <View className="absolute inset-0 z-50">
+              <BiometricLockScreen onUnlock={unlock} />
+            </View>
           )}
           <StatusBar style="auto" />
         </QueryClientProvider>

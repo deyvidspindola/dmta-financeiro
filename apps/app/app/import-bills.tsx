@@ -4,6 +4,7 @@ import * as DocumentPicker from 'expo-document-picker';
 import { useMutation } from '@tanstack/react-query';
 import { Badge, Button, Card, Screen, Text } from '@/components/ui';
 import { t } from '@/i18n';
+import { suspendBiometricLock } from '@/lib/biometricSuspend';
 import { downloadAndShare } from '@/lib/download';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
@@ -62,6 +63,7 @@ export default function ImportBillsPage() {
   });
 
   const handlePickFile = async () => {
+    suspendBiometricLock();
     const result = await DocumentPicker.getDocumentAsync({
       type: ['text/csv', 'text/comma-separated-values', 'application/csv'],
       copyToCacheDirectory: true,
