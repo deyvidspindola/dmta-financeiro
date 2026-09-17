@@ -2,11 +2,11 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
 import { useColorScheme } from 'nativewind';
+import { ContextSwitcher } from '@/components/ContextSwitcher';
+import { MonthNavigator } from '@/components/MonthNavigator';
 import { Money, MoneyValue, Skeleton, Text } from '@/components/ui';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
-import { currentMonthKey, formatMonthLabel } from '@/lib/dates';
-import { useMonthStore } from '@/store/monthStore';
 import type { DashboardSummary } from '@/types/models';
 
 // Feather não resolve `className` (sem cssInterop configurado neste app —
@@ -52,7 +52,6 @@ function DirectionSummary({
 }
 
 type HomeHeaderProps = {
-  contextLabel: string;
   isConsolidated: boolean;
   hideBalance: boolean;
   onToggleHideBalance: () => void;
@@ -62,13 +61,13 @@ type HomeHeaderProps = {
 };
 
 /**
- * Painel fixo no topo da Home (fora do scroll) — avatar do contexto ativo,
- * mês corrente e sino de notificação na primeira linha; saldo centralizado
- * e o resumo de receita/despesa do mês embaixo. Ver seção 4.1 do guia de
- * migração de tema (redesign escuro/roxo).
+ * Painel fixo no topo da Home (fora do scroll) — avatar do contexto ativo
+ * (abre o mesmo seletor PF/PJ/Consolidado do `ContextSwitcher`), o
+ * `MonthNavigator` de sempre e o sino de notificação na primeira linha;
+ * saldo centralizado e o resumo de receita/despesa do mês embaixo. Ver
+ * seção 4.1 do guia de migração de tema (redesign escuro/roxo).
  */
 export function HomeHeader({
-  contextLabel,
   isConsolidated,
   hideBalance,
   onToggleHideBalance,
@@ -79,26 +78,25 @@ export function HomeHeader({
   const router = useRouter();
   const { colorScheme } = useColorScheme();
   const palette = colorScheme === 'dark' ? ICON_COLORS.dark : ICON_COLORS.light;
-  const month = useMonthStore((s) => s.month);
-  const resetMonth = useMonthStore((s) => s.reset);
-  const isCurrentMonth = month === currentMonthKey();
-  const initial = (contextLabel.trim().charAt(0) || '?').toUpperCase();
 
   return (
     <View className="items-center gap-5 rounded-b-[28px] bg-surface px-5 pb-6 pt-4">
       <View className="w-full flex-row items-center justify-between">
-        <View className="size-9 items-center justify-center rounded-full bg-accent-600">
-          <Text className="text-sm font-semibold text-white">{initial}</Text>
-        </View>
+        <ContextSwitcher
+          renderTrigger={({ onPress, label }) => (
+            <Pressable
+              accessibilityLabel={label}
+              onPress={onPress}
+              className="size-9 items-center justify-center rounded-full bg-accent-600"
+            >
+              <Text className="text-sm font-semibold text-white">
+                {(label.trim().charAt(0) || '?').toUpperCase()}
+              </Text>
+            </Pressable>
+          )}
+        />
 
-        <Pressable
-          accessibilityLabel={isCurrentMonth ? formatMonthLabel(month) : t.monthNav.backToCurrent}
-          onPress={resetMonth}
-          className="flex-row items-center gap-1 rounded-lg px-2 py-1 active:bg-surface-2"
-        >
-          <Text className="text-sm font-medium">{formatMonthLabel(month)}</Text>
-          <Feather name="chevron-down" size={16} color={palette.muted} />
-        </Pressable>
+        <MonthNavigator />
 
         <Pressable
           accessibilityLabel={t.nav.notifications}

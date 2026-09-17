@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import { Modal, Pressable, ScrollView, useWindowDimensions, View } from 'react-native';
 import { Feather } from '@expo/vector-icons';
@@ -11,8 +12,18 @@ const ICON_COLORS = {
   dark: { subtle: '#6b7f79', positive: '#34d399' },
 } as const;
 
-/** Troca de contexto PF/PJ + Consolidado — chip com menu modal. */
-export function ContextSwitcher() {
+type ContextSwitcherProps = {
+  /**
+   * Gatilho customizado (ex.: o avatar do hero da Home) no lugar do chip
+   * padrão — o modal e a lógica de troca de contexto continuam os mesmos,
+   * só a UI que abre o modal muda. `label` é o nome do contexto ativo
+   * (ou "Consolidado"), útil pra derivar coisas como a inicial do avatar.
+   */
+  renderTrigger?: (props: { onPress: () => void; label: string }) => ReactNode;
+};
+
+/** Troca de contexto PF/PJ + Consolidado — chip com menu modal (ou gatilho customizado via `renderTrigger`). */
+export function ContextSwitcher({ renderTrigger }: ContextSwitcherProps = {}) {
   const { contexts, activeScope, setActiveScope } = useAuthStore();
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
@@ -46,24 +57,30 @@ export function ContextSwitcher() {
 
   return (
     <>
-      <Pressable
-        onPress={() => setOpen(true)}
-        className="h-10 max-w-[10.5rem] flex-row items-center gap-2 rounded-xl border border-line bg-surface px-2.5 active:bg-surface-2"
-      >
-        {activeScope === CONSOLIDATED ? <Feather name="layers" size={14} color="#8b5cf6" /> : null}
-        {/* `shrink` (não `flex-1`) — dentro de um Pressable sem largura fixa,
-            `flex: 1` (flexBasis 0%) colapsa o texto a ~0px, some o nome do
-            contexto e deixa só a badge/seta com vão vazio no lugar. */}
-        <Text className="min-w-0 shrink text-xs font-medium" numberOfLines={1}>
-          {currentLabel}
-        </Text>
-        {currentTag ? (
-          <Badge tone={currentTagTone} className="shrink-0">
-            {currentTag}
-          </Badge>
-        ) : null}
-        <Feather name="chevrons-up" size={14} color={palette.subtle} />
-      </Pressable>
+      {renderTrigger ? (
+        renderTrigger({ onPress: () => setOpen(true), label: currentLabel })
+      ) : (
+        <Pressable
+          onPress={() => setOpen(true)}
+          className="h-10 max-w-[10.5rem] flex-row items-center gap-2 rounded-xl border border-line bg-surface px-2.5 active:bg-surface-2"
+        >
+          {activeScope === CONSOLIDATED ? (
+            <Feather name="layers" size={14} color="#8b5cf6" />
+          ) : null}
+          {/* `shrink` (não `flex-1`) — dentro de um Pressable sem largura fixa,
+              `flex: 1` (flexBasis 0%) colapsa o texto a ~0px, some o nome do
+              contexto e deixa só a badge/seta com vão vazio no lugar. */}
+          <Text className="min-w-0 shrink text-xs font-medium" numberOfLines={1}>
+            {currentLabel}
+          </Text>
+          {currentTag ? (
+            <Badge tone={currentTagTone} className="shrink-0">
+              {currentTag}
+            </Badge>
+          ) : null}
+          <Feather name="chevrons-up" size={14} color={palette.subtle} />
+        </Pressable>
+      )}
 
       <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
         <Pressable className="flex-1 bg-black/40" onPress={() => setOpen(false)}>
