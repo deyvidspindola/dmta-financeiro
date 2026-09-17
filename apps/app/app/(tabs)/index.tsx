@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Pressable, View } from 'react-native';
+import { View } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Feather } from '@expo/vector-icons';
 import { useQuery } from '@tanstack/react-query';
 import {
   accountsApi,
@@ -13,8 +12,10 @@ import {
   transactionsApi,
 } from '@/api';
 import { TabShell } from '@/components/TabShell';
-import { CategorySpendingList } from '@/components/dashboard/CategorySpendingList';
+import { CategorySpendingCards } from '@/components/dashboard/CategorySpendingCards';
 import { EvolutionChart } from '@/components/dashboard/EvolutionChart';
+import { HomeHeader } from '@/components/dashboard/HomeHeader';
+import { QuickActions } from '@/components/dashboard/QuickActions';
 import { TransactionDetailSheet } from '@/components/transactions/TransactionDetailSheet';
 import {
   AccountIcon,
@@ -32,7 +33,7 @@ import {
 } from '@/components/ui';
 import { t } from '@/i18n';
 import { categoryColor } from '@/lib/categoryColor';
-import { formatDateShort, formatMonthLabel, isInMonth, monthDateRange } from '@/lib/dates';
+import { formatDateShort, isInMonth, monthDateRange } from '@/lib/dates';
 import { formatMoney } from '@/lib/format';
 import { transactionDirection } from '@/lib/transactionDisplay';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
@@ -43,42 +44,9 @@ const RECENT_LIMIT = 6;
 
 function StatSkeleton() {
   return (
-    <View className="min-h-[7rem] gap-2 rounded-2xl border border-line bg-surface p-4">
+    <View className="min-h-[7rem] gap-2 rounded-2xl bg-surface-2 p-4">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="h-7 w-28" />
-    </View>
-  );
-}
-
-/** Círculo + valor, estilo Mobills: resumo de receita/despesa do mês na hero do painel. */
-function DirectionSummary({
-  label,
-  amount,
-  tone,
-}: {
-  label: string;
-  amount: number;
-  tone: 'positive' | 'negative';
-}) {
-  const color = tone === 'positive' ? '#059669' : '#dc2626';
-  return (
-    <View className="min-w-0 flex-1 flex-row items-center gap-2">
-      <View
-        className="size-9 items-center justify-center rounded-full"
-        style={{ backgroundColor: color }}
-      >
-        <Feather name={tone === 'positive' ? 'arrow-up' : 'arrow-down'} size={16} color="#fff" />
-      </View>
-      <View className="min-w-0 flex-1">
-        <Text variant="muted" className="text-xs" numberOfLines={1}>
-          {label}
-        </Text>
-        <MoneyValue
-          amount={amount}
-          direction={tone === 'positive' ? 'credit' : 'debit'}
-          size="md"
-        />
-      </View>
     </View>
   );
 }
@@ -207,85 +175,21 @@ export default function HomeTab() {
       data.pending_debts_owed_to_me_amount > 0);
 
   return (
-    <TabShell>
+    <TabShell
+      headerPanel={
+        <HomeHeader
+          contextLabel={contextLabel}
+          isConsolidated={isConsolidated}
+          hideBalance={hideBalance}
+          onToggleHideBalance={() => setHideBalance((v) => !v)}
+          isLoading={isLoading}
+          isError={isError}
+          data={data}
+        />
+      }
+    >
       <View className="gap-6">
-        {/* Saldo em destaque */}
-        <Card variant="hero" className="gap-3">
-          <View className="flex-row items-start justify-between gap-2">
-            <View className="gap-1">
-              <Text variant="muted">{contextLabel}</Text>
-              <Text variant="muted" className="text-xs uppercase tracking-wide text-fg-subtle">
-                {t.dashboard.balance}
-              </Text>
-            </View>
-            <Pressable
-              accessibilityLabel={hideBalance ? t.dashboard.showBalance : t.dashboard.hideBalance}
-              onPress={() => setHideBalance((v) => !v)}
-              hitSlop={8}
-              className="p-1"
-            >
-              <Feather name={hideBalance ? 'eye-off' : 'eye'} size={18} color="#7c918b" />
-            </Pressable>
-          </View>
-
-          {isLoading ? (
-            <Skeleton className="h-9 w-48" />
-          ) : isError ? (
-            <Text variant="error">{t.common.error}</Text>
-          ) : data ? (
-            <View className="gap-3">
-              <View className="gap-1">
-                {hideBalance ? (
-                  <Text className="text-3xl font-bold tabular-nums text-fg">
-                    {t.dashboard.hiddenBalance}
-                  </Text>
-                ) : (
-                  <>
-                    <Money amount={data.balance_total} size="xl" />
-                    {data.provisioned_balance_total !== data.balance_total ? (
-                      <View className="flex-row items-baseline gap-1.5">
-                        <Text variant="muted" className="text-xs">
-                          {t.dashboard.balanceProvisioned}
-                        </Text>
-                        <Money amount={data.provisioned_balance_total} size="sm" />
-                        <Text variant="muted" className="text-xs text-fg-subtle">
-                          {t.dashboard.balanceProvisionedHint}
-                        </Text>
-                      </View>
-                    ) : null}
-                  </>
-                )}
-                {isConsolidated ? <Text variant="muted">{t.dashboard.hint}</Text> : null}
-                <Text variant="muted" className="text-fg-subtle">
-                  {formatMonthLabel(month)}
-                </Text>
-              </View>
-
-              <View className="flex-row gap-4 border-t border-line pt-3">
-                <DirectionSummary
-                  label={
-                    data.projected_income_month !== data.income_month
-                      ? `${t.dashboard.income} ${t.dashboard.projectedLabel}`
-                      : t.dashboard.income
-                  }
-                  amount={data.projected_income_month}
-                  tone="positive"
-                />
-                <DirectionSummary
-                  label={
-                    data.projected_expense_month !== data.expense_month
-                      ? `${t.dashboard.expense} ${t.dashboard.projectedLabel}`
-                      : t.dashboard.expense
-                  }
-                  amount={data.projected_expense_month}
-                  tone="negative"
-                />
-              </View>
-            </View>
-          ) : (
-            <Text variant="muted">{t.dashboard.empty}</Text>
-          )}
-        </Card>
+        <QuickActions />
 
         {/* Boletos */}
         {isLoading ? (
@@ -301,7 +205,7 @@ export default function HomeTab() {
           <View className="flex-row gap-3">
             <View className="flex-1">
               <Stat
-                className="min-h-[7rem]"
+                className="min-h-[7rem] border-0 bg-surface-2"
                 label={t.dashboard.billsPending}
                 value={formatMoney(data.pending_bills_amount)}
                 hint={`${data.pending_bills_count}`}
@@ -310,7 +214,7 @@ export default function HomeTab() {
             </View>
             <View className="flex-1">
               <Stat
-                className="min-h-[7rem]"
+                className="min-h-[7rem] border-0 bg-surface-2"
                 label={t.dashboard.billsOverdue}
                 tone={data.overdue_bills_amount > 0 ? 'negative' : 'neutral'}
                 value={formatMoney(data.overdue_bills_amount)}
@@ -347,12 +251,12 @@ export default function HomeTab() {
 
         {/* Evolução */}
         {evolutionQuery.isLoading ? (
-          <Card className="gap-3">
+          <Card className="gap-3 border-0 bg-surface-2">
             <Skeleton className="h-4 w-24" />
             <Skeleton className="h-24 w-full" />
           </Card>
         ) : evolutionQuery.data && evolutionQuery.data.length > 0 ? (
-          <Card className="gap-3">
+          <Card className="gap-3 border-0 bg-surface-2">
             <Text variant="title" className="text-base">
               {t.dashboard.evolution}
             </Text>
@@ -362,16 +266,16 @@ export default function HomeTab() {
 
         {/* Gastos por categoria — só despesa já efetivada do mês */}
         {categorySpending.length > 0 ? (
-          <Card className="gap-3">
+          <Card className="gap-3 border-0 bg-surface-2">
             <Text variant="title" className="text-base">
               {t.dashboard.categorySpending}
             </Text>
-            <CategorySpendingList rows={categorySpending} />
+            <CategorySpendingCards rows={categorySpending} />
           </Card>
         ) : null}
 
         {/* Contas */}
-        <Card className="gap-3">
+        <View className="gap-3">
           <View className="flex-row items-center justify-between">
             <Text variant="title" className="text-base">
               {t.dashboard.accounts}
@@ -387,9 +291,9 @@ export default function HomeTab() {
             ) : null}
           </View>
           {accountsQuery.isLoading ? (
-            <View className="gap-3">
+            <View className="gap-2">
               {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-14 w-full" />
+                <Skeleton key={i} className="h-14 w-full rounded-2xl" />
               ))}
             </View>
           ) : accountsQuery.isError ? (
@@ -397,10 +301,11 @@ export default function HomeTab() {
           ) : (accountsQuery.data ?? []).length === 0 ? (
             <Text variant="muted">{t.accounts.empty}</Text>
           ) : (
-            <View>
+            <View className="gap-2">
               {(accountsQuery.data ?? []).map((account) => (
                 <ListRow
                   key={`${account.context_id}-${account.id}`}
+                  className="rounded-2xl border-0 bg-surface-2"
                   onPress={() =>
                     router.push({
                       pathname: '/account',
@@ -428,7 +333,7 @@ export default function HomeTab() {
               ))}
             </View>
           )}
-        </Card>
+        </View>
 
         {/* Últimos lançamentos */}
         <Card className="gap-3">
