@@ -53,16 +53,12 @@ function StatSkeleton() {
 
 export default function HomeTab() {
   const router = useRouter();
-  const { activeScope, contexts } = useAuthStore();
+  const { activeScope } = useAuthStore();
   const month = useMonthStore((s) => s.month);
   const isConsolidated = activeScope === CONSOLIDATED;
   const contextId = isConsolidated ? null : activeScope;
   const [selected, setSelected] = useState<StatementEntry | null>(null);
   const [hideBalance, setHideBalance] = useState(false);
-
-  const contextLabel = isConsolidated
-    ? t.dashboard.consolidatedTitle
-    : (contexts.find((c) => c.id === activeScope)?.name ?? t.dashboard.title);
 
   const dashboardQuery = useQuery({
     queryKey: ['dashboard', activeScope, month],
@@ -178,7 +174,6 @@ export default function HomeTab() {
     <TabShell
       headerPanel={
         <HomeHeader
-          contextLabel={contextLabel}
           isConsolidated={isConsolidated}
           hideBalance={hideBalance}
           onToggleHideBalance={() => setHideBalance((v) => !v)}
