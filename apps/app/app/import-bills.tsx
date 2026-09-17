@@ -42,7 +42,8 @@ export default function ImportBillsPage() {
       return importsApi.previewBillsCsv(contextId, f);
     },
     onSuccess: (data) => setPreview(data),
-    onError: () => push(t.common.error, 'error'),
+    onError: (error) =>
+      push(error instanceof Error ? error.message : t.common.error, 'error', 8000),
   });
 
   // Import
@@ -58,7 +59,8 @@ export default function ImportBillsPage() {
       setFile(null);
       push(t.imports.done);
     },
-    onError: () => push(t.common.error, 'error'),
+    onError: (error) =>
+      push(error instanceof Error ? error.message : t.common.error, 'error', 8000),
   });
 
   const handlePickFile = async () => {
@@ -69,6 +71,7 @@ export default function ImportBillsPage() {
       });
       if (result.canceled || !result.assets[0]) return;
       const asset = result.assets[0];
+      push(t.imports.fileSelected(asset.name));
       setFile({
         uri: asset.uri,
         name: asset.name,
@@ -83,8 +86,14 @@ export default function ImportBillsPage() {
         mimeType: asset.mimeType ?? 'text/csv',
         size: asset.size,
       });
-    } catch {
-      push(t.imports.pickFileError, 'error');
+    } catch (error) {
+      push(
+        error instanceof Error
+          ? `${t.imports.pickFileError} (${error.message})`
+          : t.imports.pickFileError,
+        'error',
+        8000,
+      );
     }
   };
 

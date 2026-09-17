@@ -16,7 +16,8 @@ export type Toast = {
 
 interface ToastState {
   toasts: Toast[];
-  push: (message: string, tone?: ToastTone) => void;
+  /** `durationMs` sobrescreve o tempo padrão — útil pra mensagem de erro mais longa que precisa de mais tempo de leitura. */
+  push: (message: string, tone?: ToastTone, durationMs?: number) => void;
   dismiss: (id: string) => void;
 }
 
@@ -30,10 +31,10 @@ function nextId(): string {
 
 export const useToastStore = create<ToastState>((set, get) => ({
   toasts: [],
-  push: (message, tone = 'success') => {
+  push: (message, tone = 'success', durationMs = AUTO_DISMISS_MS) => {
     const id = nextId();
     set((state) => ({ toasts: [...state.toasts, { id, message, tone }] }));
-    setTimeout(() => get().dismiss(id), AUTO_DISMISS_MS);
+    setTimeout(() => get().dismiss(id), durationMs);
   },
   dismiss: (id) => set((state) => ({ toasts: state.toasts.filter((toast) => toast.id !== id) })),
 }));
