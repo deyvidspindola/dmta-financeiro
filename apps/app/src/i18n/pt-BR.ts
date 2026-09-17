@@ -744,6 +744,7 @@ export const strings = {
     entryTypeIncome: 'Entrada',
     entryTypeExpense: 'Saída',
     downloadTemplateError: 'Não deu para baixar o modelo. Tente de novo.',
+    pickFileError: 'Não deu para abrir o seletor de arquivo. Tente de novo.',
     passwordLabel: 'Senha do PDF (opcional)',
     passwordLabelRequired: 'Senha do PDF',
     retry: 'Tentar novamente',
