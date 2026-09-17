@@ -8,16 +8,9 @@ import { Text } from '@/components/ui';
 import { useNotificationCaptureSync } from '@/hooks/useNotificationCaptureSync';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { t } from '@/i18n';
+import { getQuickActions, type QuickAction } from '@/lib/quickActions';
 
-type FabAction = {
-  key: string;
-  label: string;
-  icon: keyof typeof Feather.glyphMap;
-  color: string;
-  onPress: () => void;
-};
-
-function FabCircle({ action, onPress }: { action: FabAction; onPress: () => void }) {
+function FabCircle({ action, onPress }: { action: QuickAction; onPress: () => void }) {
   return (
     <Pressable accessibilityLabel={action.label} onPress={onPress} className="items-center gap-2">
       <View className="size-16 items-center justify-center rounded-full bg-surface-2 shadow-sm">
@@ -59,37 +52,7 @@ function arcPosition(angleDeg: number) {
 function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-
-  const actions: FabAction[] = [
-    {
-      key: 'transfer',
-      label: t.nav.fabTransfer,
-      icon: 'repeat',
-      color: '#a78bfa',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'transfer' } }),
-    },
-    {
-      key: 'income',
-      label: t.newTransaction.typeIncome,
-      icon: 'trending-up',
-      color: '#34d399',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'income' } }),
-    },
-    {
-      key: 'card',
-      label: t.nav.fabCardExpense,
-      icon: 'credit-card',
-      color: '#22d3ee',
-      onPress: () => router.push('/(tabs)/cards'),
-    },
-    {
-      key: 'expense',
-      label: t.newTransaction.typeExpense,
-      icon: 'trending-down',
-      color: '#f87171',
-      onPress: () => router.push({ pathname: '/new', params: { type: 'expense' } }),
-    },
-  ];
+  const actions = getQuickActions(router);
 
   return (
     <View
@@ -126,7 +89,7 @@ function FabButton({ open, onToggle }: { open: boolean; onToggle: () => void }) 
       <Pressable
         accessibilityLabel={open ? t.nav.fabClose : t.nav.quickAdd}
         onPress={onToggle}
-        className="size-14 items-center justify-center rounded-full bg-brand-600 shadow-lg active:bg-brand-700"
+        className="size-14 items-center justify-center rounded-full bg-accent-600 shadow-lg active:bg-accent-700"
         style={{ elevation: 8 }}
       >
         <Feather name={open ? 'x' : 'plus'} size={26} color="#fff" />
@@ -153,11 +116,11 @@ export default function TabsLayout() {
       <Tabs
         screenOptions={{
           headerShown: false,
-          tabBarActiveTintColor: isDark ? '#34d399' : '#059669',
+          tabBarActiveTintColor: isDark ? '#a78bfa' : '#7c3aed',
           tabBarInactiveTintColor: isDark ? '#6b7f79' : '#7c918b',
           tabBarStyle: {
-            backgroundColor: isDark ? '#121917' : '#ffffff',
-            borderTopColor: isDark ? '#263130' : '#e3e9e7',
+            backgroundColor: isDark ? '#1b1a25' : '#ffffff',
+            borderTopColor: isDark ? '#2c2a3a' : '#e3e9e7',
             paddingBottom: insets.bottom,
             height: 56 + insets.bottom,
           },

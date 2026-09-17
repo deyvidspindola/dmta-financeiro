@@ -21,14 +21,14 @@
   }
 
   .dark:root {
-    --canvas: #0a0f0d;
-    --surface: #121917;
-    --surface-2: #1a2320;
-    --line: #263130;
-    --fg: #e7efec;
-    --fg-muted: #9db0aa;
-    --fg-subtle: #6b7f79;
-    --positive: #34d399;
-    --negative: #f87171;
+    --canvas: #121119;
+    --surface: #1b1a25;
+    --surface-2: #1e1d28;
+    --line: #2c2a3a;
+    --fg: #f1eff8;
+    --fg-muted: #8d8aa3;
+    --fg-subtle: #6e6b82;
+    --positive: #34c878;
+    --negative: #ff5c72;
   }
 }
