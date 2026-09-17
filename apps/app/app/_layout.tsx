@@ -10,6 +10,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { bindAuthToken } from '@/api';
 import { queryClient } from '@/query/client';
 import { BiometricLockScreen } from '@/components/BiometricLockScreen';
+import { ToastHost } from '@/components/ToastHost';
 import { useAutoUpdate } from '@/hooks/useAutoUpdate';
 import { useBiometricLock } from '@/hooks/useBiometricLock';
 import { hydrateAuthToken, useAuthStore } from '@/store/authStore';
@@ -58,6 +59,9 @@ export default function RootLayout() {
               <BiometricLockScreen onUnlock={unlock} />
             </View>
           )}
+          {/* `useToastStore.push()` só muda estado — sem isso montado em
+              algum lugar, nenhum toast do app nunca apareceu de verdade. */}
+          <ToastHost />
           <StatusBar style="auto" />
         </QueryClientProvider>
       </SafeAreaProvider>
