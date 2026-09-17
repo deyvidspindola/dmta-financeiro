@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import {
   AccountIcon,
@@ -13,8 +12,8 @@ import {
   TextField,
 } from '@/components/ui';
 import { t } from '@/i18n';
-import { suspendBiometricLock } from '@/lib/biometricSuspend';
 import { downloadAndShare } from '@/lib/download';
+import { pickDocument } from '@/lib/pickDocument';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import * as importsApi from '@/api/imports';
@@ -90,23 +89,26 @@ export default function ImportStatementPage() {
   });
 
   const handlePickFile = async () => {
-    suspendBiometricLock();
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/csv', 'application/pdf'],
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    const f = {
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: asset.mimeType ?? 'application/octet-stream',
-      size: asset.size,
-    };
-    setFile(f);
-    setPreview(null);
-    setSummary(null);
-    previewMutation.mutate({ f, pwd: password || undefined });
+    try {
+      const result = await pickDocument({
+        type: ['text/csv', 'text/comma-separated-values', 'application/csv', 'application/pdf'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      const f = {
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? 'application/octet-stream',
+        size: asset.size,
+      };
+      setFile(f);
+      setPreview(null);
+      setSummary(null);
+      previewMutation.mutate({ f, pwd: password || undefined });
+    } catch {
+      push(t.imports.pickFileError, 'error');
+    }
   };
 
   const handleRetryWithPassword = () => {

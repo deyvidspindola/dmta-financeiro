@@ -1,11 +1,10 @@
 import { useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
-import * as DocumentPicker from 'expo-document-picker';
 import { useMutation } from '@tanstack/react-query';
 import { Badge, Button, Card, Screen, Text } from '@/components/ui';
 import { t } from '@/i18n';
-import { suspendBiometricLock } from '@/lib/biometricSuspend';
 import { downloadAndShare } from '@/lib/download';
+import { pickDocument } from '@/lib/pickDocument';
 import { useAuthStore } from '@/store/authStore';
 import { useToastStore } from '@/store/toastStore';
 import * as importsApi from '@/api/imports';
@@ -63,27 +62,30 @@ export default function ImportBillsPage() {
   });
 
   const handlePickFile = async () => {
-    suspendBiometricLock();
-    const result = await DocumentPicker.getDocumentAsync({
-      type: ['text/csv', 'text/comma-separated-values', 'application/csv'],
-      copyToCacheDirectory: true,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
-    setFile({
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: asset.mimeType ?? 'text/csv',
-      size: asset.size,
-    });
-    setPreview(null);
-    setSummary(null);
-    previewMutation.mutate({
-      uri: asset.uri,
-      name: asset.name,
-      mimeType: asset.mimeType ?? 'text/csv',
-      size: asset.size,
-    });
+    try {
+      const result = await pickDocument({
+        type: ['text/csv', 'text/comma-separated-values', 'application/csv'],
+        copyToCacheDirectory: true,
+      });
+      if (result.canceled || !result.assets[0]) return;
+      const asset = result.assets[0];
+      setFile({
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? 'text/csv',
+        size: asset.size,
+      });
+      setPreview(null);
+      setSummary(null);
+      previewMutation.mutate({
+        uri: asset.uri,
+        name: asset.name,
+        mimeType: asset.mimeType ?? 'text/csv',
+        size: asset.size,
+      });
+    } catch {
+      push(t.imports.pickFileError, 'error');
+    }
   };
 
   if (!contextId) {
