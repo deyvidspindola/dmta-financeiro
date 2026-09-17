@@ -63,7 +63,8 @@ export default function ImportStatementPage() {
       return importsApi.previewStatement(contextId, accountId, f, pwd);
     },
     onSuccess: (data) => setPreview(data),
-    onError: () => push(t.common.error, 'error'),
+    onError: (error) =>
+      push(error instanceof Error ? error.message : t.common.error, 'error', 8000),
   });
 
   // Import
@@ -85,7 +86,8 @@ export default function ImportStatementPage() {
       setPassword('');
       push(t.imports.done);
     },
-    onError: () => push(t.common.error, 'error'),
+    onError: (error) =>
+      push(error instanceof Error ? error.message : t.common.error, 'error', 8000),
   });
 
   const handlePickFile = async () => {
@@ -102,12 +104,19 @@ export default function ImportStatementPage() {
         mimeType: asset.mimeType ?? 'application/octet-stream',
         size: asset.size,
       };
+      push(t.imports.fileSelected(asset.name));
       setFile(f);
       setPreview(null);
       setSummary(null);
       previewMutation.mutate({ f, pwd: password || undefined });
-    } catch {
-      push(t.imports.pickFileError, 'error');
+    } catch (error) {
+      push(
+        error instanceof Error
+          ? `${t.imports.pickFileError} (${error.message})`
+          : t.imports.pickFileError,
+        'error',
+        8000,
+      );
     }
   };
 

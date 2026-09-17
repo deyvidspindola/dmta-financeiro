@@ -745,6 +745,7 @@ export const strings = {
     entryTypeExpense: 'Saída',
     downloadTemplateError: 'Não deu para baixar o modelo. Tente de novo.',
     pickFileError: 'Não deu para abrir o seletor de arquivo. Tente de novo.',
+    fileSelected: (name: string) => `Arquivo selecionado: ${name}`,
     passwordLabel: 'Senha do PDF (opcional)',
     passwordLabelRequired: 'Senha do PDF',
     retry: 'Tentar novamente',
