@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Feather } from '@expo/vector-icons';
+import { useColorScheme } from 'nativewind';
 import { useQuery } from '@tanstack/react-query';
 import { accountsApi, categoriesApi, consolidatedApi, transactionsApi } from '@/api';
 import { TabShell } from '@/components/TabShell';
@@ -27,6 +28,14 @@ import {
   useTransactionFilterStore,
 } from '@/store/transactionFilterStore';
 import type { StatementEntry } from '@/types/models';
+
+// Feather não resolve `className` (sem cssInterop — ver MonthNavigator.tsx
+// pro mesmo padrão), então os ícones de busca/filtro pegam cor literal por
+// tema. `active` é o roxo de ação (accent), não mais o verde de antes.
+const ICON_COLORS = {
+  light: { muted: '#7c918b', active: '#7c3aed' },
+  dark: { muted: '#6e6b82', active: '#a78bfa' },
+} as const;
 
 function dayGroupLabel(iso: string): string {
   const today = new Date();
@@ -86,6 +95,8 @@ export default function TransactionsTab() {
   const month = useMonthStore((s) => s.month);
   const isConsolidated = activeScope === CONSOLIDATED;
   const contextId = isConsolidated ? null : activeScope;
+  const { colorScheme } = useColorScheme();
+  const palette = colorScheme === 'dark' ? ICON_COLORS.dark : ICON_COLORS.light;
 
   const [showSearch, setShowSearch] = useState(false);
   const [search, setSearch] = useState('');
@@ -197,13 +208,17 @@ export default function TransactionsTab() {
       headerRight={
         <View className="flex-row items-center gap-4">
           <Pressable onPress={() => setShowSearch((v) => !v)} hitSlop={8}>
-            <Feather name="search" size={20} color={showSearch ? '#0f9d58' : '#7c918b'} />
+            <Feather name="search" size={20} color={showSearch ? palette.active : palette.muted} />
           </Pressable>
           <Pressable onPress={() => router.push('/transaction-filters')} hitSlop={8}>
             <View>
-              <Feather name="filter" size={20} color={filtersActive ? '#0f9d58' : '#7c918b'} />
+              <Feather
+                name="filter"
+                size={20}
+                color={filtersActive ? palette.active : palette.muted}
+              />
               {filtersActive ? (
-                <View className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-brand-600" />
+                <View className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-accent-600" />
               ) : null}
             </View>
           </Pressable>
@@ -212,10 +227,10 @@ export default function TransactionsTab() {
     >
       <View className="gap-4">
         {/* Resumo do mês */}
-        <Card className="flex-row gap-3">
+        <Card className="flex-row gap-3 border-0 bg-surface-2">
           <View className="min-w-0 flex-1 gap-1">
             <View className="flex-row items-center gap-2">
-              <Feather name="lock" size={14} color="#7c918b" />
+              <Feather name="lock" size={14} color={palette.muted} />
               <Text variant="muted" className="text-xs" numberOfLines={1}>
                 {t.dashboard.balanceReal}
               </Text>
@@ -224,7 +239,7 @@ export default function TransactionsTab() {
           </View>
           <View className="min-w-0 flex-1 items-end gap-1">
             <View className="flex-row items-center gap-2">
-              <Feather name="briefcase" size={14} color="#7c918b" />
+              <Feather name="briefcase" size={14} color={palette.muted} />
               <Text variant="muted" className="text-xs" numberOfLines={1}>
                 {t.transactions.monthNet}
               </Text>
@@ -235,18 +250,18 @@ export default function TransactionsTab() {
 
         {showSearch ? (
           <View className="h-12 flex-row items-center gap-2 rounded-xl border border-line bg-surface px-3">
-            <Feather name="search" size={16} color="#7c918b" />
+            <Feather name="search" size={16} color={palette.muted} />
             <TextInput
               value={search}
               onChangeText={setSearch}
               autoFocus
               placeholder={t.transactions.filters.searchPlaceholder}
-              placeholderTextColor="#7c918b"
+              placeholderTextColor={palette.muted}
               className="h-full flex-1 text-base text-fg"
             />
             {search.length > 0 ? (
               <Pressable onPress={() => setSearch('')} hitSlop={8}>
-                <Feather name="x" size={16} color="#7c918b" />
+                <Feather name="x" size={16} color={palette.muted} />
               </Pressable>
             ) : null}
           </View>
@@ -272,7 +287,7 @@ export default function TransactionsTab() {
                 <Text variant="muted" className="mb-1 text-xs uppercase tracking-wide">
                   {dayGroupLabel(group.date)}
                 </Text>
-                <Card className="gap-0 py-0">
+                <Card className="gap-0 border-0 bg-surface-2 py-0">
                   {group.rows.map((tx) => {
                     const categoryName = tx.category_id
                       ? categoryMap.get(tx.category_id)
