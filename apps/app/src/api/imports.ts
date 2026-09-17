@@ -24,19 +24,17 @@ function appendLines(body: FormData, lines?: number[]): void {
 }
 
 /**
- * Converte DocumentPickerAsset (expo-document-picker) para o formato que o FormData/fetch
- * do React Native aceita.
+ * Converte DocumentPickerAsset num Blob de verdade pro FormData. O SDK
+ * 57 trocou o `fetch` global pelo `expo/fetch` (WinterCG) — o FormData
+ * dele só aceita `string | Blob | {bytes()}`, não mais o objeto clássico
+ * `{uri, name, type}` do React Native puro (rejeitado em runtime com
+ * "Unsupported FormDataPart implementation"). Ler a URI local via
+ * `fetch` + `.blob()` é o mesmo truque de sempre pra virar Blob de
+ * verdade, e continua funcionando com o `fetch` novo.
  */
-function assetToFormDataBlob(asset: DocumentPickerAsset): {
-  uri: string;
-  name: string;
-  type: string;
-} {
-  return {
-    uri: asset.uri,
-    name: asset.name,
-    type: asset.mimeType || 'application/octet-stream',
-  };
+async function assetToBlob(asset: DocumentPickerAsset): Promise<Blob> {
+  const response = await fetch(asset.uri);
+  return response.blob();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -53,7 +51,7 @@ export async function previewBillsCsv(
   file: DocumentPickerAsset,
 ): Promise<BillImportPreview> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   return http.postForm<BillImportPreview>(`/contexts/${contextId}/bills/import/preview`, body);
 }
 
@@ -63,7 +61,7 @@ export async function importBillsCsv(
   lines?: number[],
 ): Promise<BillImportSummary> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   appendLines(body, lines);
   return http.postForm<BillImportSummary>(`/contexts/${contextId}/bills/import`, body);
 }
@@ -86,7 +84,7 @@ export async function previewStatement(
   password?: string,
 ): Promise<StatementImportPreview> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   if (password) body.append('password', password);
   return http.postForm<StatementImportPreview>(
     `/contexts/${contextId}/accounts/${accountId}/statement-imports/preview`,
@@ -102,7 +100,7 @@ export async function importStatement(
   password?: string,
 ): Promise<StatementImportSummary> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   appendLines(body, lines);
   if (password) body.append('password', password);
   return http.postForm<StatementImportSummary>(
@@ -129,7 +127,7 @@ export async function previewInvoice(
   password?: string,
 ): Promise<CardInvoiceImportPreview> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   if (password) body.append('password', password);
   return http.postForm<CardInvoiceImportPreview>(
     `/contexts/${contextId}/credit-cards/${creditCardId}/invoice-import/preview`,
@@ -145,7 +143,7 @@ export async function importInvoice(
   password?: string,
 ): Promise<CardInvoiceImportSummary> {
   const body = new FormData();
-  body.append('file', assetToFormDataBlob(file) as any);
+  body.append('file', await assetToBlob(file), file.name);
   appendLines(body, lines);
   if (password) body.append('password', password);
   return http.postForm<CardInvoiceImportSummary>(
