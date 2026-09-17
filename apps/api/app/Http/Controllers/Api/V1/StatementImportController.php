@@ -8,23 +8,26 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreStatementImportRequest;
 use App\Models\Account;
 use App\Models\Context;
-use App\UseCases\Transaction\ImportStatementFromCsv;
-use App\UseCases\Transaction\PreviewStatementFromCsv;
+use App\UseCases\Transaction\ImportStatement;
+use App\UseCases\Transaction\PreviewStatement;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 
 /**
- * Importação de extrato bancário via CSV — preview + store seletivo.
+ * Importação de extrato bancário (CSV ou PDF) — preview + store seletivo.
+ * PDF protegido é decifrado com as senhas de boleto cadastradas ou a que
+ * o usuário informa (`password`); cada banco tem seu próprio motor de
+ * leitura (`App\Services\StatementParsers`).
  *
  * @package App\Http\Controllers\Api\V1
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 2.0.0
  *
  * @since   22/08/2026
  *
- * @updated 03/09/2026
+ * @updated 16/09/2026
  */
 final class StatementImportController extends Controller
 {
@@ -32,24 +35,28 @@ final class StatementImportController extends Controller
         StoreStatementImportRequest $request,
         Context $context,
         Account $account,
-        PreviewStatementFromCsv $useCase,
+        PreviewStatement $useCase,
     ): JsonResponse {
-        return response()->json(
-            $useCase->execute($request->file('file'), $context->id, $account->id),
-        );
+        return response()->json($useCase->execute(
+            $request->file('file'),
+            $context->id,
+            $account->id,
+            $request->input('password'),
+        ));
     }
 
     public function store(
         StoreStatementImportRequest $request,
         Context $context,
         Account $account,
-        ImportStatementFromCsv $useCase,
+        ImportStatement $useCase,
     ): JsonResponse {
         return response()->json($useCase->execute(
             $request->file('file'),
             $context->id,
             $account->id,
             $request->onlyLines(),
+            $request->input('password'),
         ));
     }
 
