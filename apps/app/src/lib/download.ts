@@ -6,6 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import { API_BASE_URL } from '@/api/config';
 import { authHeaders } from '@/api/http';
+import { suspendBiometricLock } from '@/lib/biometricSuspend';
 
 /**
  * Baixa um arquivo autenticado do backend e entrega pro usuário — web
@@ -34,5 +35,6 @@ export async function downloadAndShare(path: string, filename: string): Promise<
   const dest = `${FileSystem.documentDirectory}${filename}`;
   const result = await FileSystem.downloadAsync(url, dest, { headers });
   if (result.status !== 200) throw new Error(`HTTP ${result.status}`);
+  suspendBiometricLock();
   await Sharing.shareAsync(result.uri);
 }

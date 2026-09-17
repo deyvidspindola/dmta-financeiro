@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, Platform } from 'react-native';
 import * as LocalAuthentication from 'expo-local-authentication';
+import { isBiometricLockSuspended } from '@/lib/biometricSuspend';
 import { useBiometricStore } from '@/store/biometricStore';
 import { t } from '@/i18n';
 
@@ -12,7 +13,9 @@ import { t } from '@/i18n';
  * logar). Web nunca trava (`expo-local-authentication` não roda lá,
  * e é o mesmo alvo do `apps/web`, sem esse gate). Se o aparelho não tem
  * biometria cadastrada, também não trava — sem isso o usuário ficava
- * preso sem forma de entrar.
+ * preso sem forma de entrar. Ignora a transição de `AppState` enquanto
+ * {@see isBiometricLockSuspended} — sem isso, abrir um seletor de
+ * arquivo do próprio SO já contava como "saiu do app".
  */
 export function useBiometricLock(hasSession: boolean): {
   locked: boolean;
@@ -63,6 +66,10 @@ export function useBiometricLock(hasSession: boolean): {
     void attemptUnlock();
 
     const sub = AppState.addEventListener('change', (state) => {
+      // Seletor de arquivo, compartilhar, câmera: o app perde foco pro
+      // SO sem o usuário ter saído de fato — ver `suspendBiometricLock`.
+      if (isBiometricLockSuspended()) return;
+
       if (state === 'active') {
         setAwaitingAuth(true);
         void attemptUnlock();
