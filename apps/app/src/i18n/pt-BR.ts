@@ -720,6 +720,10 @@ export const strings = {
     statementDescription:
       'CSV ou PDF do banco — reconhecemos o layout de Bradesco, Itaú, Nubank, Inter e C6 Bank automaticamente. Mesmo arquivo pode ser reenviado, duplicatas são ignoradas.',
     statementBankDetected: (bank: string) => `Banco identificado: ${bank}`,
+    noRowsFound: 'Nenhum lançamento foi reconhecido neste arquivo.',
+    bankNotRecognized: 'Não reconhecemos o layout deste banco automaticamente.',
+    rawTextHint:
+      'Texto extraído do PDF, pra diagnóstico — mande um print pra gente ajustar a leitura desse banco:',
     cardInvoiceTitle: 'Importar fatura de cartão',
     cardInvoiceHint: 'Envie a fatura em CSV ou PDF do banco',
     cardInvoiceDescription:

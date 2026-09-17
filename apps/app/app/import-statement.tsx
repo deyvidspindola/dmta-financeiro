@@ -238,82 +238,112 @@ export default function ImportStatementPage() {
           </Card>
         )}
 
-        {preview && !preview.needs_password && !preview.unsupported && (
-          <Card className="gap-3">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-lg font-semibold">{t.imports.previewTitle}</Text>
-              <Badge tone="brand">{preview.summary.ok} OK</Badge>
-            </View>
-
-            {preview.bank && (
+        {preview &&
+          !preview.needs_password &&
+          !preview.unsupported &&
+          preview.summary.total === 0 &&
+          !previewMutation.isPending && (
+            <Card className="gap-3">
+              <Text className="font-semibold text-negative">{t.imports.noRowsFound}</Text>
               <Text variant="muted" className="text-xs">
-                {t.imports.statementBankDetected(preview.bank)}
+                {preview.bank
+                  ? t.imports.statementBankDetected(preview.bank)
+                  : t.imports.bankNotRecognized}
               </Text>
-            )}
-
-            <View className="gap-2 rounded-lg border border-line bg-canvas p-3">
-              <View className="flex-row gap-2">
-                <Text variant="muted" className="text-xs">
-                  {t.imports.total}: {preview.summary.total}
-                </Text>
-                <Text variant="muted" className="text-xs">
-                  · {t.imports.rowStatus.ok}: {preview.summary.ok}
-                </Text>
-                <Text variant="muted" className="text-xs">
-                  · {t.imports.duplicates}: {preview.summary.duplicates}
-                </Text>
-                <Text variant="muted" className="text-xs">
-                  · {t.imports.invalidCount}: {preview.summary.invalid}
-                </Text>
-              </View>
-            </View>
-
-            <ScrollView className="max-h-80">
-              <View className="gap-2">
-                {preview.rows.slice(0, 20).map((row) => (
-                  <View
-                    key={row.line}
-                    className="gap-1 rounded-lg border border-line bg-canvas p-2"
-                  >
-                    <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-medium">
-                        {t.imports.failedRow} {row.line}
-                      </Text>
-                      <View
-                        className={`rounded px-2 py-0.5 ${STATUS_COLOR[row.status] || 'bg-gray-500'}`}
-                      >
-                        <Text className="text-xs font-medium text-white">
-                          {t.imports.rowStatus[row.status]}
-                        </Text>
-                      </View>
-                    </View>
-                    {row.parsed && (
-                      <Text variant="muted" className="text-xs" numberOfLines={1}>
-                        {row.parsed.description} · R$ {row.parsed.amount.toFixed(2)} ·{' '}
-                        {row.parsed.type === 'income'
-                          ? t.imports.entryTypeIncome
-                          : t.imports.entryTypeExpense}
-                      </Text>
-                    )}
-                    {row.reason && <Text className="text-xs text-negative">{row.reason}</Text>}
-                  </View>
-                ))}
-                {preview.rows.length > 20 && (
-                  <Text variant="muted" className="text-center text-xs">
-                    + {preview.rows.length - 20} linhas…
+              {preview.raw_text && (
+                <>
+                  <Text variant="muted" className="text-xs">
+                    {t.imports.rawTextHint}
                   </Text>
-                )}
-              </View>
-            </ScrollView>
+                  <ScrollView className="max-h-60 rounded-lg border border-line bg-canvas p-2">
+                    <Text className="text-xs" selectable>
+                      {preview.raw_text}
+                    </Text>
+                  </ScrollView>
+                </>
+              )}
+            </Card>
+          )}
 
-            <Button
-              label={t.imports.importSelected}
-              onPress={() => importMutation.mutate()}
-              loading={importMutation.isPending}
-              disabled={preview.summary.ok === 0}
-            />
-          </Card>
-        )}
+        {preview &&
+          !preview.needs_password &&
+          !preview.unsupported &&
+          preview.summary.total > 0 && (
+            <Card className="gap-3">
+              <View className="flex-row items-center justify-between">
+                <Text className="text-lg font-semibold">{t.imports.previewTitle}</Text>
+                <Badge tone="brand">{preview.summary.ok} OK</Badge>
+              </View>
+
+              {preview.bank && (
+                <Text variant="muted" className="text-xs">
+                  {t.imports.statementBankDetected(preview.bank)}
+                </Text>
+              )}
+
+              <View className="gap-2 rounded-lg border border-line bg-canvas p-3">
+                <View className="flex-row gap-2">
+                  <Text variant="muted" className="text-xs">
+                    {t.imports.total}: {preview.summary.total}
+                  </Text>
+                  <Text variant="muted" className="text-xs">
+                    · {t.imports.rowStatus.ok}: {preview.summary.ok}
+                  </Text>
+                  <Text variant="muted" className="text-xs">
+                    · {t.imports.duplicates}: {preview.summary.duplicates}
+                  </Text>
+                  <Text variant="muted" className="text-xs">
+                    · {t.imports.invalidCount}: {preview.summary.invalid}
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView className="max-h-80">
+                <View className="gap-2">
+                  {preview.rows.slice(0, 20).map((row) => (
+                    <View
+                      key={row.line}
+                      className="gap-1 rounded-lg border border-line bg-canvas p-2"
+                    >
+                      <View className="flex-row items-center justify-between">
+                        <Text className="text-xs font-medium">
+                          {t.imports.failedRow} {row.line}
+                        </Text>
+                        <View
+                          className={`rounded px-2 py-0.5 ${STATUS_COLOR[row.status] || 'bg-gray-500'}`}
+                        >
+                          <Text className="text-xs font-medium text-white">
+                            {t.imports.rowStatus[row.status]}
+                          </Text>
+                        </View>
+                      </View>
+                      {row.parsed && (
+                        <Text variant="muted" className="text-xs" numberOfLines={1}>
+                          {row.parsed.description} · R$ {row.parsed.amount.toFixed(2)} ·{' '}
+                          {row.parsed.type === 'income'
+                            ? t.imports.entryTypeIncome
+                            : t.imports.entryTypeExpense}
+                        </Text>
+                      )}
+                      {row.reason && <Text className="text-xs text-negative">{row.reason}</Text>}
+                    </View>
+                  ))}
+                  {preview.rows.length > 20 && (
+                    <Text variant="muted" className="text-center text-xs">
+                      + {preview.rows.length - 20} linhas…
+                    </Text>
+                  )}
+                </View>
+              </ScrollView>
+
+              <Button
+                label={t.imports.importSelected}
+                onPress={() => importMutation.mutate()}
+                loading={importMutation.isPending}
+                disabled={preview.summary.ok === 0}
+              />
+            </Card>
+          )}
       </View>
     </Screen>
   );
