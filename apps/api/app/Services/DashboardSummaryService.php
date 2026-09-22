@@ -22,22 +22,20 @@ use Illuminate\Support\Carbon;
  * `::consolidated` (todos) — por isso é Service, não lógica solta em cada
  * ação (capítulo 04.3: soma para exibir, nunca mistura para movimentar).
  *
- * `month_income`/`month_expense` são o que já foi efetivado no mês;
- * `month_projected_*` somam a isso o que ainda vai cair (boletos, fatura
- * de cartão, recorrência) via {@see MonthlyFlowProjector} — sem duplo,
- * porque o cursor de cada regra recorrente já avançou além das ocorrências
- * materializadas. Dívidas pendentes entram só como indicador — nunca
- * somadas a nenhum dos dois (ver docblock de {@see Debt}).
+ * `month_income`/`month_expense` = efetivado no mês; `month_projected_*`
+ * soma o que ainda vai cair (boleto, fatura, recorrência) via
+ * {@see MonthlyFlowProjector}, sem duplicar (cursor da regra já avançou).
+ * Dívida pendente é só indicador — nunca some com os dois (ver {@see Debt}).
  *
  * @package App\Services
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.2.0
+ * @version 2.3.0
  *
  * @since   21/08/2026
  *
- * @updated 16/09/2026
+ * @updated 22/09/2026
  */
 final class DashboardSummaryService
 {
@@ -60,9 +58,11 @@ final class DashboardSummaryService
         $monthStart = $reference->copy()->startOfMonth();
         $monthEnd = $reference->copy()->endOfMonth();
 
-        $pending = $context->bills()->where('status', BillStatus::Pending->value);
-        $overdue = $context->bills()
-            ->where('status', BillStatus::Pending->value)
+        // "Em aberto" só o mês corrente — sem isso, a recorrência de 12
+        // meses à frente inflava o card (pedido do dono, 22/09/2026).
+        $pending = $context->bills()->where('status', BillStatus::Pending->value)
+            ->whereBetween('due_date', [$monthStart->toDateString(), $monthEnd->toDateString()]);
+        $overdue = $context->bills()->where('status', BillStatus::Pending->value)
             ->where('due_date', '<', $now->toDateString());
 
         $incomeEffective = (float) $this->monthEntries($context, StatementEntryType::Income, $reference);
