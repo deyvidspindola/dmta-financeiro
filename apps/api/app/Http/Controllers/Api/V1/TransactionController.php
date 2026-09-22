@@ -8,16 +8,17 @@ use App\DTOs\RegisterTransactionData;
 use App\DTOs\UpdateTransactionData;
 use App\Enums\StatementEntryType;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Api\DeleteTransactionRequest;
 use App\Http\Requests\Api\IndexTransactionRequest;
 use App\Http\Requests\Api\StoreTransactionRequest;
 use App\Http\Requests\Api\UpdateTransactionRequest;
 use App\Http\Resources\StatementEntryResource;
 use App\Models\Context;
 use App\Models\StatementEntry;
-use App\UseCases\Transaction\DeleteTransaction;
+use App\UseCases\Transaction\DeleteTransactionScoped;
 use App\UseCases\Transaction\RegisterTransaction;
 use App\UseCases\Transaction\SettleTransaction;
-use App\UseCases\Transaction\UpdateTransaction;
+use App\UseCases\Transaction\UpdateTransactionScoped;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 
@@ -90,12 +91,9 @@ final class TransactionController extends Controller
         return new StatementEntryResource($useCase->execute($transaction));
     }
 
-    public function update(
-        UpdateTransactionRequest $request,
-        Context $context,
-        StatementEntry $transaction,
-        UpdateTransaction $useCase,
-    ): StatementEntryResource {
+    /** `scope=future|all` no body (só com `recurring_transaction_id`) propaga pra série — ver {@see UpdateTransactionScoped}. */
+    public function update(UpdateTransactionRequest $request, Context $context, StatementEntry $transaction, UpdateTransactionScoped $useCase): StatementEntryResource
+    {
         $entry = $useCase->execute($transaction, new UpdateTransactionData(
             accountId: $request->integer('account_id'),
             description: $request->string('description')->toString(),
@@ -105,15 +103,15 @@ final class TransactionController extends Controller
             categoryId: $request->integer('category_id') ?: null,
             goalId: $request->integer('goal_id') ?: null,
             notes: $request->filled('notes') ? $request->string('notes')->toString() : null,
-        ));
+        ), $request->scope());
 
         return new StatementEntryResource($entry);
     }
 
-    /** Apaga o lançamento e desfaz o efeito no saldo/boleto — ver {@see DeleteTransaction}. */
-    public function destroy(Context $context, StatementEntry $transaction, DeleteTransaction $useCase): JsonResponse
+    /** Apaga o lançamento (e desfaz o efeito no saldo/boleto). `?scope=future|all` propaga pra série — ver {@see DeleteTransactionScoped}. */
+    public function destroy(DeleteTransactionRequest $request, Context $context, StatementEntry $transaction, DeleteTransactionScoped $useCase): JsonResponse
     {
-        $useCase->execute($transaction);
+        $useCase->execute($transaction, $request->scope());
 
         return response()->json(status: 204);
     }

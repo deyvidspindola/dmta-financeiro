@@ -62,6 +62,14 @@ export type CreateTransactionInput = {
 
 export type UpdateTransactionInput = Omit<CreateTransactionInput, 'settled'>;
 
+/**
+ * Alcance de uma edição/exclusão num lançamento vindo de recorrência —
+ * `this` (default) só afeta o próprio; `future` propaga da referência em
+ * diante; `all` propaga pra série inteira, passado incluído. Sem efeito
+ * em lançamento avulso (`recurring_transaction_id` nulo).
+ */
+export type RecurrenceEditScope = 'this' | 'future' | 'all';
+
 export async function createTransaction(
   contextId: string,
   input: CreateTransactionInput,
@@ -81,6 +89,7 @@ export async function updateTransaction(
   contextId: string,
   transactionId: string,
   input: UpdateTransactionInput,
+  scope: RecurrenceEditScope = 'this',
 ): Promise<StatementEntry> {
   const payload = await http.patch<
     Parameters<typeof mapTransaction>[1] | { data: Parameters<typeof mapTransaction>[1] }
@@ -88,6 +97,7 @@ export async function updateTransaction(
     ...input,
     category_id: input.category_id ?? undefined,
     notes: input.notes || undefined,
+    scope,
   });
   return mapTransaction(contextId, unwrapData(payload));
 }
@@ -126,6 +136,11 @@ export async function moveTransaction(
 }
 
 /** Apaga o lançamento e desfaz o efeito no saldo/boleto/meta/fatura. */
-export async function deleteTransaction(contextId: string, transactionId: string): Promise<void> {
-  await http.delete(`/contexts/${contextId}/transactions/${transactionId}`);
+export async function deleteTransaction(
+  contextId: string,
+  transactionId: string,
+  scope: RecurrenceEditScope = 'this',
+): Promise<void> {
+  const qs = scope !== 'this' ? `?scope=${scope}` : '';
+  await http.delete(`/contexts/${contextId}/transactions/${transactionId}${qs}`);
 }

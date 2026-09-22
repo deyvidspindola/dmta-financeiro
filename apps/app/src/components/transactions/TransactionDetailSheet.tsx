@@ -3,8 +3,10 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { accountsApi, categoriesApi, transactionsApi } from '@/api';
+import type { RecurrenceEditScope } from '@/api/transactions';
 import { ApiError } from '@/api/http';
 import { Badge, Button, ConfirmSheet, MoneyValue, SelectField, Sheet, Text } from '@/components/ui';
+import { RecurrenceScopeSheet } from '@/components/transactions/RecurrenceScopeSheet';
 import { t } from '@/i18n';
 import { formatDateShort } from '@/lib/dates';
 import { transactionDirection } from '@/lib/transactionDisplay';
@@ -42,6 +44,7 @@ export function TransactionDetailSheet({
 
   const [mode, setMode] = useState<'detail' | 'move'>('detail');
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [scopePrompt, setScopePrompt] = useState(false);
   const [targetContextId, setTargetContextId] = useState<string | null>(null);
   const [targetAccountId, setTargetAccountId] = useState<string | null>(null);
   const [targetCategoryId, setTargetCategoryId] = useState<string | null>(null);
@@ -53,6 +56,7 @@ export function TransactionDetailSheet({
   const reset = () => {
     setMode('detail');
     setConfirmDelete(false);
+    setScopePrompt(false);
     setTargetContextId(null);
     setTargetAccountId(null);
     setTargetCategoryId(null);
@@ -78,13 +82,25 @@ export function TransactionDetailSheet({
   });
 
   const remove = useMutation({
-    mutationFn: () => transactionsApi.deleteTransaction(contextId!, entry!.id),
+    mutationFn: (scope: RecurrenceEditScope) =>
+      transactionsApi.deleteTransaction(contextId!, entry!.id, scope),
     onSuccess: () => {
       invalidate();
       handleClose();
     },
-    onError: () => setConfirmDelete(false),
+    onError: () => {
+      setConfirmDelete(false);
+      setScopePrompt(false);
+    },
   });
+
+  function startDelete() {
+    if (entry?.recurring_transaction_id) {
+      setScopePrompt(true);
+      return;
+    }
+    setConfirmDelete(true);
+  }
 
   const targetAccountsQuery = useQuery({
     queryKey: ['accounts', targetContextId],
@@ -237,11 +253,7 @@ export function TransactionDetailSheet({
                 <View />
               )}
               {contextId ? (
-                <Button
-                  label={t.common.delete}
-                  variant="ghost"
-                  onPress={() => setConfirmDelete(true)}
-                />
+                <Button label={t.common.delete} variant="ghost" onPress={startDelete} />
               ) : null}
             </View>
           ) : null}
@@ -304,8 +316,15 @@ export function TransactionDetailSheet({
         confirmLabel={t.common.delete}
         tone="danger"
         loading={remove.isPending}
-        onConfirm={() => remove.mutate()}
+        onConfirm={() => remove.mutate('this')}
         onClose={() => setConfirmDelete(false)}
+      />
+
+      <RecurrenceScopeSheet
+        open={scopePrompt}
+        action="delete"
+        onChoose={(scope) => remove.mutate(scope)}
+        onClose={() => setScopePrompt(false)}
       />
     </Sheet>
   );
