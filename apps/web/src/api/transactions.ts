@@ -25,6 +25,14 @@ export type UpdateTransactionInput = Omit<CreateTransactionInput, 'settled' | 'g
   goal_id?: string | null
 }
 
+/**
+ * Alcance de uma edição/exclusão num lançamento vindo de recorrência —
+ * `this` (default) só afeta o próprio; `future` propaga da referência em
+ * diante; `all` propaga pra série inteira, passado incluído. Sem efeito
+ * em lançamento avulso (`recurring_transaction_id` nulo).
+ */
+export type RecurrenceEditScope = 'this' | 'future' | 'all'
+
 export type MoveTransactionInput = {
   target_context_id: string
   target_account_id: string
@@ -98,6 +106,7 @@ export async function updateTransaction(
   contextId: string,
   transactionId: string,
   payload: UpdateTransactionInput,
+  scope: RecurrenceEditScope = 'this',
 ): Promise<StatementEntry> {
   if (useMocks) {
     return mockApi.updateTransaction(contextId, transactionId, payload)
@@ -108,7 +117,7 @@ export async function updateTransaction(
       | { data: Parameters<typeof mapTransaction>[1] }
     >(
       `/contexts/${contextId}/transactions/${transactionId}`,
-      toUpdateTransactionBody(payload),
+      { ...toUpdateTransactionBody(payload), scope },
     ),
   )
   return mapTransaction(contextId, updated)
@@ -152,7 +161,9 @@ export async function settleTransaction(
 export async function deleteTransaction(
   contextId: string,
   transactionId: string,
+  scope: RecurrenceEditScope = 'this',
 ): Promise<void> {
   if (useMocks) return mockApi.deleteTransaction(contextId, transactionId)
-  await http.delete(`/contexts/${contextId}/transactions/${transactionId}`)
+  const qs = scope !== 'this' ? `?scope=${scope}` : ''
+  await http.delete(`/contexts/${contextId}/transactions/${transactionId}${qs}`)
 }

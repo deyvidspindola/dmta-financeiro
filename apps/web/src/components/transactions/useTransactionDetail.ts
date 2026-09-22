@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { accountsApi, categoriesApi, goalsApi, transactionsApi } from '@/api'
+import type { RecurrenceEditScope } from '@/api/transactions'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
 import { canMutateEntry } from '@/lib/transactionDisplay'
@@ -39,6 +40,10 @@ export function useTransactionDetail({ contextId, transactionId, onDeleted, onMo
 
   const [entryOpen, setEntryOpen] = useState(false)
   const [moving, setMoving] = useState(false)
+  const [scopePrompt, setScopePrompt] = useState<{
+    action: 'edit' | 'delete'
+    values?: EntryFormValues
+  } | null>(null)
 
   const txQuery = useQuery({
     queryKey: ['transaction', contextId, transactionId],
@@ -95,19 +100,25 @@ export function useTransactionDetail({ contextId, transactionId, onDeleted, onMo
   }
 
   const saveMutation = useMutation({
-    mutationFn: (values: EntryFormValues) =>
-      transactionsApi.updateTransaction(transaction!.context_id, transaction!.id, {
-        account_id: values.account_id,
-        category_id: values.category_id || null,
-        description: values.description,
-        amount: values.amount,
-        type: values.type,
-        date: values.date,
-      }),
+    mutationFn: ({ values, scope }: { values: EntryFormValues; scope: RecurrenceEditScope }) =>
+      transactionsApi.updateTransaction(
+        transaction!.context_id,
+        transaction!.id,
+        {
+          account_id: values.account_id,
+          category_id: values.category_id || null,
+          description: values.description,
+          amount: values.amount,
+          type: values.type,
+          date: values.date,
+        },
+        scope,
+      ),
     onSuccess: async () => {
       await invalidateMoney()
       toastSuccess(tx.updated)
       setEntryOpen(false)
+      setScopePrompt(null)
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
@@ -134,20 +145,47 @@ export function useTransactionDetail({ contextId, transactionId, onDeleted, onMo
   })
 
   const deleteMutation = useMutation({
-    mutationFn: () => transactionsApi.deleteTransaction(transaction!.context_id, transaction!.id),
+    mutationFn: (scope: RecurrenceEditScope) =>
+      transactionsApi.deleteTransaction(transaction!.context_id, transaction!.id, scope),
     onSuccess: async () => {
       await invalidateMoney()
       toastSuccess(tx.deleted)
+      setScopePrompt(null)
       onDeleted?.()
     },
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
   async function handleDelete() {
+    if (transaction?.recurring_transaction_id) {
+      setScopePrompt({ action: 'delete' })
+      return
+    }
     if (!(await confirm({ message: tx.confirmDelete, tone: 'danger' }))) {
       return
     }
-    deleteMutation.mutate()
+    deleteMutation.mutate('this')
+  }
+
+  function handleSave(values: EntryFormValues) {
+    if (transaction?.recurring_transaction_id) {
+      setScopePrompt({ action: 'edit', values })
+      return
+    }
+    saveMutation.mutate({ values, scope: 'this' })
+  }
+
+  function chooseScope(scope: RecurrenceEditScope) {
+    if (!scopePrompt) return
+    if (scopePrompt.action === 'delete') {
+      deleteMutation.mutate(scope)
+    } else if (scopePrompt.values) {
+      saveMutation.mutate({ values: scopePrompt.values, scope })
+    }
+  }
+
+  function cancelScopePrompt() {
+    setScopePrompt(null)
   }
 
   const isConsolidated = activeScope === CONSOLIDATED
@@ -173,5 +211,9 @@ export function useTransactionDetail({ contextId, transactionId, onDeleted, onMo
     settleMutation,
     deleteMutation,
     handleDelete,
+    handleSave,
+    scopePrompt,
+    chooseScope,
+    cancelScopePrompt,
   }
 }

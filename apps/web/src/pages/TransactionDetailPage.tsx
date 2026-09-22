@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { ArrowLeft, FolderInput, Pencil, Trash2 } from 'lucide-react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
+import { RecurrenceScopeDialog } from '@/components/transactions/RecurrenceScopeDialog'
 import { TransactionDetailBody } from '@/components/transactions/TransactionDetailModal'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { useTransactionDetail } from '@/components/transactions/useTransactionDetail'
@@ -48,6 +49,10 @@ export function TransactionDetailPage() {
     settleMutation,
     deleteMutation,
     handleDelete,
+    handleSave,
+    scopePrompt,
+    chooseScope,
+    cancelScopePrompt,
   } = useTransactionDetail({
     contextId,
     transactionId: id,
@@ -147,10 +152,18 @@ export function TransactionDetailPage() {
             showGoal={false}
             isPending={saveMutation.isPending}
             error={saveMutation.isError ? getErrorMessage(saveMutation.error) : null}
-            onSubmit={(values) => saveMutation.mutate(values)}
+            onSubmit={handleSave}
             onCancel={() => setEntryOpen(false)}
           />
         </Modal>
+      ) : null}
+
+      {scopePrompt ? (
+        <RecurrenceScopeDialog
+          action={scopePrompt.action}
+          onChoose={chooseScope}
+          onCancel={cancelScopePrompt}
+        />
       ) : null}
 
       {moving ? (

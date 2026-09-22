@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { FolderInput, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { MoveTransactionForm } from '@/components/transactions/MoveTransactionForm'
+import { RecurrenceScopeDialog } from '@/components/transactions/RecurrenceScopeDialog'
 import { TransactionForm } from '@/components/transactions/TransactionForm'
 import { TransactionOriginBadge } from '@/components/transactions/TransactionOriginBadge'
 import { useTransactionDetail } from '@/components/transactions/useTransactionDetail'
@@ -66,6 +67,10 @@ export function TransactionDetailModal({
     settleMutation,
     deleteMutation,
     handleDelete,
+    handleSave,
+    scopePrompt,
+    chooseScope,
+    cancelScopePrompt,
   } = useTransactionDetail({
     contextId,
     transactionId,
@@ -158,10 +163,18 @@ export function TransactionDetailModal({
             showGoal={false}
             isPending={saveMutation.isPending}
             error={saveMutation.isError ? getErrorMessage(saveMutation.error) : null}
-            onSubmit={(values) => saveMutation.mutate(values)}
+            onSubmit={handleSave}
             onCancel={() => setEntryOpen(false)}
           />
         </Modal>
+      ) : null}
+
+      {scopePrompt ? (
+        <RecurrenceScopeDialog
+          action={scopePrompt.action}
+          onChoose={chooseScope}
+          onCancel={cancelScopePrompt}
+        />
       ) : null}
 
       {moving && transaction ? (
@@ -207,6 +220,9 @@ export function TransactionDetailBody({
         <div className="mt-2 flex flex-wrap items-center justify-center gap-2">
           <Badge tone="neutral">{typeLabel}</Badge>
           {transaction.status === 'pending' ? <Badge tone="warning">{tx.pendingBadge}</Badge> : null}
+          {transaction.recurring_transaction_id ? (
+            <Badge tone="neutral">{t.recurrenceBadge}</Badge>
+          ) : null}
           <TransactionOriginBadge origin={transaction.origin} />
         </div>
         {transaction.status === 'settled' && transaction.settled_at ? (

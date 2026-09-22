@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Requests\Api;
 
+use App\Enums\RecurrenceEditScope;
 use App\Http\Requests\Api\Concerns\ScopedExists;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -46,6 +47,13 @@ final class UpdateTransactionRequest extends FormRequest
             'occurred_at' => ['required', 'date'],
             'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
             'goal_id' => ['nullable', 'integer', $this->existsInRouteContext('goals')],
+            'scope' => ['nullable', Rule::in(array_column(RecurrenceEditScope::cases(), 'value'))],
         ];
+    }
+
+    /** `this` por padrão — só lançamento vindo de recorrência aceita `future`/`all` (checado no controller). */
+    public function scope(): RecurrenceEditScope
+    {
+        return RecurrenceEditScope::tryFrom((string) $this->input('scope')) ?? RecurrenceEditScope::This;
     }
 }

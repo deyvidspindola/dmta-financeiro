@@ -4,6 +4,7 @@ import { Redirect, useLocalSearchParams, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { z } from 'zod';
 import { accountsApi, categoriesApi, transactionsApi } from '@/api';
+import type { RecurrenceEditScope } from '@/api/transactions';
 import { ApiError } from '@/api/http';
 import {
   Button,
@@ -14,6 +15,7 @@ import {
   Text,
   TextField,
 } from '@/components/ui';
+import { RecurrenceScopeSheet } from '@/components/transactions/RecurrenceScopeSheet';
 import { t } from '@/i18n';
 import { cn } from '@/lib/cn';
 import { useSessionRoute } from '@/hooks/useSessionRoute';
@@ -49,6 +51,7 @@ export default function EditTransactionScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
+  const [scopePrompt, setScopePrompt] = useState(false);
 
   const transactionQuery = useQuery({
     queryKey: ['transaction', contextId, transactionId],
@@ -93,15 +96,20 @@ export default function EditTransactionScreen() {
   );
 
   const mutation = useMutation({
-    mutationFn: () =>
-      transactionsApi.updateTransaction(contextId, transactionId!, {
-        account_id: accountId!,
-        category_id: categoryId || null,
-        description: description.trim(),
-        amount,
-        type,
-        occurred_at: occurredAt,
-      }),
+    mutationFn: (scope: RecurrenceEditScope) =>
+      transactionsApi.updateTransaction(
+        contextId,
+        transactionId!,
+        {
+          account_id: accountId!,
+          category_id: categoryId || null,
+          description: description.trim(),
+          amount,
+          type,
+          occurred_at: occurredAt,
+        },
+        scope,
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['transactions'] });
       void queryClient.invalidateQueries({ queryKey: ['dashboard'] });
@@ -110,6 +118,7 @@ export default function EditTransactionScreen() {
       router.back();
     },
     onError: (err) => {
+      setScopePrompt(false);
       setFormError(
         err instanceof ApiError && err.status === 422
           ? (err.message ?? t.newTransaction.errors.generic)
@@ -155,7 +164,11 @@ export default function EditTransactionScreen() {
       return;
     }
     setErrors({});
-    mutation.mutate();
+    if (transactionQuery.data?.recurring_transaction_id) {
+      setScopePrompt(true);
+      return;
+    }
+    mutation.mutate('this');
   }
 
   return (
@@ -243,6 +256,13 @@ export default function EditTransactionScreen() {
           />
         </View>
       )}
+
+      <RecurrenceScopeSheet
+        open={scopePrompt}
+        action="edit"
+        onChoose={(scope) => mutation.mutate(scope)}
+        onClose={() => setScopePrompt(false)}
+      />
     </Screen>
   );
 }

@@ -223,6 +223,17 @@ export const strings = {
     settle: 'Marcar como efetivado',
     settledToast: 'Lançamento efetivado.',
     settledAt: (date: string) => `Efetivado em ${date}`,
+    recurrenceBadge: 'Recorrente',
+    scopeDialog: {
+      editTitle: 'Este lançamento é recorrente',
+      deleteTitle: 'Excluir lançamento recorrente',
+      editMessage: 'O que você quer alterar?',
+      deleteMessage: 'O que você quer excluir?',
+      this: 'Só este lançamento',
+      future: 'Este e os futuros',
+      all: 'Todos (passado e futuro)',
+      allHint: 'Reescreve/apaga cada ocorrência já gerada, inclusive as passadas.',
+    },
   },
 
   accountDetail: {
