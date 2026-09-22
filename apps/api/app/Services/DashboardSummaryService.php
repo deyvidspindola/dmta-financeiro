@@ -83,11 +83,13 @@ final class DashboardSummaryService
             'context_id' => $context->id,
             'month' => $reference->format('Y-m'),
             'accounts_balance' => $accountsBalance,
-            // Provisionado: real + o previsto (pending). Mês passado não tem
-            // previsto — é história, mostra o real. Ver StatementEntryStatus.
+            // Provisionado: real + previsto (pending + boleto/recorrência do
+            // mês, base de month_projected_*; sem isso boleto em aberto não
+            // pesava aqui). Mês passado não tem previsto, mostra o real.
             'accounts_balance_provisioned' => $isPastMonth
                 ? $accountsBalance
-                : round($accountsBalance + $this->pendingBalanceDelta($context, includeInDashboardOnly: true), 2),
+                : round($accountsBalance + $this->pendingBalanceDelta($context, includeInDashboardOnly: true)
+                    + $projected['income'] - $projected['expense'], 2),
             'pending_bills_count' => $pending->count(),
             'pending_bills_amount' => (float) $pending->sum('amount'),
             'overdue_bills_count' => $overdue->count(),
@@ -123,15 +125,11 @@ final class DashboardSummaryService
     }
 
     /**
-     * Impacto no saldo de todos os lançamentos previstos (pending) do
-     * contexto, com sinal: receita prevista soma, despesa prevista subtrai.
-     * Sem filtro de mês — uma despesa prevista de um mês passado que você
-     * ainda não pagou continua reduzindo o caixa projetado.
-     *
-     * `$includeInDashboardOnly` espelha o mesmo filtro do `accountsBalance`
-     * que este delta soma em cima — sem isso, um pending de conta excluída
-     * do dashboard vazava pro `accounts_balance_provisioned` mesmo a conta
-     * não contando no saldo real ao lado.
+     * Impacto no saldo de todo lançamento previsto (pending) do contexto,
+     * sinal: receita soma, despesa subtrai. Sem filtro de mês — despesa
+     * prevista de mês passado ainda não paga continua pesando aqui.
+     * `$includeInDashboardOnly` espelha o filtro do `accountsBalance` que
+     * este delta soma em cima (senão vazava pending de conta excluída).
      */
     private function pendingBalanceDelta(Context $context, bool $includeInDashboardOnly = false): float
     {
