@@ -19,6 +19,7 @@ import type {
   Investment,
   LoginCredentials,
   LoginResult,
+  RecurringBill,
   StatementEntry,
   User,
 } from '@/types/models'
@@ -133,8 +134,14 @@ let bills: Bill[] = [
     category_id: 'cat_moradia',
     barcode: null,
     origin: 'manual',
+    recurring_bill_id: null,
+    installment_number: null,
+    installment_total: null,
+    installment_group: null,
   },
 ]
+
+let recurringBills: RecurringBill[] = []
 
 let transactions: StatementEntry[] = [
   {
@@ -607,17 +614,41 @@ export const mockApi = {
 
   async createBill(
     contextId: string,
-    payload: Omit<Bill, 'id' | 'context_id' | 'origin'>,
+    payload: Omit<
+      Bill,
+      | 'id'
+      | 'context_id'
+      | 'origin'
+      | 'recurring_bill_id'
+      | 'installment_number'
+      | 'installment_total'
+      | 'installment_group'
+    > & { installments?: number },
   ): Promise<Bill> {
     await delay()
-    const row: Bill = {
-      id: id('bill'),
-      context_id: contextId,
-      origin: 'manual',
-      ...payload,
+    const { installments, ...rest } = payload
+    const count = installments && installments > 1 ? installments : 1
+    const group = count > 1 ? id('inst') : null
+    const [year, month, day] = rest.due_date.split('-').map(Number)
+    const created: Bill[] = []
+    for (let k = 0; k < count; k++) {
+      const dueDate = new Date(Date.UTC(year!, month! - 1 + k, day))
+      created.push({
+        id: id('bill'),
+        context_id: contextId,
+        origin: 'manual',
+        ...rest,
+        amount: rest.amount / count,
+        due_date: dueDate.toISOString().slice(0, 10),
+        barcode: k === 0 ? rest.barcode : null,
+        recurring_bill_id: null,
+        installment_number: count > 1 ? k + 1 : null,
+        installment_total: count > 1 ? count : null,
+        installment_group: group,
+      })
     }
-    bills = [...bills, row]
-    return row
+    bills = [...bills, ...created]
+    return created[0]!
   },
 
   async updateBill(
@@ -907,6 +938,71 @@ export const mockApi = {
     await delay()
   },
 
+  async listRecurringBills(contextId: string): Promise<RecurringBill[]> {
+    await delay()
+    return byContext(recurringBills, contextId)
+  },
+
+  async createRecurringBill(
+    contextId: string,
+    payload: {
+      category_id: string | null
+      description: string
+      amount: number
+      direction: Bill['kind']
+      interval: RecurringBill['interval']
+      start_date: string
+      end_date: string | null
+    },
+  ): Promise<RecurringBill> {
+    await delay()
+    const rule: RecurringBill = {
+      id: id('recbill'),
+      context_id: contextId,
+      category_id: payload.category_id,
+      description: payload.description,
+      amount: payload.amount,
+      direction: payload.direction,
+      interval: payload.interval,
+      start_date: payload.start_date,
+      end_date: payload.end_date,
+      next_due_date: payload.start_date,
+      is_fixed: payload.end_date === null,
+      active: true,
+    }
+    recurringBills = [...recurringBills, rule]
+    bills = [
+      ...bills,
+      {
+        id: id('bill'),
+        context_id: contextId,
+        description: payload.description,
+        amount: payload.amount,
+        due_date: payload.start_date,
+        status: 'pending',
+        kind: payload.direction,
+        category_id: payload.category_id,
+        barcode: null,
+        origin: 'manual',
+        recurring_bill_id: rule.id,
+        installment_number: null,
+        installment_total: null,
+        installment_group: null,
+      },
+    ]
+    return rule
+  },
+
+  async deleteRecurringBill(
+    contextId: string,
+    recurringBillId: string,
+  ): Promise<void> {
+    await delay()
+    recurringBills = recurringBills.filter(
+      (row) => !(row.context_id === contextId && row.id === recurringBillId),
+    )
+  },
+
   async listConsolidatedAccounts(): Promise<Account[]> {
     await delay()
     return accounts.map((row) => ({
@@ -1149,6 +1245,10 @@ export const mockApi = {
       category_id: payload.category_id,
       barcode: capture.linha_digitavel,
       origin: 'email',
+      recurring_bill_id: null,
+      installment_number: null,
+      installment_total: null,
+      installment_group: null,
     }
     bills = [...bills, bill]
     billCaptures = billCaptures.map((row, i) =>

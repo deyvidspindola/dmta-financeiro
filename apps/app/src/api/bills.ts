@@ -11,6 +11,7 @@ export type BillInput = {
   kind: BillKind;
   category_id: string | null;
   barcode: string | null;
+  installments?: number;
 };
 
 export async function listBills(contextId: string, filters: BillListFilters = {}): Promise<Bill[]> {

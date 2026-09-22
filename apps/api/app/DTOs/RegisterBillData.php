@@ -23,6 +23,7 @@ use App\UseCases\Bill\RegisterBill;
  */
 final readonly class RegisterBillData
 {
+    /** @param  int  $installments  1 = boleto avulso; >1 = um boleto por mês, mesmo `installment_group`. */
     public function __construct(
         public int $contextId,
         public string $description,
@@ -33,5 +34,6 @@ final readonly class RegisterBillData
         public ?string $barcode = null,
         public ?string $beneficiary = null,
         public CaptureOrigin $origin = CaptureOrigin::Manual,
+        public int $installments = 1,
     ) {}
 }

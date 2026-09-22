@@ -88,6 +88,14 @@ export function BillList({
                     {isConsolidated && bill.context ? (
                       <Badge tone="neutral">{bill.context.name}</Badge>
                     ) : null}
+                    {bill.installment_number && bill.installment_total ? (
+                      <Badge tone="neutral">
+                        {b.installmentBadge(bill.installment_number, bill.installment_total)}
+                      </Badge>
+                    ) : null}
+                    {bill.recurring_bill_id ? (
+                      <Badge tone="neutral">{b.recurringBadge}</Badge>
+                    ) : null}
                     <TransactionOriginBadge origin={bill.origin} />
                   </>
                 }

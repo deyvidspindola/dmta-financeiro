@@ -101,6 +101,25 @@ export interface Bill {
   barcode: string | null;
   origin: CaptureOrigin;
   context?: ContextRef | null;
+  recurring_bill_id: string | null;
+  installment_number: number | null;
+  installment_total: number | null;
+  installment_group: string | null;
+}
+
+export interface RecurringBill {
+  id: string;
+  context_id: string;
+  category_id: string | null;
+  description: string;
+  amount: number;
+  direction: BillKind;
+  interval: RecurrenceInterval;
+  start_date: string;
+  end_date: string | null;
+  next_due_date: string;
+  is_fixed: boolean;
+  active: boolean;
 }
 
 export interface TransferLeg {

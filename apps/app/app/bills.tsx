@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react';
 import { Pressable, View } from 'react-native';
 import { Redirect, useFocusEffect, useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { accountsApi, billsApi, categoriesApi } from '@/api';
+import { accountsApi, billsApi, categoriesApi, recurringBillsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import {
   Badge,
@@ -26,7 +26,7 @@ import { useSessionRoute } from '@/hooks/useSessionRoute';
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore';
 import { useMonthStore } from '@/store/monthStore';
 import { useScanStore } from '@/store/scanStore';
-import type { Bill, BillKind, BillStatus } from '@/types/models';
+import type { Bill, BillKind, BillStatus, RecurrenceInterval, RecurringBill } from '@/types/models';
 
 // Mesma paleta do apps/web (billStatusTone): pago=verde, vencido=vermelho,
 // pendente=âmbar — antes o mobile não tinha tom vermelho/âmbar no Badge e
@@ -38,6 +38,8 @@ const STATUS_TONE: Record<BillStatus, 'neutral' | 'brand' | 'negative' | 'warnin
   cancelled: 'neutral',
 };
 
+type RepeatMode = 'none' | 'installments' | 'recurring';
+
 type FormState = {
   id: string | null;
   description: string;
@@ -46,6 +48,10 @@ type FormState = {
   kind: BillKind;
   categoryId: string | null;
   barcode: string;
+  repeatMode: RepeatMode;
+  installments: number;
+  interval: RecurrenceInterval;
+  endDate: string;
 };
 
 export default function BillsScreen() {
@@ -125,8 +131,19 @@ export default function BillsScreen() {
     void queryClient.invalidateQueries({ queryKey: ['accounts'] });
   };
 
-  const save = useMutation({
+  const save = useMutation<Bill | RecurringBill, Error, FormState>({
     mutationFn: (f: FormState) => {
+      if (!f.id && f.repeatMode === 'recurring') {
+        return recurringBillsApi.createRecurringBill(activeScope, {
+          description: f.description.trim(),
+          amount: f.amount,
+          direction: f.kind,
+          interval: f.interval,
+          start_date: f.dueDate,
+          end_date: f.endDate || null,
+          category_id: f.categoryId || null,
+        });
+      }
       const base = {
         description: f.description.trim(),
         amount: f.amount,
@@ -136,9 +153,14 @@ export default function BillsScreen() {
       };
       return f.id
         ? billsApi.updateBill(activeScope, f.id, base)
-        : billsApi.createBill(activeScope, { ...base, kind: f.kind });
+        : billsApi.createBill(activeScope, {
+            ...base,
+            kind: f.kind,
+            installments: f.repeatMode === 'installments' ? f.installments : undefined,
+          });
     },
     onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['recurring-bills'] });
       invalidate();
       setForm(null);
     },
@@ -178,6 +200,10 @@ export default function BillsScreen() {
         kind: 'payable',
         categoryId: null,
         barcode: scan.barcode ?? scan.pixCode ?? '',
+        repeatMode: 'none',
+        installments: 2,
+        interval: 'monthly',
+        endDate: '',
       });
     }, [consumeScan]),
   );
@@ -220,6 +246,10 @@ export default function BillsScreen() {
                       kind: bill.kind,
                       categoryId: bill.category_id,
                       barcode: bill.barcode ?? '',
+                      repeatMode: 'none',
+                      installments: 2,
+                      interval: 'monthly',
+                      endDate: '',
                     })
                   }
                   leading={
@@ -243,6 +273,17 @@ export default function BillsScreen() {
                         <Badge tone={STATUS_TONE[bill.status]}>
                           {t.bills.statuses[bill.status]}
                         </Badge>
+                        {bill.installment_number && bill.installment_total ? (
+                          <Badge tone="neutral">
+                            {t.bills.installmentBadge(
+                              bill.installment_number,
+                              bill.installment_total,
+                            )}
+                          </Badge>
+                        ) : null}
+                        {bill.recurring_bill_id ? (
+                          <Badge tone="neutral">{t.bills.recurringBadge}</Badge>
+                        ) : null}
                         <Text variant="muted" className="text-xs">
                           {formatDateShort(bill.due_date)}
                         </Text>
@@ -286,6 +327,10 @@ export default function BillsScreen() {
                   kind: 'payable',
                   categoryId: null,
                   barcode: '',
+                  repeatMode: 'none',
+                  installments: 2,
+                  interval: 'monthly',
+                  endDate: '',
                 })
               }
             />
@@ -359,6 +404,62 @@ export default function BillsScreen() {
               <Text variant="muted" className="text-xs">
                 {t.bills.scanFilled}
               </Text>
+            ) : null}
+
+            {!form.id ? (
+              <>
+                <SelectField
+                  label={t.bills.repeat.label}
+                  placeholder={t.common.select}
+                  value={form.repeatMode}
+                  options={(['none', 'installments', 'recurring'] as RepeatMode[]).map((v) => ({
+                    value: v,
+                    label: t.bills.repeat[v],
+                  }))}
+                  onChange={(v) => setForm({ ...form, repeatMode: v as RepeatMode })}
+                />
+
+                {form.repeatMode === 'installments' ? (
+                  <>
+                    <TextField
+                      label={t.bills.repeat.installmentsCount}
+                      keyboardType="number-pad"
+                      value={String(form.installments)}
+                      onChangeText={(v) =>
+                        setForm({
+                          ...form,
+                          installments: Math.min(60, Math.max(2, parseInt(v, 10) || 2)),
+                        })
+                      }
+                    />
+                    <Text variant="muted" className="text-xs">
+                      {t.bills.repeat.installmentsHint}
+                    </Text>
+                  </>
+                ) : null}
+
+                {form.repeatMode === 'recurring' ? (
+                  <>
+                    <SelectField
+                      label={t.bills.repeat.interval}
+                      placeholder={t.common.select}
+                      value={form.interval}
+                      options={(['weekly', 'monthly', 'yearly'] as RecurrenceInterval[]).map(
+                        (v) => ({ value: v, label: t.recurring.intervals[v] }),
+                      )}
+                      onChange={(v) => setForm({ ...form, interval: v as RecurrenceInterval })}
+                    />
+                    <DateField
+                      label={t.bills.repeat.endDate}
+                      value={form.endDate}
+                      onChange={(v) => setForm({ ...form, endDate: v })}
+                    />
+                    <Text variant="muted" className="text-xs">
+                      {t.bills.repeat.recurringHint}
+                    </Text>
+                  </>
+                ) : null}
+              </>
             ) : null}
 
             {formError ? <Text variant="error">{formError}</Text> : null}

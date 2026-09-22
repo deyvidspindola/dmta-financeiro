@@ -29,6 +29,7 @@ import type {
   InvoiceStatus,
   MoneyDirection,
   RecurrenceInterval,
+  RecurringBill,
   RecurringTransaction,
   SimulationStatus,
   StatementEntry,
@@ -286,6 +287,10 @@ export function mapBill(
     barcode?: string | null;
     origin?: CaptureOrigin;
     context?: Parameters<typeof mapContextRef>[0] | null;
+    recurring_bill_id?: string | number | null;
+    installment_number?: number | null;
+    installment_total?: number | null;
+    installment_group?: string | null;
   },
 ): Bill {
   const context = raw.context ? mapContextRef(raw.context) : null;
@@ -302,6 +307,13 @@ export function mapBill(
     barcode: raw.barcode ?? null,
     origin: mapOrigin(raw.origin),
     context,
+    recurring_bill_id:
+      raw.recurring_bill_id === null || raw.recurring_bill_id === undefined
+        ? null
+        : asId(raw.recurring_bill_id),
+    installment_number: raw.installment_number ?? null,
+    installment_total: raw.installment_total ?? null,
+    installment_group: raw.installment_group ?? null,
   };
 }
 
@@ -312,6 +324,7 @@ export function toCreateBillBody(payload: {
   kind: BillKind;
   category_id: string | null;
   barcode: string | null;
+  installments?: number;
 }): {
   description: string;
   amount: number;
@@ -319,6 +332,7 @@ export function toCreateBillBody(payload: {
   direction: BillKind;
   category_id: number | null;
   barcode: string | null;
+  installments?: number;
 } {
   return {
     description: payload.description,
@@ -327,6 +341,69 @@ export function toCreateBillBody(payload: {
     direction: payload.kind,
     category_id: payload.category_id === null ? null : asApiId(payload.category_id),
     barcode: payload.barcode,
+    installments:
+      payload.installments && payload.installments > 1 ? payload.installments : undefined,
+  };
+}
+
+export function mapRecurringBill(
+  contextId: string,
+  raw: {
+    id: string | number;
+    category_id?: string | number | null;
+    description: string;
+    amount: number;
+    direction: BillKind;
+    interval: RecurrenceInterval;
+    start_date: string;
+    end_date?: string | null;
+    next_due_date: string;
+    is_fixed: boolean;
+    active: boolean;
+  },
+): RecurringBill {
+  return {
+    id: asId(raw.id),
+    context_id: contextId,
+    category_id:
+      raw.category_id === null || raw.category_id === undefined ? null : asId(raw.category_id),
+    description: raw.description,
+    amount: Number(raw.amount),
+    direction: raw.direction,
+    interval: raw.interval,
+    start_date: raw.start_date,
+    end_date: raw.end_date ?? null,
+    next_due_date: raw.next_due_date,
+    is_fixed: raw.is_fixed,
+    active: raw.active,
+  };
+}
+
+export function toCreateRecurringBillBody(payload: {
+  category_id: string | null;
+  description: string;
+  amount: number;
+  direction: BillKind;
+  interval: RecurrenceInterval;
+  start_date: string;
+  end_date: string | null;
+}): {
+  category_id: number | null;
+  description: string;
+  amount: number;
+  direction: BillKind;
+  interval: RecurrenceInterval;
+  start_date: string;
+  end_date: string | null;
+} {
+  return {
+    category_id: payload.category_id ? asApiId(payload.category_id) : null,
+    description: payload.description,
+    amount: payload.amount,
+    direction: payload.direction,
+    interval: payload.interval,
+    start_date: payload.start_date,
+    end_date: payload.end_date,
   };
 }
 

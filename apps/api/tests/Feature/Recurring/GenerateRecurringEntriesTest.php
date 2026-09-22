@@ -12,6 +12,7 @@ use App\Models\Bill;
 use App\Models\RecurringBill;
 use App\Models\RecurringTransaction;
 use App\Models\StatementEntry;
+use App\Services\RecurringBillMaterializer;
 use App\Services\RecurringTransactionMaterializer;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Carbon;
@@ -44,7 +45,7 @@ function runTransactionJob(): void
 
 function runBillJob(): void
 {
-    (new GenerateRecurringBillEntries)->handle(app(RecurrenceWindow::class));
+    (new GenerateRecurringBillEntries)->handle(app(RecurringBillMaterializer::class));
 }
 
 test('lançamento recorrente: uma ocorrência vencida gera um lançamento e avança a data', function () {

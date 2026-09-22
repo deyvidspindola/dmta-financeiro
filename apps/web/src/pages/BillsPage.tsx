@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { billsApi, accountsApi, categoriesApi, consolidatedApi } from '@/api'
+import { billsApi, accountsApi, categoriesApi, consolidatedApi, recurringBillsApi } from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import { BillFiltersBar } from '@/components/bills/BillFilters'
 import { applyClientBillFilters, toApiBillFilters } from '@/components/bills/billFilterState'
@@ -29,7 +29,7 @@ import { getErrorMessage } from '@/lib/errors'
 import { CONSOLIDATED, useAuthStore } from '@/store/authStore'
 import { useMonthStore } from '@/store/monthStore'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import type { Bill } from '@/types/models'
+import type { Bill, RecurringBill } from '@/types/models'
 
 const b = strings.bills
 
@@ -123,7 +123,7 @@ export function BillsPage() {
     setEditing(null)
   }
 
-  const saveMutation = useMutation({
+  const saveMutation = useMutation<Bill | RecurringBill, Error, BillFormValues>({
     mutationFn: (values: BillFormValues) => {
       if (editing) {
         return billsApi.updateBill(contextId!, editing.id, {
@@ -134,6 +134,17 @@ export function BillsPage() {
           barcode: values.barcode || null,
         })
       }
+      if (values.repeat_mode === 'recurring') {
+        return recurringBillsApi.createRecurringBill(contextId!, {
+          description: values.description,
+          amount: values.amount,
+          direction: values.kind,
+          interval: values.interval,
+          start_date: values.due_date,
+          end_date: values.end_date || null,
+          category_id: values.category_id || null,
+        })
+      }
       return billsApi.createBill(contextId!, {
         description: values.description,
         amount: values.amount,
@@ -142,12 +153,21 @@ export function BillsPage() {
         status: values.status,
         category_id: values.category_id || null,
         barcode: values.barcode || null,
+        installments:
+          values.repeat_mode === 'installments' ? values.installments : undefined,
       })
     },
-    onSuccess: async () => {
+    onSuccess: async (_result, values) => {
       await queryClient.invalidateQueries({ queryKey: ['bills'] })
+      await queryClient.invalidateQueries({ queryKey: ['recurring-bills'] })
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      toastSuccess(editing ? b.updated : b.created)
+      toastSuccess(
+        editing
+          ? b.updated
+          : values.repeat_mode === 'recurring'
+            ? b.repeat.recurringCreated
+            : b.created,
+      )
       closeModal()
     },
     onError: (err) => toastError(getErrorMessage(err)),

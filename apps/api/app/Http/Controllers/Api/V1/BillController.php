@@ -53,6 +53,7 @@ final class BillController extends Controller
             categoryId: $request->integer('category_id') ?: null,
             barcode: $request->input('barcode'),
             beneficiary: $request->input('beneficiary'),
+            installments: $request->integer('installments') ?: 1,
         ));
 
         return new BillResource($bill);

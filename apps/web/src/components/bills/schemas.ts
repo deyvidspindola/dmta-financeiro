@@ -9,6 +9,10 @@ export const billSchema = z.object({
   status: z.enum(['pending', 'paid', 'overdue', 'cancelled']),
   category_id: z.string().nullable(),
   barcode: z.string().optional(),
+  repeat_mode: z.enum(['none', 'installments', 'recurring']),
+  installments: z.coerce.number().int().min(2).max(60).optional(),
+  interval: z.enum(['weekly', 'monthly', 'yearly']),
+  end_date: z.string().optional(),
 })
 
 export type BillFormValues = z.infer<typeof billSchema>
@@ -21,6 +25,10 @@ export const emptyBillValues: BillFormValues = {
   status: 'pending',
   category_id: null,
   barcode: '',
+  repeat_mode: 'none',
+  installments: 2,
+  interval: 'monthly',
+  end_date: '',
 }
 
 export const payBillSchema = z.object({
