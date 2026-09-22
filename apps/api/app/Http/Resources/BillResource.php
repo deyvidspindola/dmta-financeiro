@@ -42,6 +42,10 @@ final class BillResource extends JsonResource
             'days_until_due' => $this->daysUntilDue(),
             // @phpstan-ignore-next-line method.nonObject (cast 'datetime' da migration)
             'paid_at' => $this->paid_at?->toIso8601String(),
+            'recurring_bill_id' => $this->recurring_bill_id,
+            'installment_number' => $this->installment_number,
+            'installment_total' => $this->installment_total,
+            'installment_group' => $this->installment_group,
             // Só presente na visão consolidada — ver AccountResource.
             'context' => new ContextResource($this->whenLoaded('context')),
         ];

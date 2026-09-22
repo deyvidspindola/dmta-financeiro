@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
 #[Fillable([
     'context_id', 'category_id', 'recurring_bill_id', 'description', 'amount', 'due_date',
     'direction', 'status', 'origin', 'barcode', 'beneficiary', 'paid_at',
+    'installment_number', 'installment_total', 'installment_group',
 ])]
 /**
  * Boleto a pagar/receber (D-06). Não move saldo de conta sozinho — quando

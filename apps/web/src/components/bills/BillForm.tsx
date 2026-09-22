@@ -10,6 +10,7 @@ import {
   TextInput,
   TextSelect,
 } from '@/components/ui'
+import { cn } from '@/lib/cn'
 import { categoryTypeForBillKind } from '@/components/bills/billDisplay'
 import {
   billSchema,
@@ -50,6 +51,7 @@ export function BillForm({
 
   const watchedKind = form.watch('kind')
   const categoryType = categoryTypeForBillKind(watchedKind)
+  const repeatMode = form.watch('repeat_mode')
 
   useEffect(() => {
     if (!isEdit) {
@@ -138,6 +140,72 @@ export function BillForm({
               ))}
             </TextSelect>
           </Field>
+
+          <Field label={b.repeat.label}>
+            <div className="flex gap-2">
+              {(['none', 'installments', 'recurring'] as const).map((mode) => (
+                <button
+                  key={mode}
+                  type="button"
+                  onClick={() => form.setValue('repeat_mode', mode)}
+                  className={cn(
+                    'flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition',
+                    repeatMode === mode
+                      ? 'border-brand-600 bg-brand-500/10 text-brand-700 dark:text-brand-300'
+                      : 'border-line bg-surface text-fg-muted hover:bg-surface-2',
+                  )}
+                >
+                  {b.repeat[mode]}
+                </button>
+              ))}
+            </div>
+          </Field>
+
+          {repeatMode === 'installments' ? (
+            <Field
+              label={b.repeat.installmentsCount}
+              hint={b.repeat.installmentsHint}
+              error={form.formState.errors.installments?.message}
+            >
+              <TextInput
+                type="number"
+                min={2}
+                max={60}
+                {...form.register('installments')}
+              />
+            </Field>
+          ) : null}
+
+          {repeatMode === 'recurring' ? (
+            <>
+              <Field label={b.repeat.interval}>
+                <TextSelect {...form.register('interval')}>
+                  {(
+                    Object.keys(strings.recurring.intervals) as Array<
+                      keyof typeof strings.recurring.intervals
+                    >
+                  ).map((key) => (
+                    <option key={key} value={key}>
+                      {strings.recurring.intervals[key]}
+                    </option>
+                  ))}
+                </TextSelect>
+              </Field>
+              <Field label={b.repeat.endDate}>
+                <Controller
+                  name="end_date"
+                  control={form.control}
+                  render={({ field }) => (
+                    <DatePickerField
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </Field>
+              <p className="text-xs text-fg-muted">{b.repeat.recurringHint}</p>
+            </>
+          ) : null}
         </>
       ) : (
         <p className="text-sm text-fg-muted">

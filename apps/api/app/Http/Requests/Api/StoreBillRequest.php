@@ -42,6 +42,7 @@ final class StoreBillRequest extends FormRequest
             'category_id' => ['nullable', 'integer', $this->existsInRouteContext('categories')],
             'barcode' => ['nullable', 'string', 'max:60'],
             'beneficiary' => ['nullable', 'string', 'max:150'],
+            'installments' => ['nullable', 'integer', 'min:1', 'max:60'],
         ];
     }
 }

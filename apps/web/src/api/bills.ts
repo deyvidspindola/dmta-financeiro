@@ -9,7 +9,16 @@ import {
 import { mockApi } from '@/mocks/store'
 import type { Bill } from '@/types/models'
 
-export type CreateBillInput = Omit<Bill, 'id' | 'context_id' | 'origin'>
+export type CreateBillInput = Omit<
+  Bill,
+  | 'id'
+  | 'context_id'
+  | 'origin'
+  | 'recurring_bill_id'
+  | 'installment_number'
+  | 'installment_total'
+  | 'installment_group'
+> & { installments?: number }
 
 export type UpdateBillInput = {
   description: string

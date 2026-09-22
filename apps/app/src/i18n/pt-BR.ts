@@ -431,6 +431,21 @@ export const strings = {
     },
     scan: 'Escanear boleto/PIX',
     scanFilled: 'Dados do boleto preenchidos. Confira e salve.',
+    repeat: {
+      label: 'Repetição',
+      none: 'Único',
+      installments: 'Parcelado',
+      recurring: 'Recorrente',
+      installmentsCount: 'Número de parcelas',
+      installmentsHint: 'Um boleto por mês, valor dividido igualmente.',
+      interval: 'Frequência',
+      endDate: 'Data de fim (opcional)',
+      recurringHint:
+        'Gera um boleto pendente todo mês automaticamente. Pagar um não afeta os demais.',
+      recurringCreated: 'Boleto recorrente cadastrado.',
+    },
+    installmentBadge: (n: number, total: number) => `${n}/${total}`,
+    recurringBadge: 'Recorrente',
   },
 
   scanBoleto: {
