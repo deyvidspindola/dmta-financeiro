@@ -155,7 +155,7 @@ export const strings = {
     disableSuccess: 'MFA desligado.',
     dangerZone: 'Zona de perigo',
     resetDescription:
-      'Apaga de forma irreversível contas, lançamentos, cartões, orçamentos, metas, boletos e recorrências. Seu login e senha continuam válidos.',
+      'Apaga de forma irreversível contas, lançamentos, cartões, orçamentos, metas, boletos, recorrências e categorias. Seu login e senha continuam válidos, e um conjunto de categorias padrão já vem pronto no novo contexto.',
     resetButton: 'Apagar todos os dados',
     resetTitle: 'Apagar todos os dados',
     resetConfirmWord: 'APAGAR',
@@ -872,9 +872,15 @@ export const strings = {
       expense: 'Despesa',
     },
     color: 'Cor',
+    icon: 'Ícone',
     groupIncome: 'Receitas',
     groupExpense: 'Despesas',
     needContext: 'Selecione um contexto para gerenciar categorias.',
+    deleteAll: 'Excluir todas as categorias',
+    confirmDeleteAllTitle: 'Excluir todas as categorias?',
+    confirmDeleteAll:
+      'Apaga todas as categorias e subcategorias deste contexto de uma vez. Lançamentos, boletos e orçamentos que usavam essas categorias ficam sem categoria. Essa ação não pode ser desfeita.',
+    deletedAll: 'Todas as categorias foram excluídas.',
   },
 
   common: {

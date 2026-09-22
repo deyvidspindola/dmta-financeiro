@@ -89,6 +89,8 @@ let categories: Category[] = [
     name: 'Moradia',
     parent_id: null,
     type: 'expense',
+    color: null,
+    icon: null,
   },
   {
     id: 'cat_aluguel',
@@ -96,6 +98,8 @@ let categories: Category[] = [
     name: 'Aluguel',
     parent_id: 'cat_moradia',
     type: 'expense',
+    color: null,
+    icon: null,
   },
   {
     id: 'cat_salario',
@@ -103,6 +107,8 @@ let categories: Category[] = [
     name: 'Salário',
     parent_id: null,
     type: 'income',
+    color: null,
+    icon: null,
   },
   {
     id: 'cat_servicos',
@@ -110,6 +116,8 @@ let categories: Category[] = [
     name: 'Serviços',
     parent_id: null,
     type: 'income',
+    color: null,
+    icon: null,
   },
 ]
 
@@ -526,14 +534,19 @@ export const mockApi = {
   async updateCategory(
     contextId: string,
     categoryId: string,
-    payload: { name: string },
+    payload: { name: string; color?: string | null; icon?: string | null },
   ): Promise<Category> {
     await delay()
     const index = categories.findIndex(
       (row) => row.context_id === contextId && row.id === categoryId,
     )
     if (index < 0) throw Object.assign(new Error('Not found'), { status: 404 })
-    const row: Category = { ...categories[index]!, name: payload.name }
+    const row: Category = {
+      ...categories[index]!,
+      name: payload.name,
+      color: payload.color ?? categories[index]!.color,
+      icon: payload.icon ?? categories[index]!.icon,
+    }
     categories = categories.map((item, i) => (i === index ? row : item))
     return row
   },
@@ -543,6 +556,11 @@ export const mockApi = {
     categories = categories.filter(
       (row) => !(row.context_id === contextId && row.id === categoryId),
     )
+  },
+
+  async deleteAllCategories(contextId: string): Promise<void> {
+    await delay()
+    categories = categories.filter((row) => row.context_id !== contextId)
   },
 
   async listBills(

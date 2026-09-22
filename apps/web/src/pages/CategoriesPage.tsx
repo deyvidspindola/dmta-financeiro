@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Plus } from 'lucide-react'
+import { Plus, Trash2 } from 'lucide-react'
 import { categoriesApi } from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import { CategoryList } from '@/components/categories/CategoryList'
@@ -54,6 +54,15 @@ export function CategoriesPage() {
     onError: (err) => toastError(getErrorMessage(err)),
   })
 
+  const deleteAllMutation = useMutation({
+    mutationFn: () => categoriesApi.deleteAllCategories(contextId!),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['categories'] })
+      toastSuccess(c.deletedAll)
+    },
+    onError: (err) => toastError(getErrorMessage(err)),
+  })
+
   function openCreate() {
     setEditing(null)
     setModalOpen(true)
@@ -81,6 +90,19 @@ export function CategoriesPage() {
     deleteMutation.mutate(categoryId)
   }
 
+  async function handleDeleteAll() {
+    if (
+      !(await confirm({
+        title: c.confirmDeleteAllTitle,
+        message: c.confirmDeleteAll,
+        tone: 'danger',
+      }))
+    ) {
+      return
+    }
+    deleteAllMutation.mutate()
+  }
+
   const canMutate = Boolean(contextId) && activeScope !== CONSOLIDATED
 
   return (
@@ -89,10 +111,23 @@ export function CategoriesPage() {
         title={c.listTitle}
         description={c.listHint}
         actions={
-          <Button onClick={openCreate} disabled={!canMutate}>
-            <Plus size={16} aria-hidden />
-            {c.create}
-          </Button>
+          <div className="flex items-center gap-2">
+            {hasCategories ? (
+              <Button
+                variant="ghost"
+                className="text-negative hover:bg-negative/10 hover:text-negative"
+                onClick={handleDeleteAll}
+                disabled={!canMutate || deleteAllMutation.isPending}
+              >
+                <Trash2 size={16} aria-hidden />
+                {c.deleteAll}
+              </Button>
+            ) : null}
+            <Button onClick={openCreate} disabled={!canMutate}>
+              <Plus size={16} aria-hidden />
+              {c.create}
+            </Button>
+          </div>
         }
       />
 

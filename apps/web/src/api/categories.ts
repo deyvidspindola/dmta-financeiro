@@ -44,7 +44,7 @@ export async function createCategory(
 export async function updateCategory(
   contextId: string,
   categoryId: string,
-  payload: { name: string },
+  payload: { name: string; color?: string | null; icon?: string | null },
 ): Promise<Category> {
   if (useMocks) return mockApi.updateCategory(contextId, categoryId, payload)
   const updated = unwrapData(
@@ -65,4 +65,10 @@ export async function deleteCategory(
 ): Promise<void> {
   if (useMocks) return mockApi.deleteCategory(contextId, categoryId)
   await http.delete(`/contexts/${contextId}/categories/${categoryId}`)
+}
+
+/** Apaga TODAS as categorias do contexto — botão próprio da tela de categorias. */
+export async function deleteAllCategories(contextId: string): Promise<void> {
+  if (useMocks) return mockApi.deleteAllCategories(contextId)
+  await http.delete(`/contexts/${contextId}/categories`)
 }

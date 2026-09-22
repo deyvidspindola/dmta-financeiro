@@ -88,6 +88,8 @@ export interface Category {
   name: string
   parent_id: string | null
   type: MoneyDirection
+  color: string | null
+  icon: string | null
 }
 
 export interface Bill {

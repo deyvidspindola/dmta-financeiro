@@ -107,10 +107,15 @@ test('limpa subcategoria, transferência e todas as tabelas de domínio (FINANCE
     $investment = Investment::factory()->for($pf)->create();
     InvestmentContribution::factory()->for($investment)->create();
 
-    $this->postJson('/api/v1/account/reset', ['password' => 'password'])->assertSuccessful();
+    $response = $this->postJson('/api/v1/account/reset', ['password' => 'password'])->assertSuccessful();
+    $newContextId = $response->json('data.id');
 
     expect(Context::query()->where('user_id', $this->user->id)->count())->toBe(1)
-        ->and(Category::query()->count())->toBe(0)
+        // As categorias antigas (com hierarquia pai/filho) somem — o que
+        // existe depois é só o conjunto padrão semeado no contexto novo
+        // (CreateContext / DefaultCategories), não sobra do usuário.
+        ->and(Category::query()->whereKey($parent->id)->exists())->toBeFalse()
+        ->and(Category::query()->where('context_id', $newContextId)->count())->toBe(13)
         ->and(StatementEntry::query()->count())->toBe(0)
         ->and(CreditCard::query()->count())->toBe(0)
         ->and(CardInvoice::query()->count())->toBe(0)

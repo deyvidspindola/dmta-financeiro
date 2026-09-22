@@ -202,7 +202,7 @@ export const strings = {
     disableSuccess: 'MFA desligado.',
     resetTitle: 'Apagar todos os dados',
     resetWarning:
-      'Apaga todos os lançamentos, contas, cartões, boletos, metas e dívidas de todos os seus contextos, e recria um contexto "Pessoal" vazio para você começar do zero. Sua conta de acesso (login e senha) não é afetada. Essa ação não pode ser desfeita.',
+      'Apaga todos os lançamentos, contas, cartões, categorias, boletos, metas e dívidas de todos os seus contextos, e recria um contexto "Pessoal" com um conjunto de categorias padrão pra você começar. Sua conta de acesso (login e senha) não é afetada. Essa ação não pode ser desfeita.',
     resetPasswordLabel: 'Confirme sua senha para continuar',
     resetConfirm: 'Apagar tudo e começar do zero',
     resetSuccess: 'Pronto — todos os dados foram apagados.',
@@ -876,6 +876,11 @@ export const strings = {
       income: 'Receita',
       expense: 'Despesa',
     },
+    deleteAll: 'Excluir todas as categorias',
+    confirmDeleteAllTitle: 'Excluir todas as categorias?',
+    confirmDeleteAll:
+      'Apaga todas as categorias e subcategorias deste contexto de uma vez. Lançamentos, boletos e orçamentos que usavam essas categorias ficam sem categoria. Essa ação não pode ser desfeita.',
+    deletedAll: 'Todas as categorias foram excluídas.',
   },
 
   common: {
