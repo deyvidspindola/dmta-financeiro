@@ -145,6 +145,10 @@ Route::prefix('v1')->group(function () {
             Route::post('categories', [CategoryController::class, 'store']);
             Route::patch('categories/{category}', [CategoryController::class, 'update']);
             Route::delete('categories/{category}', [CategoryController::class, 'destroy']);
+            // Ação separada do reset geral de conta (pedido do dono,
+            // 22/09/2026): a tela de categorias ganha seu próprio "apagar
+            // tudo" em vez de isso ficar só embutido no reset de dados.
+            Route::delete('categories', [CategoryController::class, 'destroyAll']);
 
             Route::get('bills', [BillController::class, 'index']);
             Route::post('bills', [BillController::class, 'store']);

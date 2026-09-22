@@ -6,6 +6,8 @@ import { Pencil, Trash2 } from 'lucide-react'
 import { z } from 'zod'
 import { categoriesApi } from '@/api'
 import { categoryColorIndex } from '@/components/categories/categoryDisplay'
+import { ColorSwatchPicker } from '@/components/categories/ColorSwatchPicker'
+import { IconSwatchPicker } from '@/components/categories/IconSwatchPicker'
 import {
   Button,
   CategoryChip,
@@ -19,6 +21,8 @@ import {
 } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
 import { getErrorMessage } from '@/lib/errors'
+import { CATEGORY_COLORS } from '@/lib/categoryColor'
+import { CATEGORY_ICON_NAMES } from '@/lib/categoryIcons'
 import { toastError, toastSuccess } from '@/store/toastStore'
 import type { Category, MoneyDirection } from '@/types/models'
 
@@ -26,10 +30,14 @@ const createSchema = z.object({
   name: z.string().min(1, strings.common.required),
   type: z.enum(['income', 'expense']),
   parent_id: z.string().nullable(),
+  color: z.string(),
+  icon: z.string(),
 })
 
 const editSchema = z.object({
   name: z.string().min(1, strings.common.required),
+  color: z.string(),
+  icon: z.string(),
 })
 
 type CreateValues = z.infer<typeof createSchema>
@@ -66,12 +74,14 @@ export function CategoryModal({
       name: '',
       type: defaultType,
       parent_id: null,
+      color: CATEGORY_COLORS[0]!,
+      icon: CATEGORY_ICON_NAMES[0],
     },
   })
 
   const editForm = useForm<EditValues>({
     resolver: zodResolver(editSchema),
-    defaultValues: { name: '' },
+    defaultValues: { name: '', color: CATEGORY_COLORS[0]!, icon: CATEGORY_ICON_NAMES[0] },
   })
 
   const selectedType = createForm.watch('type')
@@ -91,12 +101,22 @@ export function CategoryModal({
     if (!open) return
     if (editingCategory) {
       setEditing(editingCategory)
-      editForm.reset({ name: editingCategory.name })
+      editForm.reset({
+        name: editingCategory.name,
+        color: editingCategory.color ?? CATEGORY_COLORS[0]!,
+        icon: editingCategory.icon ?? CATEGORY_ICON_NAMES[0],
+      })
       return
     }
     setEditing(null)
-    createForm.reset({ name: '', type: defaultType, parent_id: null })
-    editForm.reset({ name: '' })
+    createForm.reset({
+      name: '',
+      type: defaultType,
+      parent_id: null,
+      color: CATEGORY_COLORS[0]!,
+      icon: CATEGORY_ICON_NAMES[0],
+    })
+    editForm.reset({ name: '', color: CATEGORY_COLORS[0]!, icon: CATEGORY_ICON_NAMES[0] })
   }, [open, defaultType, editingCategory, createForm, editForm])
 
   const createMutation = useMutation({
@@ -105,6 +125,8 @@ export function CategoryModal({
         name: values.name,
         type: values.type,
         parent_id: values.parent_id || null,
+        color: values.color,
+        icon: values.icon,
       }),
     onSuccess: (category) => {
       void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
@@ -118,6 +140,8 @@ export function CategoryModal({
     mutationFn: (values: EditValues) =>
       categoriesApi.updateCategory(contextId, editing!.id, {
         name: values.name,
+        color: values.color,
+        icon: values.icon,
       }),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
@@ -127,7 +151,7 @@ export function CategoryModal({
         return
       }
       setEditing(null)
-      editForm.reset({ name: '' })
+      editForm.reset({ name: '', color: CATEGORY_COLORS[0]!, icon: CATEGORY_ICON_NAMES[0] })
     },
   })
 
@@ -139,7 +163,7 @@ export function CategoryModal({
       toastSuccess(strings.categories.deleted)
       if (editing) {
         setEditing(null)
-        editForm.reset({ name: '' })
+        editForm.reset({ name: '', color: CATEGORY_COLORS[0]!, icon: CATEGORY_ICON_NAMES[0] })
       }
     },
     onError: (err) => toastError(getErrorMessage(err)),
@@ -147,7 +171,11 @@ export function CategoryModal({
 
   function startEdit(category: Category) {
     setEditing(category)
-    editForm.reset({ name: category.name })
+    editForm.reset({
+      name: category.name,
+      color: category.color ?? CATEGORY_COLORS[0]!,
+      icon: category.icon ?? CATEGORY_ICON_NAMES[0],
+    })
   }
 
   async function handleDelete(categoryId: string) {
@@ -209,6 +237,15 @@ export function CategoryModal({
                 : ''}
             </span>
           </div>
+          <ColorSwatchPicker
+            value={editForm.watch('color')}
+            onChange={(color) => editForm.setValue('color', color)}
+          />
+          <IconSwatchPicker
+            value={editForm.watch('icon')}
+            tint={editForm.watch('color')}
+            onChange={(icon) => editForm.setValue('icon', icon)}
+          />
           {activeError ? (
             <ErrorBanner message={getErrorMessage(activeError)} />
           ) : null}
@@ -222,7 +259,7 @@ export function CategoryModal({
                   return
                 }
                 setEditing(null)
-                editForm.reset({ name: '' })
+                editForm.reset({ name: '', color: CATEGORY_COLORS[0]!, icon: CATEGORY_ICON_NAMES[0] })
               }}
             >
               {strings.common.cancel}
@@ -273,6 +310,15 @@ export function CategoryModal({
               ))}
             </TextSelect>
           </Field>
+          <ColorSwatchPicker
+            value={createForm.watch('color')}
+            onChange={(color) => createForm.setValue('color', color)}
+          />
+          <IconSwatchPicker
+            value={createForm.watch('icon')}
+            tint={createForm.watch('color')}
+            onChange={(icon) => createForm.setValue('icon', icon)}
+          />
           {activeError ? (
             <ErrorBanner message={getErrorMessage(activeError)} />
           ) : null}

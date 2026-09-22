@@ -203,6 +203,8 @@ export function mapCategory(
     name: string
     parent_id: string | number | null
     type: MoneyDirection
+    color?: string | null
+    icon?: string | null
   },
 ): Category {
   return {
@@ -211,6 +213,8 @@ export function mapCategory(
     name: raw.name,
     parent_id: raw.parent_id === null ? null : asId(raw.parent_id),
     type: raw.type,
+    color: raw.color ?? null,
+    icon: raw.icon ?? null,
   }
 }
 
@@ -218,18 +222,34 @@ export function toCreateCategoryBody(payload: {
   name: string
   parent_id: string | null
   type: MoneyDirection
-}): { name: string; parent_id: number | null; type: MoneyDirection } {
+  color?: string | null
+  icon?: string | null
+}): {
+  name: string
+  parent_id: number | null
+  type: MoneyDirection
+  color: string | null
+  icon: string | null
+} {
   return {
     name: payload.name,
     parent_id: payload.parent_id === null ? null : asApiId(payload.parent_id),
     type: payload.type,
+    color: payload.color ?? null,
+    icon: payload.icon ?? null,
   }
 }
 
 export function toUpdateCategoryBody(payload: {
   name: string
-}): { name: string } {
-  return { name: payload.name }
+  color?: string | null
+  icon?: string | null
+}): { name: string; color: string | null; icon: string | null } {
+  return {
+    name: payload.name,
+    color: payload.color ?? null,
+    icon: payload.icon ?? null,
+  }
 }
 
 export function mapBill(

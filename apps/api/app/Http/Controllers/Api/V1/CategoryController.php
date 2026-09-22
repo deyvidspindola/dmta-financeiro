@@ -85,4 +85,16 @@ final class CategoryController extends Controller
 
         return response()->json(status: 204);
     }
+
+    /**
+     * Apaga TODAS as categorias do contexto de uma vez — botão próprio da
+     * tela de categorias, separado do reset geral de dados. Lançamento e
+     * boleto vinculados só ficam sem categoria (FK `nullOnDelete`).
+     */
+    public function destroyAll(Context $context): JsonResponse
+    {
+        $context->categories()->delete();
+
+        return response()->json(status: 204);
+    }
 }

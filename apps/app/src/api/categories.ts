@@ -52,3 +52,8 @@ export async function updateCategory(
 export async function deleteCategory(contextId: string, categoryId: string): Promise<void> {
   await http.delete(`/contexts/${contextId}/categories/${categoryId}`);
 }
+
+/** Apaga TODAS as categorias do contexto — botão próprio da tela de categorias. */
+export async function deleteAllCategories(contextId: string): Promise<void> {
+  await http.delete(`/contexts/${contextId}/categories`);
+}

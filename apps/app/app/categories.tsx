@@ -46,6 +46,7 @@ export default function CategoriesScreen() {
   const [tab, setTab] = useState<MoneyDirection>('expense');
   const [form, setForm] = useState<FormState | null>(null);
   const [toDelete, setToDelete] = useState<Category | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
   const query = useQuery({
@@ -139,6 +140,15 @@ export default function CategoriesScreen() {
     onError: () => setToDelete(null),
   });
 
+  const removeAll = useMutation({
+    mutationFn: () => categoriesApi.deleteAllCategories(activeScope),
+    onSuccess: () => {
+      void invalidate();
+      setConfirmDeleteAll(false);
+    },
+    onError: () => setConfirmDeleteAll(false),
+  });
+
   if (sessionRoute !== '/(tabs)') return <Redirect href={sessionRoute} />;
 
   return (
@@ -158,9 +168,20 @@ export default function CategoriesScreen() {
     >
       <View className="mb-4 flex-row items-center justify-between">
         <Text variant="title">{t.categories.listTitle}</Text>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text variant="muted">{t.common.close}</Text>
-        </Pressable>
+        <View className="flex-row items-center gap-4">
+          {!isConsolidated ? (
+            <Pressable
+              accessibilityLabel={t.categories.deleteAll}
+              onPress={() => setConfirmDeleteAll(true)}
+              hitSlop={8}
+            >
+              <Feather name="trash-2" size={16} color="#ef4444" />
+            </Pressable>
+          ) : null}
+          <Pressable onPress={() => router.back()} hitSlop={8}>
+            <Text variant="muted">{t.common.close}</Text>
+          </Pressable>
+        </View>
       </View>
 
       {isConsolidated ? (
@@ -354,6 +375,17 @@ export default function CategoriesScreen() {
         loading={remove.isPending}
         onConfirm={() => toDelete && remove.mutate(toDelete.id)}
         onClose={() => setToDelete(null)}
+      />
+
+      <ConfirmSheet
+        open={confirmDeleteAll}
+        title={t.categories.confirmDeleteAllTitle}
+        message={t.categories.confirmDeleteAll}
+        confirmLabel={t.categories.deleteAll}
+        tone="danger"
+        loading={removeAll.isPending}
+        onConfirm={() => removeAll.mutate()}
+        onClose={() => setConfirmDeleteAll(false)}
       />
     </Screen>
   );
