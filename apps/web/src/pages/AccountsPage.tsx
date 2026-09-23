@@ -1,9 +1,10 @@
 import { Plus } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { accountsApi, consolidatedApi, transactionsApi } from '@/api'
+import { accountsApi, consolidatedApi } from '@/api'
 import { AccountCard } from '@/components/accounts/AccountCard'
 import { AccountForm } from '@/components/accounts/AccountForm'
+import { AdjustBalanceModal } from '@/components/accounts/AdjustBalanceModal'
 import type { AccountFormValues } from '@/components/accounts/schemas'
 import {
   Button,
@@ -12,7 +13,6 @@ import {
   LoadingBlock,
   Modal,
   Money,
-  MoneyInput,
   PageHeader,
   Stat,
   useConfirm,
@@ -25,7 +25,6 @@ import { toastError, toastSuccess } from '@/store/toastStore'
 import type { Account } from '@/types/models'
 
 const t = strings.accounts
-const ta = strings.accountDetail
 
 export function AccountsPage() {
   const confirm = useConfirm()
@@ -35,8 +34,6 @@ export function AccountsPage() {
   const [editing, setEditing] = useState<Account | null>(null)
   const [open, setOpen] = useState(false)
   const [adjusting, setAdjusting] = useState<Account | null>(null)
-  const [adjustBalance, setAdjustBalance] = useState(0)
-  const [adjustError, setAdjustError] = useState<string | null>(null)
   const isEdit = editing !== null
   const isConsolidated = activeScope === CONSOLIDATED
 
@@ -62,12 +59,6 @@ export function AccountsPage() {
   function openEdit(account: Account) {
     setEditing(account)
     setOpen(true)
-  }
-
-  function openAdjust(account: Account) {
-    setAdjusting(account)
-    setAdjustBalance(account.balance)
-    setAdjustError(null)
   }
 
   function closeModal() {
@@ -109,38 +100,6 @@ export function AccountsPage() {
       toastSuccess(t.deleted)
     },
     onError: (err) => toastError(getErrorMessage(err)),
-  })
-
-  const adjustMutation = useMutation({
-    mutationFn: async (target: number) => {
-      if (!adjusting || !contextId) return
-      const diff = Math.round((target - adjusting.balance) * 100) / 100
-      if (diff === 0) throw new Error(ta.adjustBalanceSame)
-      
-      const today = new Date()
-      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      
-      return transactionsApi.createTransaction(contextId, {
-        account_id: adjusting.id,
-        category_id: null,
-        description: ta.adjustBalanceDescription,
-        amount: Math.abs(diff),
-        type: diff > 0 ? 'income' : 'expense',
-        date: localDate,
-        settled: true,
-      })
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      setAdjusting(null)
-      setAdjustError(null)
-      toastSuccess(ta.adjustBalanceSuccess)
-    },
-    onError: (err) => {
-      setAdjustError(getErrorMessage(err))
-    },
   })
 
   async function handleDelete(accountId: string) {
@@ -197,7 +156,7 @@ export function AccountsPage() {
             account={account}
             isConsolidated={isConsolidated}
             onEdit={openEdit}
-            onAdjust={openAdjust}
+            onAdjust={setAdjusting}
             onDelete={handleDelete}
             deletePending={deleteMutation.isPending}
             canMutate={Boolean(contextId)}
@@ -231,48 +190,11 @@ export function AccountsPage() {
       ) : null}
 
       {adjusting && contextId ? (
-        <Modal
-          title={ta.adjustBalance}
+        <AdjustBalanceModal
+          account={adjusting}
+          contextId={contextId}
           onClose={() => setAdjusting(null)}
-          footer={
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => setAdjusting(null)}
-                disabled={adjustMutation.isPending}
-              >
-                {strings.common.cancel}
-              </Button>
-              <Button
-                onClick={() => {
-                  setAdjustError(null)
-                  adjustMutation.mutate(adjustBalance)
-                }}
-                disabled={adjustMutation.isPending}
-              >
-                {adjustMutation.isPending ? strings.common.loading : ta.adjustBalanceSubmit}
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-fg-muted">{ta.adjustBalanceHint}</p>
-            <div className="space-y-1.5">
-              <label htmlFor="adjust-balance-input" className="block text-sm font-medium text-fg">
-                {ta.adjustBalanceNewBalance}
-              </label>
-              <MoneyInput
-                id="adjust-balance-input"
-                value={adjustBalance}
-                onChange={setAdjustBalance}
-                disabled={adjustMutation.isPending}
-              />
-            </div>
-            {adjustError ? (
-              <p className="text-sm text-negative">{adjustError}</p>
-            ) : null}
-          </div>
-        </Modal>
+        />
       ) : null}
     </div>
   )

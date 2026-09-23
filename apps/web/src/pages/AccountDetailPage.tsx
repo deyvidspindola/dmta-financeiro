@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { accountsApi, consolidatedApi, transactionsApi } from '@/api'
 import { AccountForm } from '@/components/accounts/AccountForm'
+import { AdjustBalanceModal } from '@/components/accounts/AdjustBalanceModal'
 import { AccountStatement } from '@/components/accounts/AccountStatement'
 import type { AccountFormValues } from '@/components/accounts/schemas'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -14,7 +15,6 @@ import {
   LoadingBlock,
   Modal,
   Money,
-  MoneyInput,
   Panel,
 } from '@/components/ui'
 import { useWritableContextId } from '@/hooks/useWritableContextId'
@@ -37,8 +37,6 @@ export function AccountDetailPage() {
   const [editOpen, setEditOpen] = useState(false)
   const [detail, setDetail] = useState<StatementEntry | null>(null)
   const [adjustOpen, setAdjustOpen] = useState(false)
-  const [adjustBalance, setAdjustBalance] = useState(0)
-  const [adjustError, setAdjustError] = useState<string | null>(null)
 
   const urlContextId =
     searchParams.get('context') ??
@@ -84,38 +82,6 @@ export function AccountDetailPage() {
       setEditOpen(false)
     },
     onError: (err) => toastError(getErrorMessage(err)),
-  })
-
-  const adjustMutation = useMutation({
-    mutationFn: async (target: number) => {
-      if (!account || !contextId) return
-      const diff = Math.round((target - account.balance) * 100) / 100
-      if (diff === 0) throw new Error(t.adjustBalanceSame)
-      
-      const today = new Date()
-      const localDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
-      
-      return transactionsApi.createTransaction(contextId, {
-        account_id: account.id,
-        category_id: null,
-        description: t.adjustBalanceDescription,
-        amount: Math.abs(diff),
-        type: diff > 0 ? 'income' : 'expense',
-        date: localDate,
-        settled: true,
-      })
-    },
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ['accounts'] })
-      await queryClient.invalidateQueries({ queryKey: ['transactions'] })
-      await queryClient.invalidateQueries({ queryKey: ['dashboard'] })
-      setAdjustOpen(false)
-      setAdjustError(null)
-      toastSuccess(t.adjustBalanceSuccess)
-    },
-    onError: (err) => {
-      setAdjustError(getErrorMessage(err))
-    },
   })
 
   if (accountsQuery.isLoading) {
@@ -201,11 +167,7 @@ export function AccountDetailPage() {
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => {
-              setAdjustBalance(account.balance)
-              setAdjustError(null)
-              setAdjustOpen(true)
-            }}
+            onClick={() => setAdjustOpen(true)}
             className="mt-3"
           >
             {t.adjustBalance}
@@ -258,49 +220,12 @@ export function AccountDetailPage() {
         </Modal>
       ) : null}
 
-      {adjustOpen && contextId && account ? (
-        <Modal
-          title={t.adjustBalance}
+      {adjustOpen && contextId ? (
+        <AdjustBalanceModal
+          account={account}
+          contextId={contextId}
           onClose={() => setAdjustOpen(false)}
-          footer={
-            <>
-              <Button
-                variant="ghost"
-                onClick={() => setAdjustOpen(false)}
-                disabled={adjustMutation.isPending}
-              >
-                {strings.common.cancel}
-              </Button>
-              <Button
-                onClick={() => {
-                  setAdjustError(null)
-                  adjustMutation.mutate(adjustBalance)
-                }}
-                disabled={adjustMutation.isPending}
-              >
-                {adjustMutation.isPending ? strings.common.loading : t.adjustBalanceSubmit}
-              </Button>
-            </>
-          }
-        >
-          <div className="space-y-4">
-            <p className="text-sm text-fg-muted">{t.adjustBalanceHint}</p>
-            <div className="space-y-1.5">
-              <label htmlFor="adjust-balance-input" className="block text-sm font-medium text-fg">
-                {t.adjustBalanceNewBalance}
-              </label>
-              <MoneyInput
-                id="adjust-balance-input"
-                value={adjustBalance}
-                onChange={setAdjustBalance}
-                disabled={adjustMutation.isPending}
-              />
-            </div>
-            {adjustError ? (
-              <p className="text-sm text-negative">{adjustError}</p>
-            ) : null}
-          </div>
-        </Modal>
+        />
       ) : null}
     </div>
   )
