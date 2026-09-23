@@ -113,7 +113,7 @@ export async function createCardPurchase(
   contextId: string,
   creditCardId: string,
   input: CardPurchaseInput,
-): Promise<CardPurchase> {
+): Promise<CardPurchase | null> {
   const payload = await http.post<
     Parameters<typeof mapCardPurchase>[1] | { data: Parameters<typeof mapCardPurchase>[1] }
   >(`/contexts/${contextId}/credit-cards/${creditCardId}/purchases`, {
@@ -123,6 +123,8 @@ export async function createCardPurchase(
     interval: input.interval,
     end_date: input.end_date ?? undefined,
   });
+  // Assinatura pode devolver a regra (1ª cobrança além do horizonte), não a compra.
+  if (input.recurring) return null;
   return mapCardPurchase(creditCardId, unwrapData(payload));
 }
 

@@ -270,10 +270,7 @@ export function CardDetailSheet({
                                     : ''}
                                 </Text>
                                 {p.recurring_transaction_id ? (
-                                  <Badge tone="brand">
-                                    <Feather name="repeat" size={10} color="currentColor" />{' '}
-                                    {t.creditCards.recurring.badge}
-                                  </Badge>
+                                  <Badge tone="brand">{t.creditCards.recurring.badge}</Badge>
                                 ) : null}
                               </View>
                               <MoneyValue amount={p.amount} direction="debit" size="sm" />
