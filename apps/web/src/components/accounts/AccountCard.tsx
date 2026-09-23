@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from 'lucide-react'
+import { DollarSign, Pencil, Trash2 } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Badge, IconButton, Money } from '@/components/ui'
 import { strings } from '@/i18n/pt-BR'
@@ -6,12 +6,14 @@ import { cn } from '@/lib/cn'
 import type { Account } from '@/types/models'
 
 const t = strings.accounts
+const ta = strings.accountDetail
 
 type AccountCardProps = {
   account: Account
   isConsolidated?: boolean
   onEdit?: (account: Account) => void
   onDelete?: (accountId: string) => void
+  onAdjust?: (account: Account) => void
   deletePending?: boolean
   canMutate?: boolean
 }
@@ -21,6 +23,7 @@ export function AccountCard({
   isConsolidated = false,
   onEdit,
   onDelete,
+  onAdjust,
   deletePending = false,
   canMutate = true,
 }: AccountCardProps) {
@@ -32,7 +35,7 @@ export function AccountCard({
         to={href}
         className={cn(
           'block rounded-2xl p-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600',
-          !isConsolidated && canMutate && 'pr-20',
+          !isConsolidated && canMutate && 'pr-28',
         )}
       >
         <div className="flex items-start justify-between gap-3">
@@ -58,6 +61,16 @@ export function AccountCard({
 
       {!isConsolidated && canMutate ? (
         <div className="absolute right-2 top-2 flex gap-0.5">
+          <IconButton
+            label={ta.adjustBalance}
+            icon={DollarSign}
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.preventDefault()
+              onAdjust?.(account)
+            }}
+          />
           <IconButton
             label={strings.common.edit}
             icon={Pencil}

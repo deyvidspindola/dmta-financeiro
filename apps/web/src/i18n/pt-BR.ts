@@ -244,6 +244,14 @@ export const strings = {
     statement: 'Extrato',
     runningBalance: 'Saldo',
     emptyStatement: 'Nenhum lançamento nesta conta.',
+    adjustBalance: 'Reajustar saldo',
+    adjustBalanceHint:
+      'Informe o saldo real da conta hoje — um lançamento de ajuste é criado para cobrir a diferença.',
+    adjustBalanceNewBalance: 'Novo saldo',
+    adjustBalanceDescription: 'Ajuste de saldo',
+    adjustBalanceSame: 'Esse já é o saldo atual da conta.',
+    adjustBalanceSubmit: 'Reajustar',
+    adjustBalanceSuccess: 'Saldo reajustado.',
   },
 
   accounts: {
