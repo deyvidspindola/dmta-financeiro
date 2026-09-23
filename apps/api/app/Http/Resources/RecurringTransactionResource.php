@@ -17,11 +17,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/09/2026
  */
 final class RecurringTransactionResource extends JsonResource
 {
@@ -31,6 +31,7 @@ final class RecurringTransactionResource extends JsonResource
         return [
             'id' => $this->id,
             'account_id' => $this->account_id,
+            'credit_card_id' => $this->credit_card_id,
             'category_id' => $this->category_id,
             'description' => $this->description,
             'amount' => (float) $this->amount,

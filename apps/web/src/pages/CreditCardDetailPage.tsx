@@ -1,8 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ArrowLeft, Pencil, Plus, Repeat, Trash2, XCircle } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { consolidatedApi, creditCardsApi } from '@/api'
+import {
+  consolidatedApi,
+  creditCardsApi,
+  recurringTransactionsApi,
+} from '@/api'
 import {
   CardFormModal,
   PayModal,
@@ -138,6 +142,55 @@ export function CreditCardDetailPage() {
     void queryClient.invalidateQueries({ queryKey: ['dashboard'] })
     void queryClient.invalidateQueries({ queryKey: ['accounts'] })
     void queryClient.invalidateQueries({ queryKey: ['budgets'] })
+  }
+
+  // Assinaturas ainda ativas (a API só lista regras ativas) — pra saber
+  // se a compra recorrente ainda pode ser cancelada.
+  const subscriptions = useQuery({
+    queryKey: ['recurring-transactions', cardContextId],
+    queryFn: () =>
+      recurringTransactionsApi.listRecurringTransactions(
+        cardContextId as string,
+      ),
+    enabled: Boolean(cardContextId),
+  })
+  const activeSubscriptionIds = useMemo(
+    () =>
+      new Set(
+        (subscriptions.data ?? [])
+          .filter((rule) => rule.credit_card_id === id)
+          .map((rule) => rule.id),
+      ),
+    [subscriptions.data, id],
+  )
+
+  const cancelSubscription = useMutation({
+    mutationFn: (recurringId: string) =>
+      recurringTransactionsApi.deleteRecurringTransaction(
+        cardContextId as string,
+        recurringId,
+      ),
+    onSuccess: () => {
+      invalidate()
+      void queryClient.invalidateQueries({
+        queryKey: ['recurring-transactions'],
+      })
+      toastSuccess(t.subscriptionCancelled)
+    },
+    onError: (error) => toastError(getErrorMessage(error)),
+  })
+
+  async function handleCancelSubscription(recurringId: string) {
+    if (
+      !(await confirm({
+        message: t.confirmCancelSubscription,
+        tone: 'danger',
+        confirmLabel: t.cancelSubscription,
+      }))
+    ) {
+      return
+    }
+    cancelSubscription.mutate(recurringId)
   }
 
   const removePurchase = useMutation({
@@ -392,6 +445,12 @@ export function CreditCardDetailPage() {
                           purchase.installment_total > 1
                             ? ` (${purchase.installment_number}/${purchase.installment_total})`
                             : ''}
+                          {purchase.recurring_transaction_id ? (
+                            <Badge tone="accent" className="ml-2">
+                              <Repeat size={12} aria-hidden />
+                              {t.subscriptionBadge}
+                            </Badge>
+                          ) : null}
                         </Td>
                         <Td right>
                           <span className="font-semibold tabular-nums">
@@ -429,6 +488,23 @@ export function CreditCardDetailPage() {
                                   variant="danger"
                                   disabled={removePurchase.isPending}
                                   onClick={() => handleDeletePurchase(purchase)}
+                                />
+                              ) : null}
+                              {purchase.recurring_transaction_id &&
+                              activeSubscriptionIds.has(
+                                purchase.recurring_transaction_id,
+                              ) ? (
+                                <IconButton
+                                  label={t.cancelSubscription}
+                                  icon={XCircle}
+                                  size="sm"
+                                  variant="danger"
+                                  disabled={cancelSubscription.isPending}
+                                  onClick={() =>
+                                    handleCancelSubscription(
+                                      purchase.recurring_transaction_id as string,
+                                    )
+                                  }
                                 />
                               ) : null}
                             </div>

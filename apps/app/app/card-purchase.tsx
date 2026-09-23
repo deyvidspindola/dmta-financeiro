@@ -17,8 +17,10 @@ import { ApiError } from '@/api/http';
 import {
   AmountHero,
   CategoryIcon,
+  DateField,
   QuickDateField,
   SelectField,
+  SwitchField,
   Text,
   TextField,
 } from '@/components/ui';
@@ -64,6 +66,9 @@ export default function CardPurchaseScreen() {
   const [categoryId, setCategoryId] = useState<string | null>(params.categoryId || null);
   const [occurredAt, setOccurredAt] = useState(params.occurredAt ?? todayIso());
   const [installments, setInstallments] = useState('1');
+  const [recurring, setRecurring] = useState(false);
+  const [interval, setInterval] = useState<'weekly' | 'monthly' | 'yearly'>('monthly');
+  const [endDate, setEndDate] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -79,6 +84,15 @@ export default function CardPurchaseScreen() {
       ...(categoriesQuery.data ?? []).map((c) => ({ value: c.id, label: c.name })),
     ],
     [categoriesQuery.data],
+  );
+
+  const intervalOptions = useMemo(
+    () => [
+      { value: 'monthly', label: t.creditCards.recurring.intervalMonthly },
+      { value: 'weekly', label: t.creditCards.recurring.intervalWeekly },
+      { value: 'yearly', label: t.creditCards.recurring.intervalYearly },
+    ],
+    [],
   );
 
   const mutation = useMutation({
@@ -98,7 +112,10 @@ export default function CardPurchaseScreen() {
           )
         : creditCardsApi.createCardPurchase(params.contextId!, params.cardId!, {
             ...base,
-            installments: Math.max(1, Number(installments) || 1),
+            installments: recurring ? 1 : Math.max(1, Number(installments) || 1),
+            recurring: recurring || undefined,
+            interval: recurring ? interval : undefined,
+            end_date: recurring ? endDate : undefined,
           });
     },
     onSuccess: () => {
@@ -201,12 +218,43 @@ export default function CardPurchaseScreen() {
             />
 
             {!isEdit ? (
-              <TextField
-                label={t.creditCards.installments}
-                value={installments}
-                onChangeText={setInstallments}
-                keyboardType="number-pad"
-              />
+              <>
+                <SwitchField
+                  label={t.creditCards.recurring.label}
+                  value={recurring}
+                  onChange={(v) => {
+                    setRecurring(v);
+                    if (v) setInstallments('1');
+                  }}
+                  toneColor={TONE_HEX}
+                />
+
+                {recurring ? (
+                  <>
+                    <SelectField
+                      label={t.creditCards.recurring.interval}
+                      placeholder={t.common.select}
+                      value={interval}
+                      options={intervalOptions}
+                      onChange={(v) => setInterval(v as 'weekly' | 'monthly' | 'yearly')}
+                    />
+                    <DateField
+                      label={t.creditCards.recurring.endDate}
+                      value={endDate ?? ''}
+                      onChange={(v) => setEndDate(v || null)}
+                      optional
+                      clearLabel={t.common.clear}
+                    />
+                  </>
+                ) : (
+                  <TextField
+                    label={t.creditCards.installments}
+                    value={installments}
+                    onChangeText={setInstallments}
+                    keyboardType="number-pad"
+                  />
+                )}
+              </>
             ) : null}
 
             {formError ? <Text variant="error">{formError}</Text> : null}

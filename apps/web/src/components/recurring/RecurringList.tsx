@@ -22,6 +22,8 @@ type RecurringListProps = {
   rows: RecurringTransaction[]
   categoryMap: Map<string, CategoryInfo>
   accountMap: Map<string, AccountInfo>
+  /** Cartões — pra assinatura (recorrência com `credit_card_id`). */
+  cardMap?: Map<string, AccountInfo>
   canMutate?: boolean
   onCancel?: (id: string) => void
   cancelPending?: boolean
@@ -31,6 +33,7 @@ export function RecurringList({
   rows,
   categoryMap,
   accountMap,
+  cardMap,
   canMutate = false,
   onCancel,
   cancelPending,
@@ -55,7 +58,12 @@ export function RecurringList({
         const category = row.category_id
           ? categoryMap.get(row.category_id)
           : undefined
-        const account = accountMap.get(row.account_id)
+        const account = row.account_id
+          ? accountMap.get(row.account_id)
+          : undefined
+        const card = row.credit_card_id
+          ? cardMap?.get(row.credit_card_id)
+          : undefined
 
         return (
           <Tr key={row.id}>
@@ -77,7 +85,11 @@ export function RecurringList({
             <Td>{tx.types[row.type]}</Td>
             <Td>{r.intervals[row.interval]}</Td>
             <Td>{formatDate(row.next_occurrence_date)}</Td>
-            <Td>{account?.name ?? '—'}</Td>
+            <Td>
+              {row.credit_card_id
+                ? `${strings.creditCards.card} · ${card?.name ?? '—'}`
+                : (account?.name ?? '—')}
+            </Td>
             <Td>
               {category ? (
                 <CategoryChip

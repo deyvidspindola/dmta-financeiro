@@ -8,6 +8,7 @@ import {
   DatePickerField,
   Field,
   MoneyInput,
+  SwitchField,
   TextInput,
   TextSelect,
 } from '@/components/ui'
@@ -16,7 +17,11 @@ import { currentMonthKey } from '@/lib/dates'
 import { toIsoDate } from '@/lib/datesIso'
 import { getErrorMessage } from '@/lib/errors'
 import { toastError, toastSuccess } from '@/store/toastStore'
-import type { CardPurchase, CreditCard } from '@/types/models'
+import type {
+  CardPurchase,
+  CreditCard,
+  RecurrenceInterval,
+} from '@/types/models'
 
 const t = strings.creditCards
 
@@ -37,6 +42,8 @@ export type CardPurchaseFormProps = {
  * Formulário de compra no cartão (criar / editar). Categoria de despesa
  * com atalho pra CategoryModal — mesmo padrão do TransactionForm.
  * Em edição não mostra parcelas (backend bloqueia compra parcelada).
+ * "Compra recorrente" (só ao criar) vira assinatura: o backend relança a
+ * compra no cartão a cada período — não combina com parcelas.
  */
 export function CardPurchaseForm({
   contextId,
@@ -60,6 +67,9 @@ export function CardPurchaseForm({
   )
   const [categoryId, setCategoryId] = useState(editing?.category_id ?? '')
   const [installments, setInstallments] = useState('1')
+  const [recurring, setRecurring] = useState(false)
+  const [frequency, setFrequency] = useState<RecurrenceInterval>('monthly')
+  const [endDate, setEndDate] = useState('')
 
   const categories = useQuery({
     queryKey: ['categories', contextId, 'expense'],
@@ -85,11 +95,20 @@ export function CardPurchaseForm({
       }
       await creditCardsApi.createCardPurchase(contextId, cardId, {
         ...payload,
-        installments: Number(installments),
+        ...(recurring
+          ? { recurring: true, interval: frequency, end_date: endDate || null }
+          : { installments: Number(installments) }),
       })
     },
     onSuccess: () => {
-      toastSuccess(isEdit ? t.purchaseUpdated : t.purchaseSaved)
+      toastSuccess(
+        isEdit
+          ? t.purchaseUpdated
+          : recurring
+            ? t.subscriptionSaved
+            : t.purchaseSaved,
+      )
+      void queryClient.invalidateQueries({ queryKey: ['recurring-transactions'] })
       void queryClient.invalidateQueries({ queryKey: ['categories', contextId] })
       void queryClient.invalidateQueries({ queryKey: ['budgets'] })
       onSaved()
@@ -151,6 +170,37 @@ export function CardPurchaseForm({
         />
 
         {!isEdit ? (
+          <SwitchField
+            label={t.subscription}
+            description={t.subscriptionHint}
+            checked={recurring}
+            onChange={setRecurring}
+          />
+        ) : null}
+
+        {!isEdit && recurring ? (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label={t.subscriptionInterval}>
+              <TextSelect
+                value={frequency}
+                onChange={(e) =>
+                  setFrequency(e.target.value as RecurrenceInterval)
+                }
+              >
+                {(['monthly', 'weekly', 'yearly'] as const).map((value) => (
+                  <option key={value} value={value}>
+                    {strings.recurring.intervals[value]}
+                  </option>
+                ))}
+              </TextSelect>
+            </Field>
+            <Field label={t.subscriptionEnd}>
+              <DatePickerField value={endDate} onChange={setEndDate} />
+            </Field>
+          </div>
+        ) : null}
+
+        {!isEdit && !recurring ? (
           <Field label={t.installments}>
             <TextInput
               type="number"

@@ -918,6 +918,7 @@ export const mockApi = {
       id: id('rec'),
       context_id: contextId,
       account_id: payload.account_id,
+      credit_card_id: null,
       category_id: payload.category_id,
       description: payload.description,
       amount: payload.amount,

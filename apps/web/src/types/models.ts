@@ -164,7 +164,9 @@ export interface StatementEntry {
 export interface RecurringTransaction {
   id: string
   context_id: string
-  account_id: string
+  /** null quando a recorrência é assinatura no cartão (`credit_card_id`). */
+  account_id: string | null
+  credit_card_id: string | null
   category_id: string | null
   description: string
   amount: number
@@ -211,6 +213,8 @@ export interface CardPurchase {
   occurred_at: string
   installment_number: number | null
   installment_total: number | null
+  /** Assinatura (recorrência no cartão) que gerou esta compra. */
+  recurring_transaction_id: string | null
 }
 
 export interface Investment {

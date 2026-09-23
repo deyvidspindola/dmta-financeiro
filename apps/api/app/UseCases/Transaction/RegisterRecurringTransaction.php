@@ -27,11 +27,11 @@ use Illuminate\Support\Facades\DB;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 2.0.0
+ * @version 2.1.0
  *
  * @since   21/08/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 final class RegisterRecurringTransaction
 {
@@ -43,6 +43,7 @@ final class RegisterRecurringTransaction
             $rule = RecurringTransaction::create([
                 'context_id' => $data->contextId,
                 'account_id' => $data->accountId,
+                'credit_card_id' => $data->creditCardId,
                 'category_id' => $data->categoryId,
                 'description' => $data->description,
                 'amount' => $data->amount,

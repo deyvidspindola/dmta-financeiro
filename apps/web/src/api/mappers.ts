@@ -629,7 +629,8 @@ export function mapRecurringTransaction(
   contextId: string,
   raw: {
     id: string | number
-    account_id: string | number
+    account_id: string | number | null
+    credit_card_id?: string | number | null
     category_id?: string | number | null
     description: string
     amount: number
@@ -645,7 +646,11 @@ export function mapRecurringTransaction(
   return {
     id: asId(raw.id),
     context_id: contextId,
-    account_id: asId(raw.account_id),
+    account_id: raw.account_id === null ? null : asId(raw.account_id),
+    credit_card_id:
+      raw.credit_card_id === null || raw.credit_card_id === undefined
+        ? null
+        : asId(raw.credit_card_id),
     category_id:
       raw.category_id === null || raw.category_id === undefined
         ? null
@@ -739,6 +744,7 @@ export function mapCardPurchase(
     occurred_at: string
     installment_number: number | null
     installment_total: number | null
+    recurring_transaction_id?: string | number | null
   },
 ): CardPurchase {
   return {
@@ -751,6 +757,11 @@ export function mapCardPurchase(
     occurred_at: raw.occurred_at,
     installment_number: raw.installment_number,
     installment_total: raw.installment_total,
+    recurring_transaction_id:
+      raw.recurring_transaction_id === null ||
+      raw.recurring_transaction_id === undefined
+        ? null
+        : asId(raw.recurring_transaction_id),
   }
 }
 

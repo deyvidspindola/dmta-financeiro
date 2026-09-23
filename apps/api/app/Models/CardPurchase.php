@@ -16,13 +16,15 @@ use Illuminate\Support\Carbon;
     'context_id', 'credit_card_id', 'card_invoice_id', 'category_id',
     'description', 'amount', 'occurred_at',
     'installment_number', 'installment_total', 'installment_group',
+    'recurring_transaction_id',
 ])]
 /**
  * Compra num cartão de crédito, alocada numa {@see CardInvoice} pelo dia
  * de fechamento ({@see InvoiceAllocator}). NÃO move `accounts.balance` —
  * isso é só o pagamento da fatura ({@see StatementEntry}). Compra
  * parcelada vira N linhas, uma por fatura, com o mesmo
- * `installment_group`.
+ * `installment_group`. Compra gerada por assinatura (recorrência no
+ * cartão) carrega `recurring_transaction_id`.
  *
  * @property-read Carbon $occurred_at
  *
@@ -30,11 +32,11 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 class CardPurchase extends Model
 {
@@ -57,6 +59,12 @@ class CardPurchase extends Model
     public function cardInvoice(): BelongsTo
     {
         return $this->belongsTo(CardInvoice::class);
+    }
+
+    /** @return BelongsTo<RecurringTransaction, $this> */
+    public function recurringTransaction(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTransaction::class);
     }
 
     /** @return BelongsTo<Category, $this> */

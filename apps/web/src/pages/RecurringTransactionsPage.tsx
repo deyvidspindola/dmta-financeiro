@@ -1,7 +1,12 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Plus } from 'lucide-react'
-import { accountsApi, categoriesApi, recurringTransactionsApi } from '@/api'
+import {
+  accountsApi,
+  categoriesApi,
+  creditCardsApi,
+  recurringTransactionsApi,
+} from '@/api'
 import { CategoryModal } from '@/components/CategoryModal'
 import { RecurringForm } from '@/components/recurring/RecurringForm'
 import { RecurringList } from '@/components/recurring/RecurringList'
@@ -62,6 +67,20 @@ export function RecurringTransactionsPage() {
     }
     return map
   }, [categoriesQuery.data])
+
+  const cardsQuery = useQuery({
+    queryKey: ['credit-cards', listContextId],
+    queryFn: () => creditCardsApi.listCreditCards(listContextId!),
+    enabled: Boolean(listContextId),
+  })
+
+  const cardMap = useMemo(() => {
+    const map = new Map<string, { name: string }>()
+    for (const card of cardsQuery.data ?? []) {
+      map.set(card.id, { name: card.name })
+    }
+    return map
+  }, [cardsQuery.data])
 
   const accountMap = useMemo(() => {
     const map = new Map<string, { name: string }>()
@@ -159,6 +178,7 @@ export function RecurringTransactionsPage() {
         rows={data}
         categoryMap={categoryMap}
         accountMap={accountMap}
+        cardMap={cardMap}
         canMutate={canMutate}
         onCancel={handleCancel}
         cancelPending={deleteMutation.isPending}

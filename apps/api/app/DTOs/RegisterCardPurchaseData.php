@@ -15,11 +15,11 @@ use App\UseCases\CreditCard\RegisterCardPurchase;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 final readonly class RegisterCardPurchaseData
 {
@@ -31,5 +31,6 @@ final readonly class RegisterCardPurchaseData
         public string $occurredAt,
         public ?int $categoryId = null,
         public int $installments = 1,
+        public ?int $recurringTransactionId = null,
     ) {}
 }
