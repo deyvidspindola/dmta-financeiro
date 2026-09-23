@@ -3,6 +3,7 @@ import { useEffect, useId, useRef } from 'react'
 import { X } from 'lucide-react'
 import { strings } from '@/i18n/pt-BR'
 import { cn } from '@/lib/cn'
+import { lockBodyScroll } from '@/lib/scrollLock'
 
 type Size = 'sm' | 'md' | 'lg' | 'xl'
 const WIDTH: Record<Size, string> = {
@@ -33,17 +34,16 @@ export function Modal({
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
 
+  // Trava o scroll uma vez por modal montado (não por render — `onClose`
+  // costuma ser arrow inline e mudaria a cada render).
+  useEffect(() => lockBodyScroll(), [])
+
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKeyDown)
-    const { overflow } = document.body.style
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKeyDown)
-      document.body.style.overflow = overflow
-    }
+    return () => document.removeEventListener('keydown', onKeyDown)
   }, [onClose])
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         className={cn(
-          'flex max-h-[92vh] w-full flex-col overflow-hidden bg-surface shadow-pop',
+          'flex max-h-[94dvh] w-full flex-col overflow-hidden bg-surface shadow-pop sm:max-h-[calc(100dvh-2rem)]',
           'rounded-t-2xl sm:rounded-2xl',
           WIDTH[size],
         )}
