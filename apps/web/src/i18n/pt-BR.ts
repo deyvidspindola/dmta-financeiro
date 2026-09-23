@@ -304,6 +304,18 @@ export const strings = {
       `Esta compra é parcelada. Excluir apaga as ${n} parcelas, em todas as faturas.`,
     purchaseDate: 'Data da compra',
     installments: 'Parcelas',
+    subscription: 'Compra recorrente (assinatura)',
+    subscriptionHint:
+      'Lança a compra de novo no cartão a cada período — ideal para streaming, apps e mensalidades.',
+    subscriptionInterval: 'Frequência',
+    subscriptionEnd: 'Termina em (opcional)',
+    subscriptionBadge: 'Assinatura',
+    subscriptionSaved: 'Assinatura cadastrada.',
+    cancelSubscription: 'Cancelar assinatura',
+    confirmCancelSubscription:
+      'Parar de lançar essa assinatura no cartão? As cobranças já feitas continuam na fatura.',
+    subscriptionCancelled: 'Assinatura cancelada.',
+    card: 'Cartão',
     pay: 'Pagar',
     paid: 'Paga',
     open: 'Aberta',

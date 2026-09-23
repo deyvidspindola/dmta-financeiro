@@ -10,7 +10,12 @@ import {
   toUpdateCreditCardBody,
 } from '@/api/mappers'
 import { mockApi } from '@/mocks/store'
-import type { CardInvoice, CardPurchase, CreditCard } from '@/types/models'
+import type {
+  CardInvoice,
+  CardPurchase,
+  CreditCard,
+  RecurrenceInterval,
+} from '@/types/models'
 import type {
   CardInvoiceImportPreview,
   CardInvoiceImportSummary,
@@ -162,6 +167,10 @@ export type CreateCardPurchaseInput = {
   occurred_at: string
   category_id?: string | null
   installments?: number
+  /** Assinatura: repete a compra no cartão a cada `interval` até `end_date`. */
+  recurring?: boolean
+  interval?: RecurrenceInterval
+  end_date?: string | null
 }
 
 export async function createCardPurchase(
@@ -178,6 +187,13 @@ export async function createCardPurchase(
       ...(input.category_id ? { category_id: asApiId(input.category_id) } : {}),
       ...(input.installments && input.installments > 1
         ? { installments: input.installments }
+        : {}),
+      ...(input.recurring
+        ? {
+            recurring: true,
+            interval: input.interval ?? 'monthly',
+            ...(input.end_date ? { end_date: input.end_date } : {}),
+          }
         : {}),
     },
   )
