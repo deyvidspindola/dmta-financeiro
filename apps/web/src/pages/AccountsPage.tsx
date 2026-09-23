@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { accountsApi, consolidatedApi } from '@/api'
 import { AccountCard } from '@/components/accounts/AccountCard'
 import { AccountForm } from '@/components/accounts/AccountForm'
+import { AdjustBalanceModal } from '@/components/accounts/AdjustBalanceModal'
 import type { AccountFormValues } from '@/components/accounts/schemas'
 import {
   Button,
@@ -32,6 +33,7 @@ export function AccountsPage() {
   const contextId = useWritableContextId()
   const [editing, setEditing] = useState<Account | null>(null)
   const [open, setOpen] = useState(false)
+  const [adjusting, setAdjusting] = useState<Account | null>(null)
   const isEdit = editing !== null
   const isConsolidated = activeScope === CONSOLIDATED
 
@@ -154,6 +156,7 @@ export function AccountsPage() {
             account={account}
             isConsolidated={isConsolidated}
             onEdit={openEdit}
+            onAdjust={setAdjusting}
             onDelete={handleDelete}
             deletePending={deleteMutation.isPending}
             canMutate={Boolean(contextId)}
@@ -184,6 +187,14 @@ export function AccountsPage() {
             onCancel={closeModal}
           />
         </Modal>
+      ) : null}
+
+      {adjusting && contextId ? (
+        <AdjustBalanceModal
+          account={adjusting}
+          contextId={contextId}
+          onClose={() => setAdjusting(null)}
+        />
       ) : null}
     </div>
   )

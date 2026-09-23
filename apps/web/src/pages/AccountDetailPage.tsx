@@ -4,6 +4,7 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { accountsApi, consolidatedApi, transactionsApi } from '@/api'
 import { AccountForm } from '@/components/accounts/AccountForm'
+import { AdjustBalanceModal } from '@/components/accounts/AdjustBalanceModal'
 import { AccountStatement } from '@/components/accounts/AccountStatement'
 import type { AccountFormValues } from '@/components/accounts/schemas'
 import { TransactionDetailModal } from '@/components/transactions/TransactionDetailModal'
@@ -35,6 +36,7 @@ export function AccountDetailPage() {
   const isConsolidated = activeScope === CONSOLIDATED
   const [editOpen, setEditOpen] = useState(false)
   const [detail, setDetail] = useState<StatementEntry | null>(null)
+  const [adjustOpen, setAdjustOpen] = useState(false)
 
   const urlContextId =
     searchParams.get('context') ??
@@ -161,6 +163,16 @@ export function AccountDetailPage() {
             {account.context.name}
           </Badge>
         ) : null}
+        {!isConsolidated && contextId ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setAdjustOpen(true)}
+            className="mt-3"
+          >
+            {t.adjustBalance}
+          </Button>
+        ) : null}
       </div>
 
       <Panel title={t.statement}>
@@ -206,6 +218,14 @@ export function AccountDetailPage() {
             onCancel={() => setEditOpen(false)}
           />
         </Modal>
+      ) : null}
+
+      {adjustOpen && contextId ? (
+        <AdjustBalanceModal
+          account={account}
+          contextId={contextId}
+          onClose={() => setAdjustOpen(false)}
+        />
       ) : null}
     </div>
   )
