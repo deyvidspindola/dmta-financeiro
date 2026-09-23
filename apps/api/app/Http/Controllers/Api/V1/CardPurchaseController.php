@@ -6,16 +6,19 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\DTOs\RegisterCardPurchaseData;
 use App\DTOs\UpdateCardPurchaseData;
+use App\Enums\RecurrenceInterval;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\StoreCardPurchaseRequest;
 use App\Http\Requests\Api\UpdateCardPurchaseRequest;
 use App\Http\Resources\CardPurchaseResource;
+use App\Http\Resources\RecurringTransactionResource;
 use App\Models\CardInvoice;
 use App\Models\CardPurchase;
 use App\Models\Context;
 use App\Models\CreditCard;
 use App\UseCases\CreditCard\DeleteCardPurchase;
 use App\UseCases\CreditCard\RegisterCardPurchase;
+use App\UseCases\CreditCard\RegisterCardSubscription;
 use App\UseCases\CreditCard\UpdateCardPurchase;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,11 +33,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 final class CardPurchaseController extends Controller
 {
@@ -49,13 +52,19 @@ final class CardPurchaseController extends Controller
         return CardPurchaseResource::collection($purchases);
     }
 
+    /**
+     * Lança uma compra. Com `recurring=true` vira assinatura
+     * ({@see RegisterCardSubscription}) — devolve a 1ª cobrança ou, se ela
+     * cai além do horizonte do cartão, a regra.
+     */
     public function store(
         StoreCardPurchaseRequest $request,
         Context $context,
         CreditCard $creditCard,
         RegisterCardPurchase $useCase,
-    ): CardPurchaseResource {
-        $purchase = $useCase->execute(new RegisterCardPurchaseData(
+        RegisterCardSubscription $subscription,
+    ): JsonResponse {
+        $data = new RegisterCardPurchaseData(
             contextId: $context->id,
             creditCardId: $creditCard->id,
             description: $request->string('description')->toString(),
@@ -63,9 +72,19 @@ final class CardPurchaseController extends Controller
             occurredAt: $request->string('occurred_at')->toString(),
             categoryId: $request->integer('category_id') ?: null,
             installments: $request->integer('installments') ?: 1,
-        ));
+        );
 
-        return new CardPurchaseResource($purchase);
+        $created = $request->boolean('recurring')
+            ? $subscription->execute(
+                $data,
+                RecurrenceInterval::from($request->string('interval')->toString()),
+                $request->filled('end_date') ? $request->string('end_date')->toString() : null,
+            )
+            : $useCase->execute($data);
+
+        $resource = $created instanceof CardPurchase ? new CardPurchaseResource($created) : new RecurringTransactionResource($created);
+
+        return $resource->response()->setStatusCode(201);
     }
 
     /** Edita uma compra simples (não parcelada, fatura não paga) — ver {@see UpdateCardPurchase}. */

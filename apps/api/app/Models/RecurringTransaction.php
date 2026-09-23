@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 #[Fillable([
-    'context_id', 'account_id', 'category_id', 'description', 'amount',
+    'context_id', 'account_id', 'credit_card_id', 'category_id', 'description', 'amount',
     'type', 'interval', 'start_date', 'end_date', 'next_occurrence_date', 'active',
 ])]
 /**
@@ -23,6 +23,8 @@ use Illuminate\Support\Carbon;
  * saldo por si só, só descreve "o quê, quanto, de quanto em quanto
  * tempo". Quem materializa em `StatementEntry` é o job
  * `GenerateRecurringTransactionEntries` (ver `RegisterRecurringTransaction`).
+ * Com `credit_card_id` (em vez de `account_id`) é uma assinatura no
+ * cartão: cada ocorrência vira compra na fatura ({@see CardPurchase}).
  *
  * @property-read StatementEntryType $type
  * @property-read RecurrenceInterval $interval
@@ -34,11 +36,11 @@ use Illuminate\Support\Carbon;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/09/2026
  */
 class RecurringTransaction extends Model
 {
@@ -57,6 +59,12 @@ class RecurringTransaction extends Model
         return $this->belongsTo(Account::class);
     }
 
+    /** @return BelongsTo<CreditCard, $this> */
+    public function creditCard(): BelongsTo
+    {
+        return $this->belongsTo(CreditCard::class);
+    }
+
     /** @return BelongsTo<Category, $this> */
     public function category(): BelongsTo
     {
@@ -67,6 +75,15 @@ class RecurringTransaction extends Model
     public function entries(): HasMany
     {
         return $this->hasMany(StatementEntry::class);
+    }
+
+    /**
+     * Se a regra é de cartão de crédito (assinatura) — as ocorrências
+     * viram {@see CardPurchase}, não {@see StatementEntry}.
+     */
+    public function isCreditCard(): bool
+    {
+        return $this->credit_card_id !== null;
     }
 
     /** Se esta regra não tem data-fim — "despesa fixa" na tela. */

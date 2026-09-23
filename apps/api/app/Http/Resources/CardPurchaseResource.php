@@ -17,11 +17,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   01/09/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 final class CardPurchaseResource extends JsonResource
 {
@@ -39,6 +39,7 @@ final class CardPurchaseResource extends JsonResource
             'occurred_at' => $this->occurred_at->toDateString(),
             'installment_number' => $this->installment_number,
             'installment_total' => $this->installment_total,
+            'recurring_transaction_id' => $this->recurring_transaction_id,
         ];
     }
 }

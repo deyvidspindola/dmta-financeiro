@@ -26,11 +26,11 @@ use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/09/2026
  */
 final class RecurringTransactionController extends Controller
 {
@@ -48,7 +48,7 @@ final class RecurringTransactionController extends Controller
     ): RecurringTransactionResource {
         $rule = $useCase->execute(new RegisterRecurringTransactionData(
             contextId: $context->id,
-            accountId: $request->integer('account_id'),
+            accountId: $request->integer('account_id') ?: null,
             description: $request->string('description')->toString(),
             amount: (float) $request->input('amount'),
             type: StatementEntryType::from($request->string('type')->toString()),
@@ -56,6 +56,7 @@ final class RecurringTransactionController extends Controller
             startDate: $request->string('start_date')->toString(),
             endDate: $request->filled('end_date') ? $request->string('end_date')->toString() : null,
             categoryId: $request->integer('category_id') ?: null,
+            creditCardId: $request->integer('credit_card_id') ?: null,
         ));
 
         return new RecurringTransactionResource($rule);

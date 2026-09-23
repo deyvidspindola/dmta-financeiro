@@ -31,11 +31,11 @@ use Illuminate\Support\Str;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.1.0
+ * @version 1.2.0
  *
  * @since   01/09/2026
  *
- * @updated 01/09/2026
+ * @updated 23/09/2026
  */
 final class RegisterCardPurchase
 {
@@ -104,6 +104,7 @@ final class RegisterCardPurchase
             'installment_number' => $total > 1 ? $number : null,
             'installment_total' => $total > 1 ? $total : null,
             'installment_group' => $group,
+            'recurring_transaction_id' => $data->recurringTransactionId,
         ]);
 
         $invoice->increment('total_amount', $amount);

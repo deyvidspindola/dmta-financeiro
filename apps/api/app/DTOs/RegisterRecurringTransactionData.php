@@ -16,17 +16,17 @@ use App\UseCases\Transaction\RegisterRecurringTransaction;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/09/2026
  */
 final readonly class RegisterRecurringTransactionData
 {
     public function __construct(
         public int $contextId,
-        public int $accountId,
+        public ?int $accountId,
         public string $description,
         public float $amount,
         public StatementEntryType $type,
@@ -34,5 +34,6 @@ final readonly class RegisterRecurringTransactionData
         public string $startDate,
         public ?string $endDate = null,
         public ?int $categoryId = null,
+        public ?int $creditCardId = null,
     ) {}
 }

@@ -18,11 +18,11 @@ use Illuminate\Validation\Rule;
  *
  * @author  Deyvid Spindola <spindoladeyvid@gmail.com>
  *
- * @version 1.0.0
+ * @version 1.1.0
  *
  * @since   21/08/2026
  *
- * @updated 21/08/2026
+ * @updated 23/09/2026
  */
 final class StoreRecurringTransactionRequest extends FormRequest
 {
@@ -37,10 +37,12 @@ final class StoreRecurringTransactionRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'account_id' => ['required', 'integer', $this->existsInRouteContext('accounts')],
+            'account_id' => ['required_without:credit_card_id', 'prohibits:credit_card_id', 'nullable', 'integer', $this->existsInRouteContext('accounts')],
+            'credit_card_id' => ['nullable', 'integer', $this->existsInRouteContext('credit_cards')],
             'description' => ['required', 'string', 'max:150'],
             'amount' => ['required', 'numeric', 'min:0.01'],
-            'type' => ['required', Rule::in(['income', 'expense'])],
+            // Assinatura no cartão é sempre despesa.
+            'type' => ['required', $this->filled('credit_card_id') ? Rule::in(['expense']) : Rule::in(['income', 'expense'])],
             'interval' => ['required', Rule::in(['weekly', 'monthly', 'yearly'])],
             'start_date' => ['required', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
