@@ -104,6 +104,9 @@ export type CardPurchaseInput = {
   occurred_at: string;
   category_id: string | null;
   installments?: number;
+  recurring?: boolean;
+  interval?: 'weekly' | 'monthly' | 'yearly';
+  end_date?: string | null;
 };
 
 export async function createCardPurchase(
@@ -116,6 +119,9 @@ export async function createCardPurchase(
   >(`/contexts/${contextId}/credit-cards/${creditCardId}/purchases`, {
     ...input,
     category_id: input.category_id ?? undefined,
+    recurring: input.recurring,
+    interval: input.interval,
+    end_date: input.end_date ?? undefined,
   });
   return mapCardPurchase(creditCardId, unwrapData(payload));
 }

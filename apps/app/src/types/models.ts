@@ -206,6 +206,7 @@ export interface CardPurchase {
   occurred_at: string;
   installment_number: number | null;
   installment_total: number | null;
+  recurring_transaction_id: number | null;
 }
 
 export interface Investment {

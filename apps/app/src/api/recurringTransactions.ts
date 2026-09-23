@@ -47,3 +47,11 @@ export async function createRecurringTransaction(
   });
   return unwrapData(payload);
 }
+
+/** Cancela uma assinatura recorrente de cartão. */
+export async function cancelSubscription(
+  contextId: string,
+  recurringTransactionId: number,
+): Promise<void> {
+  await http.delete(`/contexts/${contextId}/recurring-transactions/${recurringTransactionId}`);
+}

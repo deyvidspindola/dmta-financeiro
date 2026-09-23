@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Feather } from '@expo/vector-icons';
-import { accountsApi, categoriesApi, creditCardsApi } from '@/api';
+import { accountsApi, categoriesApi, creditCardsApi, recurringTransactionsApi } from '@/api';
 import { ApiError } from '@/api/http';
 import { toastError, toastSuccess } from '@/store/toastStore';
 import {
@@ -49,6 +49,7 @@ export function CardDetailSheet({
   const [payAccountId, setPayAccountId] = useState<string | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<'none' | 'first' | 'paid'>('none');
   const [toDeletePurchase, setToDeletePurchase] = useState<CardPurchase | null>(null);
+  const [toCancelSubscription, setToCancelSubscription] = useState<CardPurchase | null>(null);
   const [openInvoiceId, setOpenInvoiceId] = useState<string | null>(null);
 
   const invoicesQuery = useQuery({
@@ -138,6 +139,22 @@ export function CardDetailSheet({
     onError: (err) => {
       setToDeletePurchase(null);
       toastError(err instanceof ApiError && err.message ? err.message : t.common.error);
+    },
+  });
+
+  const cancelSubscription = useMutation({
+    mutationFn: (recurringTransactionId: number) =>
+      recurringTransactionsApi.cancelSubscription(card!.context_id, recurringTransactionId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ['credit-cards'] });
+      void queryClient.invalidateQueries({ queryKey: ['card-invoices'] });
+      void queryClient.invalidateQueries({ queryKey: ['card-purchases'] });
+      setToCancelSubscription(null);
+      toastSuccess(t.creditCards.recurring.cancelled);
+    },
+    onError: () => {
+      setToCancelSubscription(null);
+      toastError(t.common.error);
     },
   });
 
@@ -245,22 +262,41 @@ export function CardDetailSheet({
                                 isPurchaseEditable(p, invoice.status) && 'active:opacity-60',
                               )}
                             >
-                              <Text numberOfLines={1} className="flex-1">
-                                {p.description}
-                                {(p.installment_total ?? 0) > 1
-                                  ? ` (${p.installment_number}/${p.installment_total})`
-                                  : ''}
-                              </Text>
+                              <View className="min-w-0 flex-1 gap-1">
+                                <Text numberOfLines={1} className="flex-1">
+                                  {p.description}
+                                  {(p.installment_total ?? 0) > 1
+                                    ? ` (${p.installment_number}/${p.installment_total})`
+                                    : ''}
+                                </Text>
+                                {p.recurring_transaction_id ? (
+                                  <Badge tone="brand">
+                                    <Feather name="repeat" size={10} color="currentColor" />{' '}
+                                    {t.creditCards.recurring.badge}
+                                  </Badge>
+                                ) : null}
+                              </View>
                               <MoneyValue amount={p.amount} direction="debit" size="sm" />
                             </Pressable>
                             {invoice.status !== 'paid' ? (
-                              <Pressable
-                                onPress={() => setToDeletePurchase(p)}
-                                hitSlop={8}
-                                className="p-1 active:opacity-60"
-                              >
-                                <Feather name="trash-2" size={16} color="#ef4444" />
-                              </Pressable>
+                              <View className="flex-row gap-1">
+                                {p.recurring_transaction_id ? (
+                                  <Pressable
+                                    onPress={() => setToCancelSubscription(p)}
+                                    hitSlop={8}
+                                    className="p-1 active:opacity-60"
+                                  >
+                                    <Feather name="x-circle" size={16} color="#f97316" />
+                                  </Pressable>
+                                ) : null}
+                                <Pressable
+                                  onPress={() => setToDeletePurchase(p)}
+                                  hitSlop={8}
+                                  className="p-1 active:opacity-60"
+                                >
+                                  <Feather name="trash-2" size={16} color="#ef4444" />
+                                </Pressable>
+                              </View>
                             ) : null}
                           </View>
                         ))
@@ -361,6 +397,20 @@ export function CardDetailSheet({
         loading={removePurchase.isPending}
         onConfirm={() => toDeletePurchase && removePurchase.mutate(toDeletePurchase)}
         onClose={() => setToDeletePurchase(null)}
+      />
+
+      <ConfirmSheet
+        open={toCancelSubscription !== null}
+        title={t.creditCards.recurring.cancelTitle}
+        message={t.creditCards.recurring.cancelMessage}
+        confirmLabel={t.creditCards.recurring.cancelConfirm}
+        tone="danger"
+        loading={cancelSubscription.isPending}
+        onConfirm={() =>
+          toCancelSubscription?.recurring_transaction_id &&
+          cancelSubscription.mutate(toCancelSubscription.recurring_transaction_id)
+        }
+        onClose={() => setToCancelSubscription(null)}
       />
     </>
   );

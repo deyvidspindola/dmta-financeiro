@@ -740,6 +740,7 @@ export function mapCardPurchase(
     occurred_at: string;
     installment_number: number | null;
     installment_total: number | null;
+    recurring_transaction_id?: number | null;
   },
 ): CardPurchase {
   return {
@@ -752,6 +753,7 @@ export function mapCardPurchase(
     occurred_at: raw.occurred_at,
     installment_number: raw.installment_number,
     installment_total: raw.installment_total,
+    recurring_transaction_id: raw.recurring_transaction_id ?? null,
   };
 }
 

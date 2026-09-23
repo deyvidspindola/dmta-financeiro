@@ -393,6 +393,20 @@ export const strings = {
     statusOpen: 'Aberta',
     invoiceChipStrip: 'Faturas por mês',
     chipNoAmount: '—',
+    recurring: {
+      label: 'Compra recorrente (assinatura)',
+      interval: 'Frequência',
+      endDate: 'Termina em',
+      badge: 'Assinatura',
+      cancelTitle: 'Cancelar assinatura',
+      cancelMessage:
+        'Parar de lançar essa assinatura no cartão? As cobranças já feitas continuam na fatura.',
+      cancelConfirm: 'Cancelar assinatura',
+      cancelled: 'Assinatura cancelada.',
+      intervalWeekly: 'Semanal',
+      intervalMonthly: 'Mensal',
+      intervalYearly: 'Anual',
+    },
   },
 
   bills: {
@@ -929,6 +943,7 @@ export const strings = {
     today: 'Hoje',
     yesterday: 'Ontem',
     other: 'Outros…',
+    clear: 'Limpar',
   },
 
   newTransaction: {
